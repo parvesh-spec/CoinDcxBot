@@ -120,6 +120,13 @@ export class TradeMonitorService {
       let existingCount = 0;
       
       for (const coindcxTrade of newTrades) {
+        // Only process positions with active trades (skip FLAT positions)
+        if ((coindcxTrade.active_pos || 0) === 0) {
+          console.log(`⏭️  Skipped FLAT position: ${coindcxTrade.pair} (no active trades)`);
+          existingCount++;
+          continue;
+        }
+        
         // Create unique identifier with position ID + updated timestamp
         const uniqueTradeId = `${coindcxTrade.id}_${coindcxTrade.updated_at}`;
         
@@ -127,7 +134,7 @@ export class TradeMonitorService {
         const existingTrade = await storage.getTradeByTradeId(uniqueTradeId);
         
         if (!existingTrade) {
-          const positionType = (coindcxTrade.active_pos || 0) > 0 ? 'LONG' : ((coindcxTrade.active_pos || 0) < 0 ? 'SHORT' : 'FLAT');
+          const positionType = (coindcxTrade.active_pos || 0) > 0 ? 'LONG' : 'SHORT';
           console.log(`🆕 New position: ${coindcxTrade.pair} ${positionType} ${coindcxTrade.leverage}x (${uniqueTradeId})`);
           
           // Transform and save new position with unique ID
