@@ -79,12 +79,18 @@ export class CoinDCXService {
       // Handle different response formats
       if (response.data && Array.isArray(response.data)) {
         console.log(`✅ CoinDCX API: Found ${response.data.length} positions`);
+        console.log('🔍 COMPLETE API RESPONSE DATA:');
+        console.log(JSON.stringify(response.data, null, 2));
         return response.data;
       } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
         console.log(`✅ CoinDCX API: Found ${response.data.data.length} positions`);
+        console.log('🔍 COMPLETE API RESPONSE DATA:');
+        console.log(JSON.stringify(response.data.data, null, 2));
         return response.data.data;
       } else {
         console.log('⚠️ CoinDCX API: No positions found or unexpected response format');
+        console.log('🔍 UNEXPECTED RESPONSE FORMAT:');
+        console.log(JSON.stringify(response.data, null, 2));
         return [];
       }
     } catch (error: any) {
