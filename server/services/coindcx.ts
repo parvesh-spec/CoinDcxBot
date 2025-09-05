@@ -169,7 +169,7 @@ export class CoinDCXService {
       leverage: leverage,
       total: (parseFloat(price) * positionSize).toString(),
       fee: coindcxTrade.fee || '0',
-      status: 'pending' as const,
+      status: 'active' as const,
     };
   }
 }

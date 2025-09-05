@@ -120,18 +120,12 @@ export class TradeMonitorService {
       let existingCount = 0;
       
       for (const coindcxTrade of newTrades) {
-        // Skip empty positions (active_pos = 0)
-        if (coindcxTrade.active_pos === 0 || coindcxTrade.active_pos === undefined) {
-          console.log(`⏭️  Skipped empty position: ${coindcxTrade.pair}`);
-          existingCount++;
-          continue;
-        }
-        
         // Check if position already exists
         const existingTrade = await storage.getTradeByTradeId(coindcxTrade.id);
         
         if (!existingTrade) {
-          console.log(`🆕 New position: ${coindcxTrade.pair} ${coindcxTrade.active_pos > 0 ? 'LONG' : 'SHORT'} ${coindcxTrade.leverage}x`);
+          const positionType = (coindcxTrade.active_pos || 0) > 0 ? 'LONG' : ((coindcxTrade.active_pos || 0) < 0 ? 'SHORT' : 'FLAT');
+          console.log(`🆕 New position: ${coindcxTrade.pair} ${positionType} ${coindcxTrade.leverage}x`);
           
           // Transform and save new position
           const tradeData = coindcxService.transformTradeData(coindcxTrade);
