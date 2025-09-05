@@ -12,7 +12,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 
 export default function TradesPage() {
   const { toast } = useToast();
-  const [selectedTrade, setSelectedTrade] = useState(null);
+  const [selectedTrade, setSelectedTrade] = useState<any>(null);
   const [filters, setFilters] = useState({
     status: "all",
     channelId: "",
@@ -94,13 +94,13 @@ export default function TradesPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={filters.channelId} onValueChange={(value) => handleFilterChange("channelId", value)}>
+              <Select value={filters.channelId || "all"} onValueChange={(value) => handleFilterChange("channelId", value === "all" ? "" : value)}>
                 <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-channel-filter">
                   <SelectValue placeholder="All Channels" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Channels</SelectItem>
-                  {channelsData?.map((channel: any) => (
+                  <SelectItem value="all">All Channels</SelectItem>
+                  {Array.isArray(channelsData) && channelsData.map((channel: any) => (
                     <SelectItem key={channel.id} value={channel.id}>
                       {channel.name}
                     </SelectItem>
@@ -126,11 +126,11 @@ export default function TradesPage() {
         </CardHeader>
         <CardContent className="p-0">
           <TradesTable
-            trades={tradesData?.trades || []}
+            trades={Array.isArray((tradesData as any)?.trades) ? (tradesData as any).trades : []}
             isLoading={tradesLoading}
             onTradeSelect={setSelectedTrade}
             currentPage={filters.page}
-            totalTrades={tradesData?.total || 0}
+            totalTrades={(tradesData as any)?.total || 0}
             onPageChange={(page) => handleFilterChange("page", page.toString())}
           />
         </CardContent>

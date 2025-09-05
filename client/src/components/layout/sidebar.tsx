@@ -61,9 +61,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <nav className="flex-1 px-2 space-y-1">
               {navigation.map((item) => (
                 <Link key={item.name} href={item.href}>
-                  <a
+                  <div
                     className={cn(
-                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
+                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer",
                       item.current
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -73,7 +73,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   >
                     <i className={cn(item.icon, "mr-3 flex-shrink-0 h-4 w-4")} />
                     {item.name}
-                  </a>
+                  </div>
                 </Link>
               ))}
             </nav>
@@ -87,7 +87,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm font-medium text-foreground" data-testid="text-username">
-                      {user?.firstName || user?.email || "Admin User"}
+                      {(user as any)?.firstName || (user as any)?.username || (user as any)?.email || "Admin User"}
                     </p>
                     <button
                       onClick={() => window.location.href = '/api/logout'}

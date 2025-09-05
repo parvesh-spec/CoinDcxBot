@@ -79,7 +79,7 @@ export default function TemplatesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Template Editor */}
           <TemplateEditor
-            channels={channelsData || []}
+            channels={Array.isArray(channelsData) ? channelsData : []}
             selectedTemplate={selectedTemplate}
             onTemplateChange={handleTemplateChange}
             onTemplateSaved={handleTemplateSaved}
@@ -94,7 +94,7 @@ export default function TemplatesPage() {
             />
             
             <SavedTemplates
-              templates={templatesData || []}
+              templates={Array.isArray(templatesData) ? templatesData : []}
               onTemplateSelect={handleTemplateSelect}
               onTemplateDeleted={refetchTemplates}
             />

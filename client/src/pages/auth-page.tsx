@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -14,14 +13,6 @@ export default function AuthPage() {
     username: "",
     password: "",
   });
-  const [registerData, setRegisterData] = useState({
-    username: "",
-    password: "",
-    email: "",
-    firstName: "",
-    lastName: "",
-  });
-
   const loginMutation = useMutation({
     mutationFn: async (data: typeof loginData) => {
       const response = await apiRequest("POST", "/api/login", data);
@@ -39,31 +30,9 @@ export default function AuthPage() {
     },
   });
 
-  const registerMutation = useMutation({
-    mutationFn: async (data: typeof registerData) => {
-      const response = await apiRequest("POST", "/api/register", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      window.location.reload();
-    },
-    onError: (error) => {
-      toast({
-        title: "Registration Failed",
-        description: error instanceof Error ? error.message : "Registration failed",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     loginMutation.mutate(loginData);
-  };
-
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    registerMutation.mutate(registerData);
   };
 
   return (
@@ -81,154 +50,58 @@ export default function AuthPage() {
             </p>
           </div>
 
-          <Tabs defaultValue="login" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Login</CardTitle>
-                  <CardDescription>
-                    Enter your credentials to access the dashboard
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
-                      <Input
-                        id="username"
-                        type="text"
-                        value={loginData.username}
-                        onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
-                        required
-                        data-testid="input-login-username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={loginData.password}
-                        onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                        required
-                        data-testid="input-login-password"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={loginMutation.isPending}
-                      data-testid="button-login"
-                    >
-                      {loginMutation.isPending ? (
-                        <>
-                          <i className="fas fa-spinner fa-spin mr-2" />
-                          Logging in...
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-sign-in-alt mr-2" />
-                          Login
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="register">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Register</CardTitle>
-                  <CardDescription>
-                    Create a new account to access the dashboard
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">First Name</Label>
-                        <Input
-                          id="firstName"
-                          type="text"
-                          value={registerData.firstName}
-                          onChange={(e) => setRegisterData(prev => ({ ...prev, firstName: e.target.value }))}
-                          data-testid="input-register-firstname"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Last Name</Label>
-                        <Input
-                          id="lastName"
-                          type="text"
-                          value={registerData.lastName}
-                          onChange={(e) => setRegisterData(prev => ({ ...prev, lastName: e.target.value }))}
-                          data-testid="input-register-lastname"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="registerUsername">Username</Label>
-                      <Input
-                        id="registerUsername"
-                        type="text"
-                        value={registerData.username}
-                        onChange={(e) => setRegisterData(prev => ({ ...prev, username: e.target.value }))}
-                        required
-                        data-testid="input-register-username"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={registerData.email}
-                        onChange={(e) => setRegisterData(prev => ({ ...prev, email: e.target.value }))}
-                        data-testid="input-register-email"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="registerPassword">Password</Label>
-                      <Input
-                        id="registerPassword"
-                        type="password"
-                        value={registerData.password}
-                        onChange={(e) => setRegisterData(prev => ({ ...prev, password: e.target.value }))}
-                        required
-                        data-testid="input-register-password"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={registerMutation.isPending}
-                      data-testid="button-register"
-                    >
-                      {registerMutation.isPending ? (
-                        <>
-                          <i className="fas fa-spinner fa-spin mr-2" />
-                          Creating account...
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-user-plus mr-2" />
-                          Create Account
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <Card>
+            <CardHeader>
+              <CardTitle>Login</CardTitle>
+              <CardDescription>
+                Enter your credentials to access the dashboard
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    value={loginData.username}
+                    onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
+                    required
+                    data-testid="input-login-username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={loginData.password}
+                    onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
+                    required
+                    data-testid="input-login-password"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loginMutation.isPending}
+                  data-testid="button-login"
+                >
+                  {loginMutation.isPending ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin mr-2" />
+                      Logging in...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-sign-in-alt mr-2" />
+                      Login
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
