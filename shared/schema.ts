@@ -52,7 +52,7 @@ export const telegramChannels = pgTable("telegram_channels", {
 export const messageTemplates = pgTable("message_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(),
-  channelId: varchar("channel_id").references(() => telegramChannels.id),
+  channelId: varchar("channel_id").references(() => telegramChannels.id), // Now nullable
   template: text("template").notNull(),
   includeFields: jsonb("include_fields").notNull(),
   isActive: boolean("is_active").default(true),

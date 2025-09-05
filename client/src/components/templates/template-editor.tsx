@@ -126,7 +126,7 @@ export default function TemplateEditor({
     mutationFn: async () => {
       await apiRequest("POST", "/api/templates/test", {
         template: formData.template,
-        channelId: "default", // Default channel for testing
+        channelId: null, // No channel needed for testing
         includeFields: formData.includeFields,
       });
     },
@@ -157,7 +157,7 @@ export default function TemplateEditor({
 
     saveMutation.mutate({
       name: formData.name,
-      channelId: "default", // Default channel ID since we don't need selection
+      channelId: null, // No channel selection needed
       template: formData.template,
       includeFields: formData.includeFields,
       isActive: true,
