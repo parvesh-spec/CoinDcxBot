@@ -126,26 +126,33 @@ export class TradeMonitorService {
       let existingCount = 0;
       
       for (const coindcxTrade of newTrades) {
-        console.log(`Checking trade ID: ${coindcxTrade.id}`);
+        console.log(`Checking position ID: ${coindcxTrade.id}`);
         
-        // Check if trade already exists
+        // Skip empty positions (active_pos = 0)
+        if (coindcxTrade.active_pos === 0 || coindcxTrade.active_pos === undefined) {
+          console.log(`Skipping empty position: ${coindcxTrade.id} - ${coindcxTrade.pair} (active_pos: ${coindcxTrade.active_pos})`);
+          existingCount++;
+          continue;
+        }
+        
+        // Check if position already exists
         const existingTrade = await storage.getTradeByTradeId(coindcxTrade.id);
         
         if (!existingTrade) {
-          console.log(`New trade found: ${coindcxTrade.id} - ${coindcxTrade.market} ${coindcxTrade.side} ${coindcxTrade.price}`);
+          console.log(`New active position found: ${coindcxTrade.id} - ${coindcxTrade.pair} ${coindcxTrade.active_pos > 0 ? 'LONG' : 'SHORT'} ${coindcxTrade.active_pos}`);
           
-          // Transform and save new trade
+          // Transform and save new position
           const tradeData = coindcxService.transformTradeData(coindcxTrade);
-          console.log('Transformed trade data:', JSON.stringify(tradeData, null, 2));
+          console.log('Transformed position data:', JSON.stringify(tradeData, null, 2));
           
           const savedTrade = await storage.createTrade(tradeData);
-          console.log(`Trade saved with ID: ${savedTrade.id}`);
+          console.log(`Position saved with ID: ${savedTrade.id}`);
           
           // Queue for posting to Telegram
           await this.postTradeToTelegram(savedTrade);
           processedCount++;
         } else {
-          console.log(`Trade ${coindcxTrade.id} already exists in database`);
+          console.log(`Position ${coindcxTrade.id} already exists in database`);
           existingCount++;
         }
       }

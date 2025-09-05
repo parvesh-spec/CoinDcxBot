@@ -175,7 +175,7 @@ export class CoinDCXService {
 
   transformTradeData(coindcxTrade: CoinDCXTrade) {
     // Handle futures positions data format
-    const pair = coindcxTrade.pair || coindcxTrade.market;
+    const pair = coindcxTrade.pair || coindcxTrade.market || 'UNKNOWN';
     const price = coindcxTrade.avg_price?.toString() || coindcxTrade.price || '0';
     const quantity = coindcxTrade.active_pos?.toString() || coindcxTrade.quantity || '0';
     const side = (coindcxTrade.active_pos || 0) > 0 ? 'buy' : ((coindcxTrade.active_pos || 0) < 0 ? 'sell' : coindcxTrade.side || 'unknown');
@@ -186,7 +186,7 @@ export class CoinDCXService {
     
     return {
       tradeId: coindcxTrade.id,
-      pair: pair,
+      pair: pair as string,
       type: side,
       price: price,
       quantity: quantity,
