@@ -125,7 +125,6 @@ export default function TradesTable({
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Trade ID</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Pair</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
@@ -142,7 +141,6 @@ export default function TradesTable({
           <tbody className="bg-card divide-y divide-border">
             {Array.from({ length: 5 }).map((_, index) => (
               <tr key={index}>
-                <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-6 w-12" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
@@ -167,9 +165,6 @@ export default function TradesTable({
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Trade ID
-              </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Pair
               </th>
@@ -208,7 +203,7 @@ export default function TradesTable({
           <tbody className="bg-card divide-y divide-border">
             {trades.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-6 py-12 text-center">
+                <td colSpan={11} className="px-6 py-12 text-center">
                   <div className="text-muted-foreground">
                     <i className="fas fa-chart-line text-2xl mb-2" />
                     <p>No trades found</p>
@@ -219,9 +214,6 @@ export default function TradesTable({
             ) : (
               trades.map((trade) => (
                 <tr key={trade.id} data-testid={`row-trade-${trade.id}`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
-                    {trade.tradeId}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {trade.pair}
                   </td>
