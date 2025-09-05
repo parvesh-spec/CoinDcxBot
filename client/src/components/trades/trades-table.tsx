@@ -11,7 +11,7 @@ interface Trade {
   pair: string;
   type: string;
   price: string;
-  quantity: string;
+  leverage: number;
   status: string;
   createdAt: string;
   channel?: {
@@ -118,7 +118,7 @@ export default function TradesTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Pair</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Quantity</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Leverage</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Time</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
@@ -162,7 +162,7 @@ export default function TradesTable({
                 Price
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Quantity
+                Leverage
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Status
@@ -211,7 +211,9 @@ export default function TradesTable({
                     {formatPrice(trade.price)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {trade.quantity}
+                    <Badge variant="outline" className="font-mono">
+                      {trade.leverage}x
+                    </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(trade.status)}
