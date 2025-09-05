@@ -1,4 +1,5 @@
 import axios from 'axios';
+import crypto from 'crypto';
 
 interface CoinDCXTrade {
   id: string;
@@ -33,7 +34,6 @@ export class CoinDCXService {
   }
 
   private generateSignature(method: string, endpoint: string, body: string = ''): string {
-    const crypto = require('crypto');
     const timestamp = Date.now();
     const message = timestamp + method + endpoint + body;
     return crypto.createHmac('sha256', this.config.apiSecret).update(message).digest('hex');

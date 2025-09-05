@@ -4,7 +4,7 @@ import {
   messageTemplates,
   trades,
   type User,
-  type UpsertUser,
+  type InsertUser,
   type TelegramChannel,
   type InsertTelegramChannel,
   type MessageTemplate,
@@ -16,9 +16,10 @@ import { db } from "./db";
 import { eq, desc, sql, and, or, ilike } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (mandatory for Replit Auth)
+  // User operations
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
 
   // Telegram channel operations
   getTelegramChannels(): Promise<TelegramChannel[]>;
@@ -61,18 +62,13 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(userData).returning();
     return user;
   }
 
@@ -102,7 +98,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTelegramChannel(id: string): Promise<boolean> {
     const result = await db.delete(telegramChannels).where(eq(telegramChannels.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Message template operations
@@ -135,7 +131,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMessageTemplate(id: string): Promise<boolean> {
     const result = await db.delete(messageTemplates).where(eq(messageTemplates.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Trade operations

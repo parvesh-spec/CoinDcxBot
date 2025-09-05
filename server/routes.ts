@@ -1,25 +1,32 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupAuth(app);
+  setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Validation middleware for auth routes
+  app.use('/api/register', (req, res, next) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      registerSchema.parse(req.body);
+      next();
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      res.status(400).json({ message: "Validation failed", errors: error });
+    }
+  });
+
+  app.use('/api/login', (req, res, next) => {
+    try {
+      loginSchema.parse(req.body);
+      next();
+    } catch (error) {
+      res.status(400).json({ message: "Validation failed", errors: error });
     }
   });
 
