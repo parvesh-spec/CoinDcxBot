@@ -90,7 +90,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       {(user as any)?.firstName || (user as any)?.username || (user as any)?.email || "Admin User"}
                     </p>
                     <button
-                      onClick={() => window.location.href = '/api/logout'}
+                      onClick={async () => {
+                        try {
+                          await fetch('/api/logout', { 
+                            method: 'POST',
+                            credentials: 'include'
+                          });
+                          window.location.reload();
+                        } catch (error) {
+                          console.error('Logout failed:', error);
+                          window.location.href = '/api/logout';
+                        }
+                      }}
                       className="text-xs text-muted-foreground hover:text-foreground"
                       data-testid="button-logout"
                     >

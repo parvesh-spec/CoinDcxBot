@@ -21,7 +21,24 @@ export default function TradesPage() {
   });
 
   const { data: tradesData, isLoading: tradesLoading, refetch: refetchTrades, error: tradesError } = useQuery({
-    queryKey: ["/api/trades", filters],
+    queryKey: ["trades", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.status && filters.status !== "all") params.append("status", filters.status);
+      if (filters.channelId) params.append("channelId", filters.channelId);
+      if (filters.search) params.append("search", filters.search);
+      params.append("page", filters.page.toString());
+      
+      const response = await fetch(`/api/trades?${params.toString()}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
     retry: false,
   });
 

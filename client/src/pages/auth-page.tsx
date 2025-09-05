@@ -19,7 +19,7 @@ export default function AuthPage() {
       return response.json();
     },
     onSuccess: () => {
-      window.location.reload();
+      window.location.href = '/';
     },
     onError: (error) => {
       toast({
