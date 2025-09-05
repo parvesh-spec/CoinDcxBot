@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pair: 'BTC/INR',
         price: '2845672',
         type: 'buy',
-        quantity: '0.0125',
+        leverage: 50,
         createdAt: new Date(),
         profitLoss: '+₹5,234'
       };
@@ -252,8 +252,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/monitor/start', isAuthenticated, async (req, res) => {
     try {
-      tradeMonitor.startMonitoring();
-      res.json({ message: "Trade monitoring started" });
+      // Trade monitoring is always running in manual sync mode
+      res.json({ message: "Trade monitoring already running" });
     } catch (error) {
       console.error("Error starting monitor:", error);
       res.status(500).json({ message: "Failed to start monitoring" });

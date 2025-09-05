@@ -95,8 +95,8 @@ export class TelegramService {
       message = message.replace(/{type}/g, trade.type.toUpperCase());
     }
     
-    if (includeFields.quantity) {
-      message = message.replace(/{quantity}/g, trade.quantity);
+    if (includeFields.leverage) {
+      message = message.replace(/{leverage}/g, `${trade.leverage}x`);
     }
     
     if (includeFields.timestamp) {

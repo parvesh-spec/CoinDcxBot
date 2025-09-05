@@ -7,7 +7,6 @@ interface CoinDCXTrade {
   market?: string;
   side?: 'buy' | 'sell';
   price?: string;
-  quantity?: string;
   fee?: string;
   timestamp?: number;
   status?: string;
