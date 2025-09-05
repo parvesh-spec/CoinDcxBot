@@ -13,6 +13,8 @@ interface Trade {
   price: string;
   leverage: number;
   takeProfitTrigger?: string | null;
+  takeProfit2?: string | null;
+  takeProfit3?: string | null;
   stopLossTrigger?: string | null;
   status: string;
   createdAt: string;
@@ -129,6 +131,8 @@ export default function TradesTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Leverage</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Take Profit</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">TP 2</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">TP 3</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Stop Loss</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Time</th>
@@ -143,6 +147,7 @@ export default function TradesTable({
                 <td className="px-6 py-4"><Skeleton className="h-6 w-12" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
+                <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-6 w-16" /></td>
@@ -181,6 +186,12 @@ export default function TradesTable({
                 Take Profit
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                TP 2
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                TP 3
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Stop Loss
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -197,7 +208,7 @@ export default function TradesTable({
           <tbody className="bg-card divide-y divide-border">
             {trades.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-6 py-12 text-center">
+                <td colSpan={12} className="px-6 py-12 text-center">
                   <div className="text-muted-foreground">
                     <i className="fas fa-chart-line text-2xl mb-2" />
                     <p>No trades found</p>
@@ -236,6 +247,12 @@ export default function TradesTable({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {trade.takeProfitTrigger ? formatPrice(trade.takeProfitTrigger) : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    {trade.takeProfit2 ? formatPrice(trade.takeProfit2) : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    {trade.takeProfit3 ? formatPrice(trade.takeProfit3) : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {trade.stopLossTrigger ? formatPrice(trade.stopLossTrigger) : '-'}

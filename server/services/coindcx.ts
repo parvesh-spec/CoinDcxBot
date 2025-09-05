@@ -163,6 +163,19 @@ export class CoinDCXService {
       console.log(`📊 Transform: ${pair} ${side.toUpperCase()} ${leverage}x @ $${price}`);
     }
     
+    // Calculate additional take profit levels
+    let takeProfit2 = null;
+    let takeProfit3 = null;
+    
+    if (coindcxTrade.take_profit_trigger && coindcxTrade.avg_price) {
+      const avgPrice = coindcxTrade.avg_price;
+      const takeProfit1 = coindcxTrade.take_profit_trigger;
+      const difference = takeProfit1 - avgPrice;
+      
+      takeProfit2 = takeProfit1 + difference;
+      takeProfit3 = takeProfit1 + (2 * difference);
+    }
+
     return {
       tradeId: coindcxTrade.id,
       pair: pair as string,
@@ -172,6 +185,8 @@ export class CoinDCXService {
       total: (parseFloat(price) * positionSize).toString(),
       fee: coindcxTrade.fee || '0',
       takeProfitTrigger: coindcxTrade.take_profit_trigger?.toString() || null,
+      takeProfit2: takeProfit2?.toString() || null,
+      takeProfit3: takeProfit3?.toString() || null,
       stopLossTrigger: coindcxTrade.stop_loss_trigger?.toString() || null,
       status: 'active' as const,
     };
