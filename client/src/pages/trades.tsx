@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import StatsCards from "@/components/trades/stats-cards";
 import TradesTable from "@/components/trades/trades-table";
 import TradeDetailModal from "@/components/trades/trade-detail-modal";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function TradesPage() {
   const { toast } = useToast();
@@ -68,12 +69,46 @@ export default function TradesPage() {
     }));
   };
 
-  const handleRefresh = () => {
-    refetchTrades();
-    toast({
-      title: "Refreshed",
-      description: "Trades data has been refreshed",
-    });
+  // Manual sync mutation - fetches trades from CoinDCX API
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/trades/sync');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate and refetch trades data
+      queryClient.invalidateQueries({ queryKey: ["trades"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trades/stats"] });
+      
+      toast({
+        title: "Sync Complete",
+        description: data.message || "Successfully synced with CoinDCX",
+        variant: data.success ? "default" : "destructive",
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync with CoinDCX",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSync = () => {
+    syncMutation.mutate();
   };
 
   return (
@@ -127,9 +162,14 @@ export default function TradesPage() {
             </div>
             
             <div className="flex space-x-2">
-              <Button variant="outline" onClick={handleRefresh} data-testid="button-refresh">
-                <i className="fas fa-sync -ml-1 mr-2 h-4 w-4" />
-                Refresh
+              <Button 
+                variant="outline" 
+                onClick={handleSync} 
+                disabled={syncMutation.isPending}
+                data-testid="button-sync"
+              >
+                <i className={`fas fa-sync -ml-1 mr-2 h-4 w-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+                {syncMutation.isPending ? 'Syncing...' : 'Sync'}
               </Button>
             </div>
           </div>

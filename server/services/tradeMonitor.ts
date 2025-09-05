@@ -8,7 +8,8 @@ export class TradeMonitorService {
   private cronJob: any = null;
 
   constructor() {
-    this.startMonitoring();
+    this.isRunning = true;
+    console.log('Trade monitoring service initialized (manual sync mode)');
   }
 
   private async processNewTrades() {
@@ -107,24 +108,42 @@ export class TradeMonitorService {
     }
   }
 
-  startMonitoring() {
-    if (this.isRunning) {
-      return;
+  // Manual sync method - no automatic cron jobs
+  async manualSync(): Promise<{ success: boolean; message: string; newTrades?: number }> {
+    try {
+      console.log('Manual sync triggered...');
+      
+      const newTrades = await coindcxService.getRecentTrades(50); // Get more trades for manual sync
+      let processedCount = 0;
+      
+      for (const coindcxTrade of newTrades) {
+        // Check if trade already exists
+        const existingTrade = await storage.getTradeByTradeId(coindcxTrade.id);
+        
+        if (!existingTrade) {
+          // Transform and save new trade
+          const tradeData = coindcxService.transformTradeData(coindcxTrade);
+          const savedTrade = await storage.createTrade(tradeData);
+          
+          // Queue for posting to Telegram
+          await this.postTradeToTelegram(savedTrade);
+          processedCount++;
+        }
+      }
+      
+      console.log(`Manual sync completed: ${processedCount} new trades processed`);
+      return {
+        success: true,
+        message: `Sync completed successfully. ${processedCount} new trades found and processed.`,
+        newTrades: processedCount
+      };
+    } catch (error) {
+      console.error('Manual sync failed:', error);
+      return {
+        success: false,
+        message: `Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
     }
-
-    this.isRunning = true;
-    
-    // Check for new trades every 5 minutes (reduced frequency to avoid API spam)
-    this.cronJob = cron.schedule('*/5 * * * *', async () => {
-      await this.processNewTrades();
-    });
-
-    // Retry failed trades every 10 minutes
-    cron.schedule('*/10 * * * *', async () => {
-      await this.retryFailedTrades();
-    });
-
-    console.log('Trade monitoring started');
   }
 
   stopMonitoring() {
@@ -139,6 +158,7 @@ export class TradeMonitorService {
   getStatus() {
     return {
       isRunning: this.isRunning,
+      mode: 'manual_sync',
       lastCheck: new Date().toISOString(),
     };
   }

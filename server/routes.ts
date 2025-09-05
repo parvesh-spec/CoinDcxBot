@@ -270,6 +270,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual sync endpoint - fetches trades from CoinDCX and saves to database
+  app.post('/api/trades/sync', isAuthenticated, async (req, res) => {
+    try {
+      const result = await tradeMonitor.manualSync();
+      res.json(result);
+    } catch (error) {
+      console.error("Error during manual sync:", error);
+      res.status(500).json({ 
+        success: false,
+        message: error instanceof Error ? error.message : 'Manual sync failed' 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
