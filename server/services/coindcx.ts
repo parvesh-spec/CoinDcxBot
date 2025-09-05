@@ -3,13 +3,27 @@ import crypto from 'crypto';
 
 interface CoinDCXTrade {
   id: string;
-  market: string;
-  side: 'buy' | 'sell';
-  price: string;
-  quantity: string;
-  fee: string;
-  timestamp: number;
-  status: string;
+  // Trade fields
+  market?: string;
+  side?: 'buy' | 'sell';
+  price?: string;
+  quantity?: string;
+  fee?: string;
+  timestamp?: number;
+  status?: string;
+  // Futures position fields
+  pair?: string;
+  active_pos?: number;
+  inactive_pos_buy?: number;
+  inactive_pos_sell?: number;
+  avg_price?: number;
+  liquidation_price?: number;
+  locked_margin?: number;
+  leverage?: number;
+  mark_price?: number;
+  margin_type?: string;
+  margin_currency_short_name?: string;
+  updated_at?: number;
 }
 
 interface CoinDCXConfig {
@@ -160,14 +174,24 @@ export class CoinDCXService {
   }
 
   transformTradeData(coindcxTrade: CoinDCXTrade) {
+    // Handle futures positions data format
+    const pair = coindcxTrade.pair || coindcxTrade.market;
+    const price = coindcxTrade.avg_price?.toString() || coindcxTrade.price || '0';
+    const quantity = coindcxTrade.active_pos?.toString() || coindcxTrade.quantity || '0';
+    const side = (coindcxTrade.active_pos || 0) > 0 ? 'buy' : ((coindcxTrade.active_pos || 0) < 0 ? 'sell' : coindcxTrade.side || 'unknown');
+    
+    console.log('=== Transform Position Data ===');
+    console.log('Original position:', JSON.stringify(coindcxTrade, null, 2));
+    console.log('Extracted values:', { pair, price, quantity, side });
+    
     return {
       tradeId: coindcxTrade.id,
-      pair: coindcxTrade.market,
-      type: coindcxTrade.side,
-      price: coindcxTrade.price,
-      quantity: coindcxTrade.quantity,
-      total: (parseFloat(coindcxTrade.price) * parseFloat(coindcxTrade.quantity)).toString(),
-      fee: coindcxTrade.fee,
+      pair: pair,
+      type: side,
+      price: price,
+      quantity: quantity,
+      total: (parseFloat(price) * parseFloat(quantity)).toString(),
+      fee: coindcxTrade.fee || '0',
       status: 'pending' as const,
     };
   }
