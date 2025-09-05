@@ -76,20 +76,12 @@ export class CoinDCXService {
         headers
       });
 
-      // Handle different response formats and debug active_pos
+      // Handle different response formats
       if (response.data && Array.isArray(response.data)) {
         console.log(`✅ CoinDCX API: Found ${response.data.length} positions`);
-        // Debug: Show active_pos for each position
-        response.data.forEach((pos: any) => {
-          console.log(`🔍 Debug: ${pos.pair} - active_pos: ${pos.active_pos}`);
-        });
         return response.data;
       } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
         console.log(`✅ CoinDCX API: Found ${response.data.data.length} positions`);
-        // Debug: Show active_pos for each position
-        response.data.data.forEach((pos: any) => {
-          console.log(`🔍 Debug: ${pos.pair} - active_pos: ${pos.active_pos}`);
-        });
         return response.data.data;
       } else {
         console.log('⚠️ CoinDCX API: No positions found or unexpected response format');

@@ -127,11 +127,20 @@ export class TradeMonitorService {
         const existingTrade = await storage.getTradeByTradeId(uniqueTradeId);
         
         if (!existingTrade) {
+          // Transform data first to check type
+          const tradeData = coindcxService.transformTradeData(coindcxTrade);
+          
+          // Skip if type is unknown
+          if (tradeData.type === 'unknown') {
+            console.log(`⏭️  Skipped unknown type: ${coindcxTrade.pair} (cannot determine buy/sell)`);
+            existingCount++;
+            continue;
+          }
+          
           const positionType = (coindcxTrade.active_pos || 0) > 0 ? 'LONG' : 'SHORT';
           console.log(`🆕 New position: ${coindcxTrade.pair} ${positionType} ${coindcxTrade.leverage}x (${uniqueTradeId})`);
           
-          // Transform and save new position with unique ID
-          const tradeData = coindcxService.transformTradeData(coindcxTrade);
+          // Save new position with unique ID
           tradeData.tradeId = uniqueTradeId; // Use unique ID
           const savedTrade = await storage.createTrade(tradeData);
           
