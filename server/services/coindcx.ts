@@ -72,44 +72,19 @@ export class CoinDCXService {
       });
       const headers = this.getHeaders(body);
       
-      // Log request details
-      console.log('=== CoinDCX API Request ===');
-      console.log('FUTURES POSITIONS ENDPOINT - Now using derivatives/futures/positions');
-      console.log('URL:', `${this.config.baseUrl}${endpoint}`);
-      console.log('Request Body:', body);
-      console.log('Headers:', {
-        ...headers,
-        'X-AUTH-SIGNATURE': '[HIDDEN]' // Don't log the actual signature for security
-      });
-      
       const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
         headers
       });
 
-      // Log complete response details
-      console.log('=== CoinDCX API Response ===');
-      console.log('Status:', response.status);
-      console.log('Status Text:', response.statusText);
-      console.log('Response Headers:', response.headers);
-      console.log('Raw Response Data:', JSON.stringify(response.data, null, 2));
-      console.log('Response Data Type:', typeof response.data);
-      console.log('Is Array:', Array.isArray(response.data));
-      
-      if (response.data && response.data.data) {
-        console.log('Nested Data Type:', typeof response.data.data);
-        console.log('Is Nested Array:', Array.isArray(response.data.data));
-      }
-
       // Handle different response formats
       if (response.data && Array.isArray(response.data)) {
-        console.log(`Found ${response.data.length} trades in direct array format`);
+        console.log(`✅ CoinDCX API: Found ${response.data.length} positions`);
         return response.data;
       } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        console.log(`Found ${response.data.data.length} trades in nested data format`);
+        console.log(`✅ CoinDCX API: Found ${response.data.data.length} positions`);
         return response.data.data;
       } else {
-        console.log('No trades found or unexpected response format. Full response structure:');
-        console.log(JSON.stringify(response.data, null, 2));
+        console.log('⚠️ CoinDCX API: No positions found or unexpected response format');
         return [];
       }
     } catch (error: any) {
@@ -180,9 +155,10 @@ export class CoinDCXService {
     const quantity = coindcxTrade.active_pos?.toString() || coindcxTrade.quantity || '0';
     const side = (coindcxTrade.active_pos || 0) > 0 ? 'buy' : ((coindcxTrade.active_pos || 0) < 0 ? 'sell' : coindcxTrade.side || 'unknown');
     
-    console.log('=== Transform Position Data ===');
-    console.log('Original position:', JSON.stringify(coindcxTrade, null, 2));
-    console.log('Extracted values:', { pair, price, quantity, side });
+    // Only log important transform details
+    if (parseFloat(quantity) > 0) {
+      console.log(`📊 Transform: ${pair} ${side.toUpperCase()} ${quantity} @ $${price}`);
+    }
     
     return {
       tradeId: coindcxTrade.id,

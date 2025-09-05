@@ -114,23 +114,15 @@ export class TradeMonitorService {
       console.log('Manual sync triggered...');
       
       const newTrades = await coindcxService.getRecentTrades(50); // Get more trades for manual sync
-      console.log(`=== Trade Processing Summary ===`);
-      console.log(`Total trades received from API: ${newTrades.length}`);
-      
-      if (newTrades.length > 0) {
-        console.log('Sample trade data from API:');
-        console.log(JSON.stringify(newTrades[0], null, 2));
-      }
+      console.log(`📋 Processing ${newTrades.length} positions from API...`);
       
       let processedCount = 0;
       let existingCount = 0;
       
       for (const coindcxTrade of newTrades) {
-        console.log(`Checking position ID: ${coindcxTrade.id}`);
-        
         // Skip empty positions (active_pos = 0)
         if (coindcxTrade.active_pos === 0 || coindcxTrade.active_pos === undefined) {
-          console.log(`Skipping empty position: ${coindcxTrade.id} - ${coindcxTrade.pair} (active_pos: ${coindcxTrade.active_pos})`);
+          console.log(`⏭️  Skipped empty position: ${coindcxTrade.pair}`);
           existingCount++;
           continue;
         }
@@ -139,29 +131,22 @@ export class TradeMonitorService {
         const existingTrade = await storage.getTradeByTradeId(coindcxTrade.id);
         
         if (!existingTrade) {
-          console.log(`New active position found: ${coindcxTrade.id} - ${coindcxTrade.pair} ${coindcxTrade.active_pos > 0 ? 'LONG' : 'SHORT'} ${coindcxTrade.active_pos}`);
+          console.log(`🆕 New position: ${coindcxTrade.pair} ${coindcxTrade.active_pos > 0 ? 'LONG' : 'SHORT'} ${coindcxTrade.active_pos}`);
           
           // Transform and save new position
           const tradeData = coindcxService.transformTradeData(coindcxTrade);
-          console.log('Transformed position data:', JSON.stringify(tradeData, null, 2));
-          
           const savedTrade = await storage.createTrade(tradeData);
-          console.log(`Position saved with ID: ${savedTrade.id}`);
           
           // Queue for posting to Telegram
           await this.postTradeToTelegram(savedTrade);
           processedCount++;
         } else {
-          console.log(`Position ${coindcxTrade.id} already exists in database`);
+          console.log(`✅ Existing position: ${coindcxTrade.pair}`);
           existingCount++;
         }
       }
       
-      console.log(`=== Sync Results ===`);
-      console.log(`New trades processed: ${processedCount}`);
-      console.log(`Existing trades skipped: ${existingCount}`);
-      console.log(`Total trades checked: ${newTrades.length}`);
-      console.log(`Manual sync completed: ${processedCount} new trades processed`);
+      console.log(`🔄 Sync completed: ${processedCount} new, ${existingCount} existing positions`);
       
       return {
         success: true,
