@@ -67,7 +67,8 @@ export class CoinDCXService {
       const body = JSON.stringify({ 
         timestamp: timestamp,
         page: 1,
-        size: limit
+        size: limit,
+        status: 'open'
       });
       const headers = this.getHeaders(body);
       
@@ -98,7 +99,7 @@ export class CoinDCXService {
       // Show detailed error for debugging
       console.log('API Credentials being used:');
       console.log('- API Key:', this.config.apiKey);
-      console.log('- Endpoint:', `${this.config.baseUrl}/exchange/v1/orders/trade_history`);
+      console.log('- Endpoint:', `${this.config.baseUrl}/exchange/v1/derivatives/futures/positions`);
       
       // Don't throw error, just return empty array for now
       // This prevents the trade monitor from crashing

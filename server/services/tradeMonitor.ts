@@ -120,13 +120,6 @@ export class TradeMonitorService {
       let existingCount = 0;
       
       for (const coindcxTrade of newTrades) {
-        // Only process positions with active trades (skip FLAT positions)
-        if ((coindcxTrade.active_pos || 0) === 0) {
-          console.log(`⏭️  Skipped FLAT position: ${coindcxTrade.pair} (no active trades)`);
-          existingCount++;
-          continue;
-        }
-        
         // Create unique identifier with position ID + updated timestamp
         const uniqueTradeId = `${coindcxTrade.id}_${coindcxTrade.updated_at}`;
         
