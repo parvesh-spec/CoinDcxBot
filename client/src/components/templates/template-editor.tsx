@@ -26,34 +26,43 @@ export default function TemplateEditor({
   onClearSelection,
 }: TemplateEditorProps) {
   const { toast } = useToast();
+  
+  const getInitialIncludeFields = () => ({
+    pair: true,
+    price: true,
+    type: true,
+    leverage: true,
+    stopLoss: true,
+    takeProfit1: true,
+    takeProfit2: true,
+    takeProfit3: true,
+    timestamp: true,
+    profitLoss: false,
+  });
+
+  const generateInitialTemplate = (includeFields: any) => {
+    let template = "🚨 TRADE ALERT 🚨\n\n";
+    
+    if (includeFields.pair) template += "📊 Pair: {pair}\n";
+    if (includeFields.price) template += "💰 Price: {price}\n";
+    if (includeFields.type) template += "📈 Type: {type}\n";
+    if (includeFields.leverage) template += "⚡ Leverage: {leverage}x\n";
+    if (includeFields.stopLoss) template += "🛑 Stop Loss: {stopLoss}\n";
+    if (includeFields.takeProfit1) template += "🎯 Take Profit 1: {takeProfit1}\n";
+    if (includeFields.takeProfit2) template += "🎯 Take Profit 2: {takeProfit2}\n";
+    if (includeFields.takeProfit3) template += "🎯 Take Profit 3: {takeProfit3}\n";
+    if (includeFields.timestamp) template += "⏰ Time: {timestamp}\n";
+    
+    template += "\n#CoinDCX #Trading";
+    return template;
+  };
+
+  const initialIncludeFields = getInitialIncludeFields();
   const [formData, setFormData] = useState({
     name: "",
     channelId: "",
-    template: `🚨 TRADE ALERT 🚨
-
-📊 Pair: {pair}
-💰 Price: {price}
-📈 Type: {type}
-⚡ Leverage: {leverage}x
-🛑 Stop Loss: {stopLoss}
-🎯 Take Profit 1: {takeProfit1}
-🎯 Take Profit 2: {takeProfit2}
-🎯 Take Profit 3: {takeProfit3}
-⏰ Time: {timestamp}
-
-#CoinDCX #Trading`,
-    includeFields: {
-      pair: true,
-      price: true,
-      type: true,
-      leverage: true,
-      stopLoss: true,
-      takeProfit1: true,
-      takeProfit2: true,
-      takeProfit3: true,
-      timestamp: true,
-      profitLoss: false,
-    },
+    template: generateInitialTemplate(initialIncludeFields),
+    includeFields: initialIncludeFields,
   });
 
   useEffect(() => {
@@ -67,9 +76,46 @@ export default function TemplateEditor({
     }
   }, [selectedTemplate]);
 
+  // Generate dynamic template based on selected fields
+  const generateDynamicTemplate = () => {
+    let template = "🚨 TRADE ALERT 🚨\n\n";
+    
+    if (formData.includeFields.pair) {
+      template += "📊 Pair: {pair}\n";
+    }
+    if (formData.includeFields.price) {
+      template += "💰 Price: {price}\n";
+    }
+    if (formData.includeFields.type) {
+      template += "📈 Type: {type}\n";
+    }
+    if (formData.includeFields.leverage) {
+      template += "⚡ Leverage: {leverage}x\n";
+    }
+    if (formData.includeFields.stopLoss) {
+      template += "🛑 Stop Loss: {stopLoss}\n";
+    }
+    if (formData.includeFields.takeProfit1) {
+      template += "🎯 Take Profit 1: {takeProfit1}\n";
+    }
+    if (formData.includeFields.takeProfit2) {
+      template += "🎯 Take Profit 2: {takeProfit2}\n";
+    }
+    if (formData.includeFields.takeProfit3) {
+      template += "🎯 Take Profit 3: {takeProfit3}\n";
+    }
+    if (formData.includeFields.timestamp) {
+      template += "⏰ Time: {timestamp}\n";
+    }
+    
+    template += "\n#CoinDCX #Trading";
+    return template;
+  };
+
   useEffect(() => {
-    onTemplateChange(formData.template, formData.includeFields);
-  }, [formData.template, formData.includeFields, onTemplateChange]);
+    const dynamicTemplate = generateDynamicTemplate();
+    onTemplateChange(dynamicTemplate, formData.includeFields);
+  }, [formData.includeFields, onTemplateChange]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -82,34 +128,12 @@ export default function TemplateEditor({
     onSuccess: () => {
       onTemplateSaved();
       if (!selectedTemplate) {
+        const resetIncludeFields = getInitialIncludeFields();
         setFormData({
           name: "",
           channelId: "",
-          template: `🚨 TRADE ALERT 🚨
-
-📊 Pair: {pair}
-💰 Price: {price}
-📈 Type: {type}
-⚡ Leverage: {leverage}x
-🛑 Stop Loss: {stopLoss}
-🎯 Take Profit 1: {takeProfit1}
-🎯 Take Profit 2: {takeProfit2}
-🎯 Take Profit 3: {takeProfit3}
-⏰ Time: {timestamp}
-
-#CoinDCX #Trading`,
-          includeFields: {
-            pair: true,
-            price: true,
-            type: true,
-            leverage: true,
-            stopLoss: true,
-            takeProfit1: true,
-            takeProfit2: true,
-            takeProfit3: true,
-            timestamp: true,
-            profitLoss: false,
-          },
+          template: generateInitialTemplate(resetIncludeFields),
+          includeFields: resetIncludeFields,
         });
       }
     },
@@ -178,13 +202,51 @@ export default function TemplateEditor({
   };
 
   const handleFieldChange = (field: string, checked: boolean) => {
+    const newIncludeFields = {
+      ...formData.includeFields,
+      [field]: checked,
+    };
+    
     setFormData(prev => ({
       ...prev,
-      includeFields: {
-        ...prev.includeFields,
-        [field]: checked,
-      },
+      includeFields: newIncludeFields,
+      template: generateDynamicTemplateWithFields(newIncludeFields),
     }));
+  };
+
+  const generateDynamicTemplateWithFields = (includeFields: any) => {
+    let template = "🚨 TRADE ALERT 🚨\n\n";
+    
+    if (includeFields.pair) {
+      template += "📊 Pair: {pair}\n";
+    }
+    if (includeFields.price) {
+      template += "💰 Price: {price}\n";
+    }
+    if (includeFields.type) {
+      template += "📈 Type: {type}\n";
+    }
+    if (includeFields.leverage) {
+      template += "⚡ Leverage: {leverage}x\n";
+    }
+    if (includeFields.stopLoss) {
+      template += "🛑 Stop Loss: {stopLoss}\n";
+    }
+    if (includeFields.takeProfit1) {
+      template += "🎯 Take Profit 1: {takeProfit1}\n";
+    }
+    if (includeFields.takeProfit2) {
+      template += "🎯 Take Profit 2: {takeProfit2}\n";
+    }
+    if (includeFields.takeProfit3) {
+      template += "🎯 Take Profit 3: {takeProfit3}\n";
+    }
+    if (includeFields.timestamp) {
+      template += "⏰ Time: {timestamp}\n";
+    }
+    
+    template += "\n#CoinDCX #Trading";
+    return template;
   };
 
   return (
@@ -244,17 +306,17 @@ export default function TemplateEditor({
 
         {/* Message Template */}
         <div>
-          <Label htmlFor="template">Message Template *</Label>
+          <Label htmlFor="template">Message Template * (Auto-generated based on selected fields)</Label>
           <Textarea
             id="template"
             rows={8}
-            placeholder="Enter your message template here..."
             value={formData.template}
-            onChange={(e) => setFormData(prev => ({ ...prev, template: e.target.value }))}
+            readOnly
+            className="bg-muted cursor-not-allowed"
             data-testid="textarea-template"
           />
           <p className="text-xs text-muted-foreground mt-2">
-            Use variables: {"{pair}"}, {"{price}"}, {"{type}"}, {"{quantity}"}, {"{timestamp}"}, {"{profit_loss}"}
+            Template is automatically generated based on the selected fields below. Check/uncheck fields to customize.
           </p>
         </div>
 
