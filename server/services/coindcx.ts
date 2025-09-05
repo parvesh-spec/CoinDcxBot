@@ -49,14 +49,18 @@ export class CoinDCXService {
 
   async getRecentTrades(limit: number = 50): Promise<CoinDCXTrade[]> {
     try {
-      const endpoint = '/exchange/v1/users/me/orders/trades';
+      const endpoint = '/exchange/v1/derivatives/futures/positions';
       const timestamp = Date.now();
-      const body = JSON.stringify({ timestamp, limit });
+      const body = JSON.stringify({ 
+        timestamp: timestamp,
+        page: 1,
+        size: limit
+      });
       const headers = this.getHeaders(body);
       
       // Log request details
       console.log('=== CoinDCX API Request ===');
-      console.log('UPDATED ENDPOINT - Now using correct user trades endpoint');
+      console.log('FUTURES POSITIONS ENDPOINT - Now using derivatives/futures/positions');
       console.log('URL:', `${this.config.baseUrl}${endpoint}`);
       console.log('Request Body:', body);
       console.log('Headers:', {
