@@ -120,22 +120,26 @@ export class TradeMonitorService {
       let existingCount = 0;
       
       for (const coindcxTrade of newTrades) {
-        // Check if position already exists
-        const existingTrade = await storage.getTradeByTradeId(coindcxTrade.id);
+        // Create unique identifier with position ID + updated timestamp
+        const uniqueTradeId = `${coindcxTrade.id}_${coindcxTrade.updated_at}`;
+        
+        // Check if this specific position state already exists
+        const existingTrade = await storage.getTradeByTradeId(uniqueTradeId);
         
         if (!existingTrade) {
           const positionType = (coindcxTrade.active_pos || 0) > 0 ? 'LONG' : ((coindcxTrade.active_pos || 0) < 0 ? 'SHORT' : 'FLAT');
-          console.log(`🆕 New position: ${coindcxTrade.pair} ${positionType} ${coindcxTrade.leverage}x`);
+          console.log(`🆕 New position: ${coindcxTrade.pair} ${positionType} ${coindcxTrade.leverage}x (${uniqueTradeId})`);
           
-          // Transform and save new position
+          // Transform and save new position with unique ID
           const tradeData = coindcxService.transformTradeData(coindcxTrade);
+          tradeData.tradeId = uniqueTradeId; // Use unique ID
           const savedTrade = await storage.createTrade(tradeData);
           
           // Queue for posting to Telegram
           await this.postTradeToTelegram(savedTrade);
           processedCount++;
         } else {
-          console.log(`✅ Existing position: ${coindcxTrade.pair}`);
+          console.log(`✅ Existing position: ${coindcxTrade.pair} (${uniqueTradeId})`);
           existingCount++;
         }
       }
