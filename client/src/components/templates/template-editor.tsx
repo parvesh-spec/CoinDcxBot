@@ -126,7 +126,7 @@ export default function TemplateEditor({
     mutationFn: async () => {
       await apiRequest("POST", "/api/templates/test", {
         template: formData.template,
-        channelId: formData.channelId,
+        channelId: "default", // Default channel for testing
         includeFields: formData.includeFields,
       });
     },
@@ -146,7 +146,7 @@ export default function TemplateEditor({
   });
 
   const handleSave = () => {
-    if (!formData.name || !formData.channelId || !formData.template) {
+    if (!formData.name || !formData.template) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -157,7 +157,7 @@ export default function TemplateEditor({
 
     saveMutation.mutate({
       name: formData.name,
-      channelId: formData.channelId,
+      channelId: "default", // Default channel ID since we don't need selection
       template: formData.template,
       includeFields: formData.includeFields,
       isActive: true,
@@ -165,10 +165,10 @@ export default function TemplateEditor({
   };
 
   const handleTest = () => {
-    if (!formData.channelId || !formData.template) {
+    if (!formData.template) {
       toast({
-        title: "Validation Error",
-        description: "Please select a channel and enter a template",
+        title: "Validation Error", 
+        description: "Please enter a template",
         variant: "destructive",
       });
       return;
@@ -205,31 +205,11 @@ export default function TemplateEditor({
           )}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Design custom message templates for different channels
+          Design custom message templates for your trading alerts
         </p>
       </CardHeader>
       
       <CardContent className="space-y-6">
-        {/* Channel Selection */}
-        <div>
-          <Label htmlFor="channel">Select Channel *</Label>
-          <Select
-            value={formData.channelId}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, channelId: value }))}
-          >
-            <SelectTrigger data-testid="select-channel">
-              <SelectValue placeholder="Choose a channel" />
-            </SelectTrigger>
-            <SelectContent>
-              {channels.map((channel) => (
-                <SelectItem key={channel.id} value={channel.id}>
-                  {channel.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Template Name */}
         <div>
           <Label htmlFor="templateName">Template Name *</Label>
