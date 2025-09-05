@@ -72,8 +72,14 @@ export class CoinDCXService {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message,
-        url: error.config?.url
+        url: error.config?.url,
+        responseData: error.response?.data
       });
+      
+      // Show detailed error for debugging
+      console.log('API Credentials being used:');
+      console.log('- API Key:', this.config.apiKey);
+      console.log('- Endpoint:', `${this.config.baseUrl}/exchange/v1/orders/trade_history`);
       
       // Don't throw error, just return empty array for now
       // This prevents the trade monitor from crashing
