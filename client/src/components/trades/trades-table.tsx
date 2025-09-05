@@ -129,10 +129,8 @@ export default function TradesTable({
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Leverage</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Take Profit</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">TP 2</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">TP 3</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Stop Loss</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Take Profits</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Time</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
@@ -146,8 +144,7 @@ export default function TradesTable({
                 <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
-                <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
-                <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
+                <td className="px-6 py-4"><Skeleton className="h-12 w-32" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-6 w-16" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-16 ml-auto" /></td>
@@ -178,16 +175,10 @@ export default function TradesTable({
                 Leverage
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Take Profit
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                TP 2
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                TP 3
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Stop Loss
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Take Profits
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Status
@@ -203,7 +194,7 @@ export default function TradesTable({
           <tbody className="bg-card divide-y divide-border">
             {trades.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-6 py-12 text-center">
+                <td colSpan={9} className="px-6 py-12 text-center">
                   <div className="text-muted-foreground">
                     <i className="fas fa-chart-line text-2xl mb-2" />
                     <p>No trades found</p>
@@ -238,16 +229,23 @@ export default function TradesTable({
                     </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {trade.takeProfitTrigger ? formatPrice(trade.takeProfitTrigger) : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {trade.takeProfit2 ? formatPrice(trade.takeProfit2) : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {trade.takeProfit3 ? formatPrice(trade.takeProfit3) : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                     {trade.stopLossTrigger ? formatPrice(trade.stopLossTrigger) : '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    <div className="space-y-1">
+                      {trade.takeProfitTrigger && (
+                        <div className="text-xs">TP1: {formatPrice(trade.takeProfitTrigger)}</div>
+                      )}
+                      {trade.takeProfit2 && (
+                        <div className="text-xs">TP2: {formatPrice(trade.takeProfit2)}</div>
+                      )}
+                      {trade.takeProfit3 && (
+                        <div className="text-xs">TP3: {formatPrice(trade.takeProfit3)}</div>
+                      )}
+                      {!trade.takeProfitTrigger && !trade.takeProfit2 && !trade.takeProfit3 && (
+                        <div className="text-xs">-</div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(trade.status)}
