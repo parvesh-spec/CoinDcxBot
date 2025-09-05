@@ -53,7 +53,8 @@ export class CoinDCXService {
 
   async getRecentTrades(limit: number = 50): Promise<CoinDCXTrade[]> {
     try {
-      const endpoint = '/exchange/v1/users/me/orders/trades';
+      // Try old endpoint first (for older API keys)
+      const endpoint = '/exchange/v1/orders/trade_history';
       const headers = this.getHeaders('GET', endpoint);
       
       const response = await axios.get(`${this.config.baseUrl}${endpoint}`, {
@@ -102,7 +103,8 @@ export class CoinDCXService {
 
   async validateApiConnection(): Promise<boolean> {
     try {
-      const endpoint = '/exchange/v1/users/me/accounts/balances';
+      // Try old endpoint first (for older API keys) 
+      const endpoint = '/exchange/v1/users/balances';
       const headers = this.getHeaders('GET', endpoint);
       
       const response = await axios.get(`${this.config.baseUrl}${endpoint}`, {
@@ -115,7 +117,7 @@ export class CoinDCXService {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message,
-        endpoint: '/exchange/v1/users/me/accounts/balances'
+        endpoint: '/exchange/v1/users/balances'
       });
       return false;
     }
