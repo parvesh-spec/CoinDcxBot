@@ -22,6 +22,8 @@ interface CoinDCXTrade {
   mark_price?: number;
   margin_type?: string;
   margin_currency_short_name?: string;
+  take_profit_trigger?: number | null;
+  stop_loss_trigger?: number | null;
   updated_at?: number;
 }
 
@@ -79,18 +81,12 @@ export class CoinDCXService {
       // Handle different response formats
       if (response.data && Array.isArray(response.data)) {
         console.log(`✅ CoinDCX API: Found ${response.data.length} positions`);
-        console.log('🔍 COMPLETE API RESPONSE DATA:');
-        console.log(JSON.stringify(response.data, null, 2));
         return response.data;
       } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
         console.log(`✅ CoinDCX API: Found ${response.data.data.length} positions`);
-        console.log('🔍 COMPLETE API RESPONSE DATA:');
-        console.log(JSON.stringify(response.data.data, null, 2));
         return response.data.data;
       } else {
         console.log('⚠️ CoinDCX API: No positions found or unexpected response format');
-        console.log('🔍 UNEXPECTED RESPONSE FORMAT:');
-        console.log(JSON.stringify(response.data, null, 2));
         return [];
       }
     } catch (error: any) {
@@ -175,6 +171,8 @@ export class CoinDCXService {
       leverage: leverage,
       total: (parseFloat(price) * positionSize).toString(),
       fee: coindcxTrade.fee || '0',
+      takeProfitTrigger: coindcxTrade.take_profit_trigger?.toString() || null,
+      stopLossTrigger: coindcxTrade.stop_loss_trigger?.toString() || null,
       status: 'active' as const,
     };
   }

@@ -70,6 +70,8 @@ export const trades = pgTable("trades", {
   leverage: integer("leverage").notNull(),
   total: decimal("total", { precision: 20, scale: 8 }).notNull(),
   fee: decimal("fee", { precision: 20, scale: 8 }),
+  takeProfitTrigger: decimal("take_profit_trigger", { precision: 20, scale: 8 }),
+  stopLossTrigger: decimal("stop_loss_trigger", { precision: 20, scale: 8 }),
   status: varchar("status").notNull().default('pending'), // 'pending', 'posted', 'failed'
   channelId: varchar("channel_id").references(() => telegramChannels.id),
   messageId: varchar("message_id"), // Telegram message ID after posting
