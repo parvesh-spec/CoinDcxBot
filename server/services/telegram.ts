@@ -96,7 +96,59 @@ export class TelegramService {
     }
     
     if (includeFields.leverage) {
-      message = message.replace(/{leverage}/g, `${trade.leverage}x`);
+      message = message.replace(/{leverage}/g, trade.leverage);
+    }
+    
+    if (includeFields.stopLoss) {
+      if (trade.stopLossTrigger) {
+        const formattedStopLoss = new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency: 'INR',
+          minimumFractionDigits: 2,
+        }).format(parseFloat(trade.stopLossTrigger));
+        message = message.replace(/{stopLoss}/g, formattedStopLoss);
+      } else {
+        message = message.replace(/{stopLoss}/g, 'Not Set');
+      }
+    }
+    
+    if (includeFields.takeProfit1) {
+      if (trade.takeProfitTrigger) {
+        const formattedTP1 = new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency: 'INR',
+          minimumFractionDigits: 2,
+        }).format(parseFloat(trade.takeProfitTrigger));
+        message = message.replace(/{takeProfit1}/g, formattedTP1);
+      } else {
+        message = message.replace(/{takeProfit1}/g, 'Not Set');
+      }
+    }
+    
+    if (includeFields.takeProfit2) {
+      if (trade.takeProfit2) {
+        const formattedTP2 = new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency: 'INR',
+          minimumFractionDigits: 2,
+        }).format(parseFloat(trade.takeProfit2));
+        message = message.replace(/{takeProfit2}/g, formattedTP2);
+      } else {
+        message = message.replace(/{takeProfit2}/g, 'Not Set');
+      }
+    }
+    
+    if (includeFields.takeProfit3) {
+      if (trade.takeProfit3) {
+        const formattedTP3 = new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency: 'INR',
+          minimumFractionDigits: 2,
+        }).format(parseFloat(trade.takeProfit3));
+        message = message.replace(/{takeProfit3}/g, formattedTP3);
+      } else {
+        message = message.replace(/{takeProfit3}/g, 'Not Set');
+      }
     }
     
     if (includeFields.timestamp) {

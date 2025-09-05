@@ -34,7 +34,11 @@ export default function TemplateEditor({
 📊 Pair: {pair}
 💰 Price: {price}
 📈 Type: {type}
-📦 Quantity: {quantity}
+⚡ Leverage: {leverage}x
+🛑 Stop Loss: {stopLoss}
+🎯 Take Profit 1: {takeProfit1}
+🎯 Take Profit 2: {takeProfit2}
+🎯 Take Profit 3: {takeProfit3}
 ⏰ Time: {timestamp}
 
 #CoinDCX #Trading`,
@@ -42,7 +46,11 @@ export default function TemplateEditor({
       pair: true,
       price: true,
       type: true,
-      quantity: true,
+      leverage: true,
+      stopLoss: true,
+      takeProfit1: true,
+      takeProfit2: true,
+      takeProfit3: true,
       timestamp: true,
       profitLoss: false,
     },
@@ -82,7 +90,11 @@ export default function TemplateEditor({
 📊 Pair: {pair}
 💰 Price: {price}
 📈 Type: {type}
-📦 Quantity: {quantity}
+⚡ Leverage: {leverage}x
+🛑 Stop Loss: {stopLoss}
+🎯 Take Profit 1: {takeProfit1}
+🎯 Take Profit 2: {takeProfit2}
+🎯 Take Profit 3: {takeProfit3}
 ⏰ Time: {timestamp}
 
 #CoinDCX #Trading`,
@@ -90,7 +102,11 @@ export default function TemplateEditor({
             pair: true,
             price: true,
             type: true,
-            quantity: true,
+            leverage: true,
+            stopLoss: true,
+            takeProfit1: true,
+            takeProfit2: true,
+            takeProfit3: true,
             timestamp: true,
             profitLoss: false,
           },
@@ -255,7 +271,12 @@ export default function TemplateEditor({
                   data-testid={`checkbox-${field}`}
                 />
                 <Label htmlFor={field} className="text-sm capitalize">
-                  {field === "profitLoss" ? "Profit/Loss" : field.replace(/([A-Z])/g, ' $1')}
+                  {field === "profitLoss" ? "Profit/Loss" : 
+                   field === "takeProfit1" ? "Take Profit 1" :
+                   field === "takeProfit2" ? "Take Profit 2" :
+                   field === "takeProfit3" ? "Take Profit 3" :
+                   field === "stopLoss" ? "Stop Loss" :
+                   field.replace(/([A-Z])/g, ' $1')}
                 </Label>
               </div>
             ))}

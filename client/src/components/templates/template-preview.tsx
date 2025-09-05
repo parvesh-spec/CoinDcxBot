@@ -11,10 +11,14 @@ export default function TemplatePreview({ template, includeFields }: TemplatePre
 
     // Sample data for preview
     const sampleData = {
-      pair: "BTC/INR",
-      price: "₹28,45,672",
+      pair: "B-ETH_USDT",
+      price: "₹4,285.67",
       type: "BUY",
-      quantity: "0.0125",
+      leverage: "50x",
+      stopLoss: "₹4,200.00",
+      takeProfit1: "₹4,350.00",
+      takeProfit2: "₹4,415.00",
+      takeProfit3: "₹4,480.00",
       timestamp: "Dec 15, 2024 14:32",
       profit_loss: "+₹5,234",
     };
