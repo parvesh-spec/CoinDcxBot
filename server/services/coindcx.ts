@@ -152,12 +152,13 @@ export class CoinDCXService {
     // Handle futures positions data format
     const pair = coindcxTrade.pair || coindcxTrade.market || 'UNKNOWN';
     const price = coindcxTrade.avg_price?.toString() || coindcxTrade.price || '0';
-    const quantity = coindcxTrade.active_pos?.toString() || coindcxTrade.quantity || '0';
+    const leverage = coindcxTrade.leverage || 1;
     const side = (coindcxTrade.active_pos || 0) > 0 ? 'buy' : ((coindcxTrade.active_pos || 0) < 0 ? 'sell' : coindcxTrade.side || 'unknown');
+    const positionSize = Math.abs(coindcxTrade.active_pos || 0);
     
     // Only log important transform details
-    if (parseFloat(quantity) > 0) {
-      console.log(`📊 Transform: ${pair} ${side.toUpperCase()} ${quantity} @ $${price}`);
+    if (positionSize > 0) {
+      console.log(`📊 Transform: ${pair} ${side.toUpperCase()} ${leverage}x @ $${price}`);
     }
     
     return {
@@ -165,8 +166,8 @@ export class CoinDCXService {
       pair: pair as string,
       type: side,
       price: price,
-      quantity: quantity,
-      total: (parseFloat(price) * parseFloat(quantity)).toString(),
+      leverage: leverage,
+      total: (parseFloat(price) * positionSize).toString(),
       fee: coindcxTrade.fee || '0',
       status: 'pending' as const,
     };

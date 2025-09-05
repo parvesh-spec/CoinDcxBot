@@ -67,7 +67,7 @@ export const trades = pgTable("trades", {
   pair: varchar("pair").notNull(),
   type: varchar("type").notNull(), // 'buy' or 'sell'
   price: decimal("price", { precision: 20, scale: 8 }).notNull(),
-  quantity: decimal("quantity", { precision: 20, scale: 8 }).notNull(),
+  leverage: integer("leverage").notNull(),
   total: decimal("total", { precision: 20, scale: 8 }).notNull(),
   fee: decimal("fee", { precision: 20, scale: 8 }),
   status: varchar("status").notNull().default('pending'), // 'pending', 'posted', 'failed'

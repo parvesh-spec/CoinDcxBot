@@ -131,7 +131,7 @@ export class TradeMonitorService {
         const existingTrade = await storage.getTradeByTradeId(coindcxTrade.id);
         
         if (!existingTrade) {
-          console.log(`🆕 New position: ${coindcxTrade.pair} ${coindcxTrade.active_pos > 0 ? 'LONG' : 'SHORT'} ${coindcxTrade.active_pos}`);
+          console.log(`🆕 New position: ${coindcxTrade.pair} ${coindcxTrade.active_pos > 0 ? 'LONG' : 'SHORT'} ${coindcxTrade.leverage}x`);
           
           // Transform and save new position
           const tradeData = coindcxService.transformTradeData(coindcxTrade);
