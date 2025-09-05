@@ -33,33 +33,29 @@ export class CoinDCXService {
     }
   }
 
-  private generateSignature(method: string, endpoint: string, body: string = ''): string {
-    const timestamp = Date.now();
-    const message = timestamp + method + endpoint + body;
-    return crypto.createHmac('sha256', this.config.apiSecret).update(message).digest('hex');
+  private generateSignature(body: string): string {
+    return crypto.createHmac('sha256', this.config.apiSecret).update(body).digest('hex');
   }
 
-  private getHeaders(method: string, endpoint: string, body: string = '') {
-    const timestamp = Date.now();
-    const signature = this.generateSignature(method, endpoint, body);
+  private getHeaders(body: string) {
+    const signature = this.generateSignature(body);
     
     return {
       'X-AUTH-APIKEY': this.config.apiKey,
       'X-AUTH-SIGNATURE': signature,
-      'X-AUTH-TIMESTAMP': timestamp.toString(),
       'Content-Type': 'application/json',
     };
   }
 
   async getRecentTrades(limit: number = 50): Promise<CoinDCXTrade[]> {
     try {
-      // Try old endpoint first (for older API keys)
       const endpoint = '/exchange/v1/orders/trade_history';
-      const headers = this.getHeaders('GET', endpoint);
+      const timestamp = Date.now();
+      const body = JSON.stringify({ timestamp, limit });
+      const headers = this.getHeaders(body);
       
-      const response = await axios.get(`${this.config.baseUrl}${endpoint}`, {
-        headers,
-        params: { limit }
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers
       });
 
       // Handle different response formats
@@ -87,10 +83,12 @@ export class CoinDCXService {
 
   async getTradeDetails(tradeId: string): Promise<CoinDCXTrade | null> {
     try {
-      const endpoint = `/exchange/v1/orders/trade/${tradeId}`;
-      const headers = this.getHeaders('GET', endpoint);
+      const endpoint = `/exchange/v1/orders/status`;
+      const timestamp = Date.now();
+      const body = JSON.stringify({ timestamp, id: tradeId });
+      const headers = this.getHeaders(body);
       
-      const response = await axios.get(`${this.config.baseUrl}${endpoint}`, {
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
         headers
       });
 
@@ -103,11 +101,12 @@ export class CoinDCXService {
 
   async validateApiConnection(): Promise<boolean> {
     try {
-      // Try old endpoint first (for older API keys) 
       const endpoint = '/exchange/v1/users/balances';
-      const headers = this.getHeaders('GET', endpoint);
+      const timestamp = Date.now();
+      const body = JSON.stringify({ timestamp });
+      const headers = this.getHeaders(body);
       
-      const response = await axios.get(`${this.config.baseUrl}${endpoint}`, {
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
         headers
       });
 
