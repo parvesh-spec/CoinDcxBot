@@ -38,49 +38,49 @@ export class TradeMonitorService {
 
   private async postTradeToTelegram(trade: any) {
     try {
-      // Get all active channels
+      // Get all active channels with their templates
       const channels = await storage.getTelegramChannels();
-      const activeChannels = channels.filter(channel => channel.isActive);
+      const activeChannels = channels.filter((channel: any) => channel.isActive && channel.templateId);
+
+      console.log(`Found ${activeChannels.length} active channels with templates for trade ${trade.tradeId}`);
 
       for (const channel of activeChannels) {
-        // Get template for this channel
-        const templates = await storage.getMessageTemplates(channel.id);
-        const activeTemplate = templates.find(template => template.isActive);
+        try {
+          // Get the template directly using channel's templateId
+          const template = await storage.getMessageTemplate(channel.templateId);
 
-        if (activeTemplate) {
-          // Generate message using template
-          const message = telegramService.generateTradeMessage(
-            trade,
-            activeTemplate.template,
-            activeTemplate.includeFields
-          );
+          if (template && template.isActive) {
+            // Generate message using template
+            const message = telegramService.generateTradeMessage(
+              trade,
+              template.template,
+              template.includeFields
+            );
 
-          // Send to Telegram
-          const result = await telegramService.sendMessage(channel.channelId, {
-            text: message,
-            parse_mode: 'HTML',
-          });
-
-          if (result.success) {
-            // Update trade status
-            await storage.updateTrade(trade.id, {
-              status: 'posted',
-              channelId: channel.id,
-              messageId: result.messageId,
+            // Send to Telegram
+            const result = await telegramService.sendMessage(channel.channelId, {
+              text: message,
+              parse_mode: 'HTML',
             });
-            console.log(`Trade ${trade.tradeId} posted to channel ${channel.name}`);
+
+            if (result.success) {
+              console.log(`✅ Trade ${trade.tradeId} posted to channel ${channel.name}`);
+            } else {
+              console.error(`❌ Failed to post trade ${trade.tradeId} to channel ${channel.name}: ${result.error}`);
+            }
           } else {
-            // Update with error
-            await storage.updateTrade(trade.id, {
-              status: 'failed',
-              channelId: channel.id,
-              errorMessage: result.error,
-              retryCount: (trade.retryCount || 0) + 1,
-            });
-            console.error(`Failed to post trade ${trade.tradeId} to channel ${channel.name}: ${result.error}`);
+            console.log(`⚠️  Channel ${channel.name} has no active template, skipping`);
           }
+        } catch (channelError) {
+          console.error(`Error processing channel ${channel.name}:`, channelError);
         }
       }
+
+      // Update trade status to posted after all channels processed
+      await storage.updateTrade(trade.id, {
+        status: 'posted',
+      });
+      
     } catch (error) {
       console.error(`Error posting trade ${trade.id} to Telegram:`, error);
       await storage.updateTrade(trade.id, {

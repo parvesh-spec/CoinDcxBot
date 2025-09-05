@@ -73,8 +73,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Telegram channel operations
-  async getTelegramChannels(): Promise<TelegramChannel[]> {
-    return await db.select().from(telegramChannels).orderBy(desc(telegramChannels.createdAt));
+  async getTelegramChannels(): Promise<any[]> {
+    return await db
+      .select({
+        id: telegramChannels.id,
+        name: telegramChannels.name,
+        channelId: telegramChannels.channelId,
+        description: telegramChannels.description,
+        isActive: telegramChannels.isActive,
+        templateId: telegramChannels.templateId,
+        templateName: messageTemplates.name,
+        createdAt: telegramChannels.createdAt,
+        updatedAt: telegramChannels.updatedAt,
+      })
+      .from(telegramChannels)
+      .leftJoin(messageTemplates, eq(telegramChannels.templateId, messageTemplates.id))
+      .orderBy(desc(telegramChannels.createdAt));
   }
 
   async getTelegramChannel(id: string): Promise<TelegramChannel | undefined> {

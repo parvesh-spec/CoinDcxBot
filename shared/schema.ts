@@ -37,6 +37,18 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Message templates table (define first to avoid circular reference)
+export const messageTemplates = pgTable("message_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  channelId: varchar("channel_id"), // Nullable, no FK to avoid circular reference
+  template: text("template").notNull(),
+  includeFields: jsonb("include_fields").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Telegram channels table
 export const telegramChannels = pgTable("telegram_channels", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -44,18 +56,7 @@ export const telegramChannels = pgTable("telegram_channels", {
   channelId: varchar("channel_id").notNull().unique(),
   description: text("description"),
   isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Message templates table
-export const messageTemplates = pgTable("message_templates", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
-  channelId: varchar("channel_id").references(() => telegramChannels.id), // Now nullable
-  template: text("template").notNull(),
-  includeFields: jsonb("include_fields").notNull(),
-  isActive: boolean("is_active").default(true),
+  templateId: varchar("template_id").references(() => messageTemplates.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -83,10 +84,16 @@ export const trades = pgTable("trades", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Relations (no circular references)
+
 // Relations
-export const channelRelations = relations(telegramChannels, ({ many }) => ({
+export const channelRelations = relations(telegramChannels, ({ many, one }) => ({
   templates: many(messageTemplates),
   trades: many(trades),
+  defaultTemplate: one(messageTemplates, {
+    fields: [telegramChannels.templateId],
+    references: [messageTemplates.id],
+  }),
 }));
 
 export const templateRelations = relations(messageTemplates, ({ one }) => ({

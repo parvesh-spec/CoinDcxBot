@@ -130,6 +130,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/channels/:id', isAuthenticated, async (req, res) => {
+    try {
+      // Allow partial updates for specific fields like isActive, templateId
+      const allowedFields = ['isActive', 'templateId', 'name', 'description'];
+      const updateData: any = {};
+      
+      for (const [key, value] of Object.entries(req.body)) {
+        if (allowedFields.includes(key)) {
+          updateData[key] = value;
+        }
+      }
+
+      const channel = await storage.updateTelegramChannel(req.params.id, updateData);
+      if (!channel) {
+        return res.status(404).json({ message: "Channel not found" });
+      }
+      res.json(channel);
+    } catch (error) {
+      console.error("Error updating channel:", error);
+      res.status(400).json({ message: "Failed to update channel" });
+    }
+  });
+
   app.delete('/api/channels/:id', isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteTelegramChannel(req.params.id);

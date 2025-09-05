@@ -20,6 +20,7 @@ function Router() {
           <Route path="/" component={Dashboard} />
           <Route path="/trades" component={Dashboard} />
           <Route path="/templates" component={Dashboard} />
+          <Route path="/channels" component={Dashboard} />
         </>
       )}
       <Route component={NotFound} />

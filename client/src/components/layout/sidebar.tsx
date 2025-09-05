@@ -25,6 +25,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: "fas fa-edit",
       current: location === "/templates",
     },
+    {
+      name: "Channel Configuration",
+      href: "/channels",
+      icon: "fas fa-cogs",
+      current: location === "/channels",
+    },
   ];
 
   return (
