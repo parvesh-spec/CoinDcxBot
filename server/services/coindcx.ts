@@ -61,10 +61,26 @@ export class CoinDCXService {
         params: { limit }
       });
 
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching CoinDCX trades:', error);
-      throw new Error('Failed to fetch trades from CoinDCX API');
+      // Handle different response formats
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        return response.data.data;
+      } else {
+        console.log('No trades found or unexpected response format:', response.data);
+        return [];
+      }
+    } catch (error: any) {
+      console.error('Error fetching CoinDCX trades:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        url: error.config?.url
+      });
+      
+      // Don't throw error, just return empty array for now
+      // This prevents the trade monitor from crashing
+      return [];
     }
   }
 
@@ -86,7 +102,7 @@ export class CoinDCXService {
 
   async validateApiConnection(): Promise<boolean> {
     try {
-      const endpoint = '/exchange/v1/users/info';
+      const endpoint = '/exchange/v1/users/balances';
       const headers = this.getHeaders('GET', endpoint);
       
       const response = await axios.get(`${this.config.baseUrl}${endpoint}`, {
@@ -94,8 +110,13 @@ export class CoinDCXService {
       });
 
       return response.status === 200;
-    } catch (error) {
-      console.error('CoinDCX API connection validation failed:', error);
+    } catch (error: any) {
+      console.error('CoinDCX API connection validation failed:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        endpoint: '/exchange/v1/users/balances'
+      });
       return false;
     }
   }

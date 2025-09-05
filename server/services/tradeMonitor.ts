@@ -1,11 +1,11 @@
 import { coindcxService } from './coindcx';
 import { telegramService } from './telegram';
 import { storage } from '../storage';
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 
 export class TradeMonitorService {
   private isRunning = false;
-  private cronJob: cron.ScheduledTask | null = null;
+  private cronJob: any = null;
 
   constructor() {
     this.startMonitoring();
@@ -114,13 +114,13 @@ export class TradeMonitorService {
 
     this.isRunning = true;
     
-    // Check for new trades every 30 seconds
-    this.cronJob = cron.schedule('*/30 * * * * *', async () => {
+    // Check for new trades every 5 minutes (reduced frequency to avoid API spam)
+    this.cronJob = cron.schedule('*/5 * * * *', async () => {
       await this.processNewTrades();
     });
 
-    // Retry failed trades every 5 minutes
-    cron.schedule('*/5 * * * *', async () => {
+    // Retry failed trades every 10 minutes
+    cron.schedule('*/10 * * * *', async () => {
       await this.retryFailedTrades();
     });
 

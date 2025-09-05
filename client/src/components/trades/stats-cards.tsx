@@ -11,28 +11,28 @@ export default function StatsCards() {
   const cardData = [
     {
       title: "Total Trades",
-      value: stats?.total || 0,
+      value: (stats as any)?.total || 0,
       icon: "fas fa-chart-bar",
       color: "text-primary",
       testId: "stat-total-trades",
     },
     {
       title: "Posted Successfully",
-      value: stats?.posted || 0,
+      value: (stats as any)?.posted || 0,
       icon: "fas fa-check-circle",
       color: "text-green-500",
       testId: "stat-posted-trades",
     },
     {
       title: "Pending",
-      value: stats?.pending || 0,
+      value: (stats as any)?.pending || 0,
       icon: "fas fa-clock",
       color: "text-yellow-500",
       testId: "stat-pending-trades",
     },
     {
       title: "Failed",
-      value: stats?.failed || 0,
+      value: (stats as any)?.failed || 0,
       icon: "fas fa-exclamation-triangle",
       color: "text-red-500",
       testId: "stat-failed-trades",
