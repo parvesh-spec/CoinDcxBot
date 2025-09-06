@@ -49,22 +49,22 @@ export default function ChannelsPage() {
     description: "",
   });
 
-  // Fetch channels
+  // Fetch channels - use default query function that handles .json()
   const { data: channelsResponse = [], isLoading: channelsLoading, error: channelsError } = useQuery<Channel[]>({
     queryKey: ["/api/channels"],
-    queryFn: () => apiRequest("GET", "/api/channels"),
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     staleTime: 0, // Always fetch fresh data
   });
   
-  // Ensure channels is always an array
+  // Ensure channels is always an array and debug
   const channels = Array.isArray(channelsResponse) ? channelsResponse : [];
+  console.log("Final channels array:", channels);
+  console.log("Channels count:", channels.length);
 
-  // Fetch templates for dropdown
+  // Fetch templates for dropdown - use default query function
   const { data: templates = [] } = useQuery<Template[]>({
     queryKey: ["/api/templates"],
-    queryFn: () => apiRequest("GET", "/api/templates"),
   });
 
   // Add channel mutation
@@ -273,6 +273,10 @@ export default function ChannelsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Debug info */}
+          <div style={{fontSize: '12px', color: 'gray', marginBottom: '10px'}}>
+            Debug: channels.length = {channels.length}, channels = {JSON.stringify(channels)}
+          </div>
           {channels.length === 0 ? (
             <div className="text-center py-8">
               <i className="fas fa-comments text-4xl text-muted-foreground mb-4" />
