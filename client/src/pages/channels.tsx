@@ -115,47 +115,34 @@ export default function ChannelsPage() {
     },
   });
 
-  // Update channel template
-  const updateTemplateMutation = useMutation({
-    mutationFn: async ({ id, templateId }: { id: string; templateId: string }) => {
-      return await apiRequest("PATCH", `/api/channels/${id}`, { templateId });
+  // Test message mutation
+  const testMessageMutation = useMutation({
+    mutationFn: async (channel: Channel) => {
+      // Send test message to Telegram channel
+      return await apiRequest("POST", `/api/channels/${channel.id}/test`, {
+        message: `🔔 Test message from CoinDCX Bot\n\nChannel: ${channel.name}\nTime: ${new Date().toLocaleString()}\n\n✅ Connection successful!`
+      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
       toast({
         title: "Success",
-        description: "Channel template updated",
+        description: "Test message sent successfully",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update template",
+        description: error instanceof Error ? error.message : "Failed to send test message",
         variant: "destructive",
       });
     },
   });
 
-  // Delete channel
-  const deleteChannelMutation = useMutation({
-    mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/channels/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
-      toast({
-        title: "Success",
-        description: "Channel deleted successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete channel",
-        variant: "destructive",
-      });
-    },
-  });
+  // Handle test message
+  const handleTestMessage = (channel: Channel) => {
+    testMessageMutation.mutate(channel);
+  };
+
 
   const handleAddChannel = () => {
     if (!newChannel.name || !newChannel.channelId) {
@@ -290,9 +277,8 @@ export default function ChannelsPage() {
                 <TableRow>
                   <TableHead>Channel</TableHead>
                   <TableHead>ID</TableHead>
-                  <TableHead>Template</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Test Message</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -310,30 +296,6 @@ export default function ChannelsPage() {
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {channel.channelId}
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={channel.templateId || "none"}
-                        onValueChange={(templateId) =>
-                          updateTemplateMutation.mutate({
-                            id: channel.id,
-                            templateId: templateId === "none" ? null : templateId,
-                          })
-                        }
-                        disabled={updateTemplateMutation.isPending}
-                      >
-                        <SelectTrigger className="w-48" data-testid={`select-template-${channel.id}`}>
-                          <SelectValue placeholder="Select template" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No template</SelectItem>
-                          {safeTemplates.map((template) => (
-                            <SelectItem key={template.id} value={template.id}>
-                              {template.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
@@ -355,13 +317,14 @@ export default function ChannelsPage() {
                     </TableCell>
                     <TableCell>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        onClick={() => deleteChannelMutation.mutate(channel.id)}
-                        disabled={deleteChannelMutation.isPending}
-                        data-testid={`button-delete-${channel.id}`}
+                        onClick={() => handleTestMessage(channel)}
+                        disabled={testMessageMutation.isPending}
+                        data-testid={`button-test-${channel.id}`}
                       >
-                        <i className="fas fa-trash text-destructive" />
+                        <i className="fas fa-paper-plane mr-2" />
+                        Send Test
                       </Button>
                     </TableCell>
                   </TableRow>

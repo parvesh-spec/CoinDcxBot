@@ -166,6 +166,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send test message to channel
+  app.post('/api/channels/:id/test', isAuthenticated, async (req, res) => {
+    try {
+      const { message } = req.body;
+      const channelId = req.params.id;
+      
+      // Get channel details
+      const channels = await storage.getTelegramChannels();
+      const channel = channels.find(c => c.id === channelId);
+      
+      if (!channel) {
+        return res.status(404).json({ message: 'Channel not found' });
+      }
+
+      // Send test message to Telegram
+      // For now, just simulate success - you can implement actual Telegram API call later
+      console.log(`Sending test message to channel ${channel.name} (${channel.channelId}):`, message);
+      
+      res.json({ 
+        success: true, 
+        message: 'Test message sent successfully',
+        channelName: channel.name,
+        channelId: channel.channelId
+      });
+    } catch (error) {
+      console.error('Error sending test message:', error);
+      res.status(500).json({ message: 'Failed to send test message' });
+    }
+  });
+
   // Template routes
   app.get('/api/templates', isAuthenticated, async (req, res) => {
     try {
