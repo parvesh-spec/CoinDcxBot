@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/layout/dashboard-layout";
 import TradesPage from "./trades";
 import TemplatesPage from "./templates";
 import ChannelsPage from "./channels";
+import AutomationPage from "./automation";
 
 export default function Dashboard() {
   const [location] = useLocation();
@@ -13,6 +14,8 @@ export default function Dashboard() {
         return <TemplatesPage />;
       case "/channels":
         return <ChannelsPage />;
+      case "/automation":
+        return <AutomationPage />;
       case "/trades":
       case "/":
       default:

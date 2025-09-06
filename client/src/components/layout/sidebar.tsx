@@ -31,6 +31,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: "fas fa-cogs",
       current: location === "/channels",
     },
+    {
+      name: "Automation",
+      href: "/automation",
+      icon: "fas fa-robot",
+      current: location === "/automation",
+    },
   ];
 
   return (

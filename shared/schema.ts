@@ -83,6 +83,31 @@ export const trades = pgTable("trades", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Automation rules table
+export const automations = pgTable("automations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  channelId: varchar("channel_id").notNull().references(() => telegramChannels.id),
+  templateId: varchar("template_id").notNull().references(() => messageTemplates.id),
+  triggerType: varchar("trigger_type").notNull(), // 'trade_registered', 'trade_completed'
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Sent messages tracking table
+export const sentMessages = pgTable("sent_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  automationId: varchar("automation_id").notNull().references(() => automations.id),
+  tradeId: varchar("trade_id").notNull().references(() => trades.id),
+  telegramMessageId: varchar("telegram_message_id"), // Telegram's message ID
+  channelId: varchar("channel_id").notNull(), // Telegram channel ID
+  status: varchar("status").notNull().default('pending'), // 'sent', 'failed', 'pending'
+  errorMessage: text("error_message"), // Error details if failed
+  sentAt: timestamp("sent_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations (no circular references)
 
 // Relations
@@ -102,10 +127,34 @@ export const templateRelations = relations(messageTemplates, ({ one }) => ({
   }),
 }));
 
-export const tradeRelations = relations(trades, ({ one }) => ({
+export const tradeRelations = relations(trades, ({ one, many }) => ({
   channel: one(telegramChannels, {
     fields: [trades.channelId],
     references: [telegramChannels.id],
+  }),
+  sentMessages: many(sentMessages),
+}));
+
+export const automationRelations = relations(automations, ({ one, many }) => ({
+  channel: one(telegramChannels, {
+    fields: [automations.channelId],
+    references: [telegramChannels.id],
+  }),
+  template: one(messageTemplates, {
+    fields: [automations.templateId],
+    references: [messageTemplates.id],
+  }),
+  sentMessages: many(sentMessages),
+}));
+
+export const sentMessageRelations = relations(sentMessages, ({ one }) => ({
+  automation: one(automations, {
+    fields: [sentMessages.automationId],
+    references: [automations.id],
+  }),
+  trade: one(trades, {
+    fields: [sentMessages.tradeId],
+    references: [trades.id],
   }),
 }));
 
@@ -154,6 +203,23 @@ export const completeTradeSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const insertAutomationSchema = createInsertSchema(automations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  triggerType: z.enum(['trade_registered', 'trade_completed'], {
+    required_error: "Please select trigger type",
+  }),
+});
+
+export const insertSentMessageSchema = createInsertSchema(sentMessages).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  status: z.enum(['sent', 'failed', 'pending']).optional(),
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
@@ -166,3 +232,7 @@ export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
 export type Trade = typeof trades.$inferSelect;
 export type InsertTrade = z.infer<typeof insertTradeSchema>;
 export type CompleteTrade = z.infer<typeof completeTradeSchema>;
+export type Automation = typeof automations.$inferSelect;
+export type InsertAutomation = z.infer<typeof insertAutomationSchema>;
+export type SentMessage = typeof sentMessages.$inferSelect;
+export type InsertSentMessage = z.infer<typeof insertSentMessageSchema>;
