@@ -60,13 +60,13 @@ export default function ChannelsPage() {
   // Ensure channels is always an array
   const channels = Array.isArray(channelsResponse) ? channelsResponse : [];
 
-  // Ensure templates is always an array too
-  const safeTemplates = Array.isArray(templates) ? templates : [];
-
   // Fetch templates for dropdown - use default query function
   const { data: templates = [] } = useQuery<Template[]>({
     queryKey: ["/api/templates"],
   });
+
+  // Ensure templates is always an array too
+  const safeTemplates = Array.isArray(templates) ? templates : [];
 
   // Add channel mutation
   const addChannelMutation = useMutation({
