@@ -49,11 +49,21 @@ export default function TradeHistoryPage() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {trades.map((trade) => (
-            <Card key={trade.id} className="hover:shadow-lg transition-shadow" data-testid={`trade-card-${trade.id}`}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
+            <Card key={trade.id} className="hover:shadow-lg transition-shadow relative" data-testid={`trade-card-${trade.id}`}>
+              {/* Time in corner */}
+              <div className="absolute top-2 right-2 text-xs text-muted-foreground" data-testid={`text-time-${trade.id}`}>
+                {trade.updatedAt 
+                  ? formatDistanceToNow(new Date(trade.updatedAt), { addSuffix: true })
+                  : trade.createdAt 
+                    ? formatDistanceToNow(new Date(trade.createdAt), { addSuffix: true })
+                    : 'Unknown'
+                }
+              </div>
+
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between pr-16">
                   <CardTitle className="text-lg font-semibold">
                     {trade.pair}
                   </CardTitle>
@@ -65,88 +75,80 @@ export default function TradeHistoryPage() {
                     {trade.type.toUpperCase()}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Status</span>
-                  <Badge variant="outline" className="text-green-600 border-green-600">
-                    {trade.status.toUpperCase()}
-                  </Badge>
-                </div>
               </CardHeader>
 
-              <CardContent className="space-y-3">
-                {/* Price & Total */}
-                <div className="grid grid-cols-2 gap-4">
+              <CardContent className="space-y-2 pt-0">
+                {/* Price & Leverage */}
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground">Price</p>
                     <p className="font-semibold text-sm" data-testid={`text-price-${trade.id}`}>
                       ₹{trade.price ? Number(trade.price).toLocaleString('en-IN') : 'N/A'}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total</p>
-                    <p className="font-semibold text-sm" data-testid={`text-total-${trade.id}`}>
-                      ₹{trade.total ? Number(trade.total).toLocaleString('en-IN') : 'N/A'}
-                    </p>
-                  </div>
+                  {trade.leverage && (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Leverage</p>
+                      <p className="font-semibold text-sm text-blue-600" data-testid={`text-leverage-${trade.id}`}>
+                        {trade.leverage}x
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Leverage */}
-                {trade.leverage && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Leverage</p>
-                    <p className="font-semibold text-sm text-blue-600" data-testid={`text-leverage-${trade.id}`}>
-                      {trade.leverage}x
-                    </p>
-                  </div>
-                )}
-
-                {/* Stop Loss */}
+                {/* Stop Loss with completion mark */}
                 {trade.stopLossTrigger && (
-                  <div>
-                    <p className="text-xs text-muted-foreground">Stop Loss</p>
-                    <p className="font-semibold text-sm text-red-600" data-testid={`text-stop-loss-${trade.id}`}>
-                      ₹{Number(trade.stopLossTrigger).toLocaleString('en-IN')}
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Stop Loss</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-red-600" data-testid={`text-stop-loss-${trade.id}`}>
+                        ₹{Number(trade.stopLossTrigger).toLocaleString('en-IN')}
+                      </span>
+                      {trade.completionReason === 'stop_loss_hit' && (
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">HIT</span>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {/* Take Profits */}
-                <div className="space-y-2">
-                  {trade.takeProfitTrigger && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Take Profit 1</p>
-                      <p className="font-semibold text-sm text-green-600" data-testid={`text-take-profit1-${trade.id}`}>
-                        ₹{Number(trade.takeProfitTrigger).toLocaleString('en-IN')}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {trade.takeProfit2 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Take Profit 2</p>
-                      <p className="font-semibold text-sm text-green-600" data-testid={`text-take-profit2-${trade.id}`}>
-                        ₹{Number(trade.takeProfit2).toLocaleString('en-IN')}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {trade.takeProfit3 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Take Profit 3</p>
-                      <p className="font-semibold text-sm text-green-600" data-testid={`text-take-profit3-${trade.id}`}>
-                        ₹{Number(trade.takeProfit3).toLocaleString('en-IN')}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Completion Details */}
-                {trade.completionReason && (
+                {/* Take Profits in one compact line */}
+                {(trade.takeProfitTrigger || trade.takeProfit2 || trade.takeProfit3) && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Completion Reason</p>
-                    <p className="font-medium text-sm" data-testid={`text-completion-reason-${trade.id}`}>
-                      {trade.completionReason}
-                    </p>
+                    <p className="text-xs text-muted-foreground mb-1">Take Profits</p>
+                    <div className="flex items-center gap-3 text-sm">
+                      {trade.takeProfitTrigger && (
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-green-600" data-testid={`text-take-profit1-${trade.id}`}>
+                            T1: ₹{Number(trade.takeProfitTrigger).toLocaleString('en-IN')}
+                          </span>
+                          {trade.completionReason === 'target_1_hit' && (
+                            <span className="text-xs bg-green-100 text-green-700 px-1 py-0.5 rounded">✓</span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {trade.takeProfit2 && (
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-green-600" data-testid={`text-take-profit2-${trade.id}`}>
+                            T2: ₹{Number(trade.takeProfit2).toLocaleString('en-IN')}
+                          </span>
+                          {trade.completionReason === 'target_2_hit' && (
+                            <span className="text-xs bg-green-100 text-green-700 px-1 py-0.5 rounded">✓</span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {trade.takeProfit3 && (
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-green-600" data-testid={`text-take-profit3-${trade.id}`}>
+                            T3: ₹{Number(trade.takeProfit3).toLocaleString('en-IN')}
+                          </span>
+                          {trade.completionReason === 'target_3_hit' && (
+                            <span className="text-xs bg-green-100 text-green-700 px-1 py-0.5 rounded">✓</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -159,19 +161,6 @@ export default function TradeHistoryPage() {
                     </p>
                   </div>
                 )}
-
-                {/* Time */}
-                <div className="pt-2 border-t border-border">
-                  <p className="text-xs text-muted-foreground">Completed</p>
-                  <p className="text-sm font-medium" data-testid={`text-time-${trade.id}`}>
-                    {trade.updatedAt 
-                      ? formatDistanceToNow(new Date(trade.updatedAt), { addSuffix: true })
-                      : trade.createdAt 
-                        ? formatDistanceToNow(new Date(trade.createdAt), { addSuffix: true })
-                        : 'Unknown'
-                    }
-                  </p>
-                </div>
               </CardContent>
             </Card>
           ))}
