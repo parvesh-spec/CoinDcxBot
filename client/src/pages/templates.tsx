@@ -28,26 +28,50 @@ type TemplateFormData = z.infer<typeof templateFormSchema>;
 export default function TemplatesPage() {
   const { toast } = useToast();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
   const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
   
   const defaultFormValues: TemplateFormData = {
     name: "",
-    template: `🚨 TRADE ALERT 🚨
+    template: `🚨 FUTURES TRADE ALERT 🚨
 
 📊 Pair: {pair}
-💰 Price: {price}
-📈 Type: {type}
-📦 Quantity: {quantity}
-⏰ Time: {timestamp}
+💰 Entry Price: {price}
+📈 Side: {side}
+⚖️ Leverage: {leverage}x
+📦 Position Size: {active_pos}
 
-#CoinDCX #Trading`,
+💵 Avg Price: {avg_price}
+🔴 Liquidation: {liquidation_price}
+💎 Mark Price: {mark_price}
+🔒 Margin: {locked_margin}
+
+🎯 Take Profit: {take_profit_trigger}
+🛑 Stop Loss: {stop_loss_trigger}
+💰 P&L: {profitLoss}
+
+⏰ Time: {timestamp}
+📊 Status: {status}
+
+#CoinDCX #Futures #Trading`,
     includeFields: {
       pair: true,
       price: true,
-      type: true,
-      quantity: true,
+      side: true,
+      leverage: true,
+      active_pos: true,
+      avg_price: true,
+      liquidation_price: true,
+      mark_price: true,
+      locked_margin: true,
+      take_profit_trigger: true,
+      stop_loss_trigger: true,
+      profitLoss: true,
       timestamp: true,
-      profitLoss: false,
+      status: true,
+      fee: false,
+      margin_currency_short_name: false,
+      updated_at: false,
     },
     channelId: null,
     isActive: true,
@@ -114,10 +138,21 @@ export default function TemplatesPage() {
     const sampleData = {
       pair: "B-ETH_USDT",
       price: "₹4,205.67",
-      type: "BUY",
-      quantity: "0.5",
+      side: "BUY",
+      leverage: "10",
+      active_pos: "0.5",
+      avg_price: "₹4,180.32",
+      liquidation_price: "₹3,850.00",
+      mark_price: "₹4,208.15",
+      locked_margin: "₹420.50",
+      take_profit_trigger: "₹4,500.00",
+      stop_loss_trigger: "₹4,000.00",
+      profitLoss: "+₹2,300.00",
       timestamp: "Dec 15, 2024 14:32",
-      profitLoss: "₹2,300.00",
+      status: "ACTIVE",
+      fee: "₹12.60",
+      margin_currency_short_name: "USDT",
+      updated_at: "Dec 15, 2024 14:35",
     };
 
     let preview = template;
@@ -136,8 +171,54 @@ export default function TemplatesPage() {
     return preview;
   };
 
+  // Edit template mutation
+  const editTemplateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: TemplateFormData }) => {
+      return await apiRequest("PUT", `/api/templates/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/templates"] });
+      setIsCreateModalOpen(false);
+      setEditingTemplate(null);
+      form.reset(defaultFormValues);
+      toast({
+        title: "Success",
+        description: "Template updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update template",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: TemplateFormData) => {
-    createTemplateMutation.mutate(data);
+    if (editingTemplate) {
+      editTemplateMutation.mutate({ id: editingTemplate.id, data });
+    } else {
+      createTemplateMutation.mutate(data);
+    }
+  };
+
+  const handleEditTemplate = (template: MessageTemplate) => {
+    setEditingTemplate(template);
+    form.reset({
+      name: template.name,
+      template: template.template,
+      includeFields: template.includeFields || defaultFormValues.includeFields,
+      channelId: template.channelId,
+      isActive: template.isActive,
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsCreateModalOpen(false);
+    setEditingTemplate(null);
+    form.reset(defaultFormValues);
   };
   
   const handleDeleteTemplate = (templateId: string) => {
@@ -157,7 +238,7 @@ export default function TemplatesPage() {
             </p>
           </div>
           
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+          <Dialog open={isCreateModalOpen} onOpenChange={handleCloseModal}>
             <DialogTrigger asChild>
               <Button size="lg" data-testid="button-add-template">
                 <Plus className="mr-2 h-4 w-4" />
@@ -166,7 +247,9 @@ export default function TemplatesPage() {
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create New Template</DialogTitle>
+                <DialogTitle>
+                  {editingTemplate ? "Edit Template" : "Create New Template"}
+                </DialogTitle>
               </DialogHeader>
               
               <Form {...form}>
@@ -208,7 +291,7 @@ export default function TemplatesPage() {
                           </FormControl>
                           <FormMessage />
                           <p className="text-sm text-muted-foreground">
-                            Use variables: {"{pair}"}, {"{price}"}, {"{type}"}, {"{quantity}"}, {"{timestamp}"}, {"{profitLoss}"}
+                            Use variables: {"{pair}"}, {"{price}"}, {"{side}"}, {"{leverage}"}, {"{active_pos}"}, {"{avg_price}"}, {"{liquidation_price}"}, {"{mark_price}"}, {"{take_profit_trigger}"}, {"{stop_loss_trigger}"}, {"{profitLoss}"}, {"{timestamp}"}, {"{status}"}
                           </p>
                         </FormItem>
                       )}
@@ -217,14 +300,24 @@ export default function TemplatesPage() {
                     {/* Include Fields Configuration */}
                     <div className="space-y-3">
                       <FormLabel>Include Fields</FormLabel>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
                         {[
                           { key: 'pair', label: 'Trading Pair' },
-                          { key: 'price', label: 'Price' },
-                          { key: 'type', label: 'Trade Type' },
-                          { key: 'quantity', label: 'Quantity' },
+                          { key: 'price', label: 'Entry Price' },
+                          { key: 'side', label: 'Side (Buy/Sell)' },
+                          { key: 'leverage', label: 'Leverage' },
+                          { key: 'active_pos', label: 'Position Size' },
+                          { key: 'avg_price', label: 'Average Price' },
+                          { key: 'liquidation_price', label: 'Liquidation Price' },
+                          { key: 'mark_price', label: 'Mark Price' },
+                          { key: 'locked_margin', label: 'Locked Margin' },
+                          { key: 'take_profit_trigger', label: 'Take Profit' },
+                          { key: 'stop_loss_trigger', label: 'Stop Loss' },
+                          { key: 'profitLoss', label: 'P&L' },
                           { key: 'timestamp', label: 'Timestamp' },
-                          { key: 'profitLoss', label: 'Profit/Loss' },
+                          { key: 'status', label: 'Status' },
+                          { key: 'fee', label: 'Fee' },
+                          { key: 'margin_currency_short_name', label: 'Margin Currency' },
                         ].map(({ key, label }) => (
                           <FormField
                             key={key}
@@ -252,25 +345,22 @@ export default function TemplatesPage() {
                     <div className="flex space-x-4">
                       <Button
                         type="submit"
-                        disabled={createTemplateMutation.isPending}
+                        disabled={createTemplateMutation.isPending || editTemplateMutation.isPending}
                         data-testid="button-save-template"
                       >
-                        {createTemplateMutation.isPending ? (
+                        {(createTemplateMutation.isPending || editTemplateMutation.isPending) ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Creating...
+                            {editingTemplate ? "Updating..." : "Creating..."}
                           </>
                         ) : (
-                          "Create Template"
+                          editingTemplate ? "Update Template" : "Create Template"
                         )}
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => {
-                          setIsCreateModalOpen(false);
-                          form.reset(defaultFormValues);
-                        }}
+                        onClick={handleCloseModal}
                         data-testid="button-cancel-template"
                       >
                         Cancel
@@ -341,14 +431,23 @@ export default function TemplatesPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-lg">{template.name}</CardTitle>
-                    <AlertDialog open={deleteTemplateId === template.id} onOpenChange={(open) => !open && setDeleteTemplateId(null)}>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteTemplateId(template.id)}
-                          disabled={deleteTemplateMutation.isPending}
-                          data-testid={`button-delete-${template.id}`}
+                    <div className="flex space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditTemplate(template)}
+                        data-testid={`button-edit-${template.id}`}
+                      >
+                        <i className="fas fa-edit text-sm" />
+                      </Button>
+                      <AlertDialog open={deleteTemplateId === template.id} onOpenChange={(open) => !open && setDeleteTemplateId(null)}>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteTemplateId(template.id)}
+                            disabled={deleteTemplateMutation.isPending}
+                            data-testid={`button-delete-${template.id}`}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
