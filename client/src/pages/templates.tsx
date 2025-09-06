@@ -110,7 +110,7 @@ export default function TemplatesPage() {
   });
 
   // Generate preview with sample data
-  const generatePreview = (template: string, includeFields: Record<string, boolean>) => {
+  const generatePreview = (template: string, includeFields: Record<string, boolean> | unknown) => {
     const sampleData = {
       pair: "B-ETH_USDT",
       price: "₹4,205.67",
@@ -121,8 +121,14 @@ export default function TemplatesPage() {
     };
 
     let preview = template;
+    
+    // Type guard for includeFields
+    const fields = includeFields && typeof includeFields === 'object' && !Array.isArray(includeFields) 
+      ? includeFields as Record<string, boolean>
+      : {};
+    
     Object.entries(sampleData).forEach(([key, value]) => {
-      if (includeFields[key]) {
+      if (fields[key]) {
         preview = preview.replace(new RegExp(`{${key}}`, 'g'), value);
       }
     });
@@ -375,13 +381,15 @@ export default function TemplatesPage() {
                     </AlertDialog>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {Object.entries(template.includeFields).map(([field, included]) => 
-                      included && (
-                        <Badge key={field} variant="secondary" className="text-xs">
-                          {field}
-                        </Badge>
-                      )
-                    )}
+                    {template.includeFields && typeof template.includeFields === 'object' && !Array.isArray(template.includeFields) ? (
+                      Object.entries(template.includeFields as Record<string, boolean>)
+                        .filter(([_, included]) => included)
+                        .map(([field]) => (
+                          <Badge key={field} variant="secondary" className="text-xs">
+                            {field}
+                          </Badge>
+                        ))
+                    ) : null}
                   </div>
                 </CardHeader>
                 <CardContent>
