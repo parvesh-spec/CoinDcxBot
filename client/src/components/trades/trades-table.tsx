@@ -237,30 +237,7 @@ export default function TradesTable({
                     {formatTime(trade.createdAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onTradeSelect(trade)}
-                        className="text-blue-600 hover:text-blue-700 border-blue-200"
-                        data-testid={`button-view-trade-${trade.id}`}
-                      >
-                        <i className="fas fa-eye mr-1" />
-                        View
-                      </Button>
-                      {trade.status === "active" && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => onTradeSelect(trade)}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                          data-testid={`button-complete-trade-${trade.id}`}
-                        >
-                          <i className="fas fa-check mr-1" />
-                          Complete
-                        </Button>
-                      )}
-                    </div>
+                    {/* Actions column kept empty for future use */}
                   </td>
                 </tr>
               ))
