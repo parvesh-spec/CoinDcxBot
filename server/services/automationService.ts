@@ -1,0 +1,172 @@
+import { storage } from '../storage';
+import { telegramService } from './telegram';
+import { Trade, Automation, TelegramChannel, MessageTemplate, InsertSentMessage } from '../../shared/schema';
+
+export type AutomationTrigger = 'trade_registered' | 'trade_completed';
+
+export class AutomationService {
+  
+  /**
+   * Trigger automation for a trade event
+   * @param trade The trade that triggered the automation
+   * @param trigger The type of trigger (trade_registered/trade_completed)
+   */
+  async triggerAutomations(trade: Trade, trigger: AutomationTrigger): Promise<void> {
+    try {
+      console.log(`🤖 Checking automations for trigger: ${trigger}, trade: ${trade.tradeId}`);
+      
+      // Find all active automations for this trigger type
+      const automations = await storage.getAutomations();
+      const matchingAutomations = automations.filter(automation => 
+        automation.isActive && 
+        automation.triggerType === trigger
+      );
+      
+      console.log(`📋 Found ${matchingAutomations.length} matching automations for ${trigger}`);
+      
+      if (matchingAutomations.length === 0) {
+        console.log(`⚠️  No active automations found for trigger: ${trigger}`);
+        return;
+      }
+      
+      // Process each matching automation
+      for (const automation of matchingAutomations) {
+        await this.processAutomation(automation, trade, trigger);
+      }
+      
+      console.log(`✅ All automations processed for trade ${trade.tradeId}`);
+      
+    } catch (error) {
+      console.error(`❌ Error triggering automations for trade ${trade.tradeId}:`, error);
+    }
+  }
+  
+  /**
+   * Process a single automation - send message to channel using template
+   */
+  private async processAutomation(automation: Automation, trade: Trade, trigger: AutomationTrigger): Promise<void> {
+    try {
+      // Get channel and template details
+      const [channel, template] = await Promise.all([
+        storage.getTelegramChannel(automation.channelId),
+        storage.getMessageTemplate(automation.templateId)
+      ]);
+      
+      if (!channel || !channel.isActive) {
+        console.log(`⚠️  Channel not found or inactive for automation ${automation.id}`);
+        return;
+      }
+      
+      if (!template || !template.isActive) {
+        console.log(`⚠️  Template not found or inactive for automation ${automation.id}`);
+        return;
+      }
+      
+      console.log(`📤 Processing automation: ${automation.name} -> Channel: ${channel.name}, Template: ${template.name}`);
+      
+      // Generate message from template with trade data
+      const messageText = this.renderTemplate(template, trade);
+      
+      if (!messageText.trim()) {
+        console.log(`⚠️  Empty message generated for automation ${automation.id}, skipping`);
+        return;
+      }
+      
+      // Send message to Telegram
+      const result = await telegramService.sendMessage(channel.channelId, {
+        text: messageText,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      });
+      
+      // Record the result in database (both success and failure)
+      if (result.success && result.messageId) {
+        await storage.logSentMessage({
+          automationId: automation.id,
+          tradeId: trade.id,
+          channelId: channel.channelId,
+          telegramMessageId: result.messageId,
+          status: 'sent',
+          sentAt: new Date()
+        });
+        
+        console.log(`✅ Message sent successfully to ${channel.name} (Message ID: ${result.messageId})`);
+      } else {
+        // Log failed messages to database for debugging
+        await storage.logSentMessage({
+          automationId: automation.id,
+          tradeId: trade.id,
+          channelId: channel.channelId,
+          status: 'failed',
+          errorMessage: result.error || 'Unknown error',
+          sentAt: new Date()
+        });
+        
+        console.error(`❌ Failed to send message to ${channel.name}: ${result.error}`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error processing automation ${automation.id}:`, error);
+    }
+  }
+  
+  /**
+   * Render template with trade data - substitute variables like {pair}, {price}, etc.
+   */
+  private renderTemplate(template: MessageTemplate, trade: Trade): string {
+    let messageText = template.template;
+    
+    // HTML escape function for user-provided content
+    const htmlEscape = (text: string): string => {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+    
+    // Define available variables and their values (with HTML escaping for user content)
+    const variables: Record<string, string> = {
+      'pair': trade.pair || '',
+      'type': trade.type || '',
+      'price': trade.price ? `$${Number(trade.price).toFixed(4)}` : '',
+      'total': trade.total ? Number(trade.total).toFixed(4) : '',
+      'leverage': trade.leverage ? `${trade.leverage}x` : '',
+      'status': trade.status || '',
+      'tradeId': trade.tradeId || '',
+      'timestamp': trade.createdAt ? new Date(trade.createdAt).toLocaleString() : '',
+      'fee': trade.fee ? `$${Number(trade.fee).toFixed(4)}` : '$0.00',
+      'notes': trade.notes ? htmlEscape(trade.notes) : '' // HTML escape user notes
+    };
+    
+    // Filter variables based on template's includeFields setting
+    if (template.includeFields && Array.isArray(template.includeFields) && template.includeFields.length > 0) {
+      // Only include specified fields
+      const filteredVariables: Record<string, string> = {};
+      for (const field of template.includeFields as string[]) {
+        if (variables[field] !== undefined) {
+          filteredVariables[field] = variables[field];
+        }
+      }
+      // Replace variables with filtered set
+      for (const [key, value] of Object.entries(filteredVariables)) {
+        const placeholder = `{${key}}`;
+        messageText = messageText.replace(new RegExp(placeholder, 'g'), value);
+      }
+    } else {
+      // Include all variables (default behavior)
+      for (const [key, value] of Object.entries(variables)) {
+        const placeholder = `{${key}}`;
+        messageText = messageText.replace(new RegExp(placeholder, 'g'), value);
+      }
+    }
+    
+    // Remove any remaining unreplaced placeholders to avoid {placeholder} artifacts
+    messageText = messageText.replace(/{[^}]+}/g, '');
+    
+    return messageText;
+  }
+}
+
+export const automationService = new AutomationService();

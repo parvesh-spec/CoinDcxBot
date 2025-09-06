@@ -89,7 +89,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedTrade = await storage.completeTrade(trade.id, completionData);
-
+      if (!updatedTrade) {
+        return res.status(500).json({ message: "Failed to complete trade" });
+      }
+      
+      // Trigger automation for trade completion
+      await tradeMonitor.triggerTradeCompleted(updatedTrade.id);
+      
       res.json(updatedTrade);
     } catch (error) {
       console.error("Error completing trade:", error);

@@ -1,5 +1,5 @@
 import { coindcxService } from './coindcx';
-import { telegramService } from './telegram';
+import { automationService } from './automationService';
 import { storage } from '../storage';
 import * as cron from 'node-cron';
 
@@ -27,8 +27,8 @@ export class TradeMonitorService {
           const tradeData = coindcxService.transformTradeData(coindcxTrade);
           const savedTrade = await storage.createTrade(tradeData);
           
-          // Queue for posting to Telegram
-          await this.postTradeToTelegram(savedTrade);
+          // Trigger automation for trade registration
+          await automationService.triggerAutomations(savedTrade, 'trade_registered');
         }
       }
     } catch (error) {
@@ -36,52 +36,17 @@ export class TradeMonitorService {
     }
   }
 
-  private async postTradeToTelegram(trade: any) {
+  /**
+   * Trigger automation when trade status changes to completed
+   */
+  async triggerTradeCompleted(tradeId: string): Promise<void> {
     try {
-      // Get all active channels with their templates
-      const channels = await storage.getTelegramChannels();
-      const activeChannels = channels.filter((channel: any) => channel.isActive && channel.templateId);
-
-      console.log(`Found ${activeChannels.length} active channels with templates for trade ${trade.tradeId}`);
-
-      for (const channel of activeChannels) {
-        try {
-          // Get the template directly using channel's templateId
-          const template = await storage.getMessageTemplate(channel.templateId);
-
-          if (template && template.isActive) {
-            // Generate message using template
-            const message = telegramService.generateTradeMessage(
-              trade,
-              template.template,
-              template.includeFields
-            );
-
-            // Send to Telegram
-            const result = await telegramService.sendMessage(channel.channelId, {
-              text: message,
-              parse_mode: 'HTML',
-            });
-
-            if (result.success) {
-              console.log(`✅ Trade ${trade.tradeId} posted to channel ${channel.name}`);
-            } else {
-              console.error(`❌ Failed to post trade ${trade.tradeId} to channel ${channel.name}: ${result.error}`);
-            }
-          } else {
-            console.log(`⚠️  Channel ${channel.name} has no active template, skipping`);
-          }
-        } catch (channelError) {
-          console.error(`Error processing channel ${channel.name}:`, channelError);
-        }
+      const trade = await storage.getTrade(tradeId);
+      if (trade && trade.status === 'completed') {
+        await automationService.triggerAutomations(trade, 'trade_completed');
       }
-
-      console.log(`✅ Trade ${trade.tradeId} posted to all channels successfully`);
-      
     } catch (error) {
-      console.error(`Error posting trade ${trade.id} to Telegram:`, error);
-      // Note: With new system, we don't update status to 'failed' for posting errors
-      // The trade remains 'active' and will be available for manual completion
+      console.error(`Error triggering trade completed automation for ${tradeId}:`, error);
     }
   }
 
@@ -123,8 +88,8 @@ export class TradeMonitorService {
           tradeData.tradeId = uniqueTradeId; // Use unique ID
           const savedTrade = await storage.createTrade(tradeData);
           
-          // Queue for posting to Telegram
-          await this.postTradeToTelegram(savedTrade);
+          // Trigger automation for trade registration
+          await automationService.triggerAutomations(savedTrade, 'trade_registered');
           processedCount++;
         } else {
           console.log(`✅ Existing position: ${coindcxTrade.pair} (${uniqueTradeId})`);
