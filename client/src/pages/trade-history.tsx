@@ -164,9 +164,11 @@ export default function TradeHistoryPage() {
                 <div className="pt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground">Completed</p>
                   <p className="text-sm font-medium" data-testid={`text-time-${trade.id}`}>
-                    {trade.completedAt 
-                      ? formatDistanceToNow(new Date(trade.completedAt), { addSuffix: true })
-                      : formatDistanceToNow(new Date(trade.createdAt), { addSuffix: true })
+                    {trade.updatedAt 
+                      ? formatDistanceToNow(new Date(trade.updatedAt), { addSuffix: true })
+                      : trade.createdAt 
+                        ? formatDistanceToNow(new Date(trade.createdAt), { addSuffix: true })
+                        : 'Unknown'
                     }
                   </p>
                 </div>
