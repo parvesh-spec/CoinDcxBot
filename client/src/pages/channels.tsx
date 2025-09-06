@@ -50,10 +50,18 @@ export default function ChannelsPage() {
   });
 
   // Fetch channels
-  const { data: channelsResponse = [], isLoading: channelsLoading } = useQuery<Channel[]>({
+  const { data: channelsResponse = [], isLoading: channelsLoading, error: channelsError } = useQuery<Channel[]>({
     queryKey: ["/api/channels"],
     queryFn: () => apiRequest("GET", "/api/channels"),
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    staleTime: 0, // Always fetch fresh data
   });
+  
+  // Debug logging
+  console.log("Channels Response:", channelsResponse);
+  console.log("Channels Loading:", channelsLoading);
+  console.log("Channels Error:", channelsError);
   
   // Ensure channels is always an array
   const channels = Array.isArray(channelsResponse) ? channelsResponse : [];
@@ -69,8 +77,11 @@ export default function ChannelsPage() {
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/channels", data);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Channel created successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      // Force refetch
+      queryClient.refetchQueries({ queryKey: ["/api/channels"] });
       setNewChannel({ name: "", channelId: "", description: "" });
       setIsAddingChannel(false);
       toast({
