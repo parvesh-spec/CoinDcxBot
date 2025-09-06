@@ -510,6 +510,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public routes (no authentication required)
+  app.get('/api/public/trades/completed', async (req, res) => {
+    try {
+      const { limit = '50', offset = '0' } = req.query;
+      
+      // Safe integer parsing with defaults
+      let parsedLimit = parseInt(limit as string);
+      let parsedOffset = parseInt(offset as string);
+      
+      if (isNaN(parsedLimit) || parsedLimit <= 0 || parsedLimit > 100) {
+        parsedLimit = 50;
+      }
+      
+      if (isNaN(parsedOffset) || parsedOffset < 0) {
+        parsedOffset = 0;
+      }
+      
+      // Fetch only completed trades for public display
+      const result = await storage.getTrades({
+        status: 'completed',
+        limit: parsedLimit,
+        offset: parsedOffset,
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching public completed trades:", error);
+      res.status(500).json({ message: "Failed to fetch completed trades" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

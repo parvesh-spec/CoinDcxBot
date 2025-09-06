@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
+import TradeHistoryPage from "@/pages/trade-history";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -13,6 +14,9 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes - no authentication required */}
+      <Route path="/tradehistory" component={TradeHistoryPage} />
+      
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={AuthPage} />
       ) : (
