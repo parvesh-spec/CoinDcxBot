@@ -180,15 +180,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Channel not found' });
       }
 
-      // Send test message to Telegram
-      // For now, just simulate success - you can implement actual Telegram API call later
-      console.log(`Sending test message to channel ${channel.name} (${channel.channelId}):`, message);
+      // Send actual message to Telegram
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return res.status(500).json({ message: 'Telegram bot token not configured' });
+      }
+
+      const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      const telegramResponse = await fetch(telegramApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: channel.channelId,
+          text: message,
+          parse_mode: 'HTML'
+        }),
+      });
+
+      if (!telegramResponse.ok) {
+        const errorData = await telegramResponse.json();
+        console.error('Telegram API error:', errorData);
+        return res.status(500).json({ 
+          message: 'Failed to send message to Telegram',
+          error: errorData.description || 'Unknown Telegram API error'
+        });
+      }
+
+      const telegramData = await telegramResponse.json();
+      console.log(`✅ Test message sent successfully to channel ${channel.name} (${channel.channelId})`);
       
       res.json({ 
         success: true, 
         message: 'Test message sent successfully',
         channelName: channel.name,
-        channelId: channel.channelId
+        channelId: channel.channelId,
+        telegramMessageId: telegramData.result?.message_id
       });
     } catch (error) {
       console.error('Error sending test message:', error);
