@@ -21,6 +21,7 @@ function Router() {
           <Route path="/trades" component={Dashboard} />
           <Route path="/templates" component={Dashboard} />
           <Route path="/channels" component={Dashboard} />
+          <Route path="/automation" component={Dashboard} />
         </>
       )}
       <Route component={NotFound} />
