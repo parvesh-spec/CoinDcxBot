@@ -50,10 +50,13 @@ export default function ChannelsPage() {
   });
 
   // Fetch channels
-  const { data: channels = [], isLoading: channelsLoading } = useQuery<Channel[]>({
+  const { data: channelsResponse = [], isLoading: channelsLoading } = useQuery<Channel[]>({
     queryKey: ["/api/channels"],
     queryFn: () => apiRequest("GET", "/api/channels"),
   });
+  
+  // Ensure channels is always an array
+  const channels = Array.isArray(channelsResponse) ? channelsResponse : [];
 
   // Fetch templates for dropdown
   const { data: templates = [] } = useQuery<Template[]>({
@@ -260,11 +263,11 @@ export default function ChannelsPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Active Channels ({channels.filter((c) => c.isActive).length})
+            Active Channels ({Array.isArray(channels) ? channels.filter((c) => c.isActive).length : 0})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {channels.length === 0 ? (
+          {!Array.isArray(channels) || channels.length === 0 ? (
             <div className="text-center py-8">
               <i className="fas fa-comments text-4xl text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">
@@ -286,7 +289,7 @@ export default function ChannelsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {channels.map((channel) => (
+                {Array.isArray(channels) && channels.map((channel) => (
                   <TableRow key={channel.id}>
                     <TableCell>
                       <div>
