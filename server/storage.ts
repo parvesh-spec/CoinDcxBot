@@ -11,6 +11,7 @@ import {
   type InsertMessageTemplate,
   type Trade,
   type InsertTrade,
+  type CompleteTrade,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, ilike } from "drizzle-orm";
@@ -47,11 +48,11 @@ export interface IStorage {
   getTradeByTradeId(tradeId: string): Promise<Trade | undefined>;
   createTrade(trade: InsertTrade): Promise<Trade>;
   updateTrade(id: string, trade: Partial<InsertTrade>): Promise<Trade | undefined>;
+  completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined>;
   getTradeStats(): Promise<{
     total: number;
-    posted: number;
-    pending: number;
-    failed: number;
+    active: number;
+    completed: number;
   }>;
 }
 
@@ -220,25 +221,36 @@ export class DatabaseStorage implements IStorage {
 
   async getTradeStats(): Promise<{
     total: number;
-    posted: number;
-    pending: number;
-    failed: number;
+    active: number;
+    completed: number;
   }> {
     const [stats] = await db
       .select({
         total: sql<number>`count(*)`,
-        posted: sql<number>`count(*) filter (where status = 'posted')`,
-        pending: sql<number>`count(*) filter (where status = 'pending')`,
-        failed: sql<number>`count(*) filter (where status = 'failed')`
+        active: sql<number>`count(*) filter (where status = 'active')`,
+        completed: sql<number>`count(*) filter (where status = 'completed')`
       })
       .from(trades);
 
     return {
       total: stats.total || 0,
-      posted: stats.posted || 0,
-      pending: stats.pending || 0,
-      failed: stats.failed || 0
+      active: stats.active || 0,
+      completed: stats.completed || 0
     };
+  }
+
+  async completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined> {
+    const [updatedTrade] = await db
+      .update(trades)
+      .set({ 
+        status: 'completed',
+        completionReason: completion.completionReason,
+        notes: completion.notes,
+        updatedAt: new Date() 
+      })
+      .where(eq(trades.id, id))
+      .returning();
+    return updatedTrade;
   }
 }
 

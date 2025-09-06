@@ -76,37 +76,16 @@ export class TradeMonitorService {
         }
       }
 
-      // Update trade status to posted after all channels processed
-      await storage.updateTrade(trade.id, {
-        status: 'posted',
-      });
+      console.log(`✅ Trade ${trade.tradeId} posted to all channels successfully`);
       
     } catch (error) {
       console.error(`Error posting trade ${trade.id} to Telegram:`, error);
-      await storage.updateTrade(trade.id, {
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        retryCount: (trade.retryCount || 0) + 1,
-      });
+      // Note: With new system, we don't update status to 'failed' for posting errors
+      // The trade remains 'active' and will be available for manual completion
     }
   }
 
-  async retryFailedTrades() {
-    try {
-      const { trades: failedTrades } = await storage.getTrades({
-        status: 'failed',
-        limit: 20,
-      });
-
-      for (const trade of failedTrades) {
-        if ((trade.retryCount || 0) < 3) {
-          await this.postTradeToTelegram(trade);
-        }
-      }
-    } catch (error) {
-      console.error('Error retrying failed trades:', error);
-    }
-  }
+  // No longer needed - trades stay 'active' until manually completed
 
   // Manual sync method - no automatic cron jobs
   async manualSync(): Promise<{ success: boolean; message: string; newTrades?: number }> {

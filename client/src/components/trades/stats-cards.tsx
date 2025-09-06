@@ -17,25 +17,18 @@ export default function StatsCards() {
       testId: "stat-total-trades",
     },
     {
-      title: "Posted Successfully",
-      value: (stats as any)?.posted || 0,
+      title: "Active",
+      value: (stats as any)?.active || 0,
+      icon: "fas fa-play",
+      color: "text-blue-500",
+      testId: "stat-active-trades",
+    },
+    {
+      title: "Completed",
+      value: (stats as any)?.completed || 0,
       icon: "fas fa-check-circle",
       color: "text-green-500",
-      testId: "stat-posted-trades",
-    },
-    {
-      title: "Pending",
-      value: (stats as any)?.pending || 0,
-      icon: "fas fa-clock",
-      color: "text-yellow-500",
-      testId: "stat-pending-trades",
-    },
-    {
-      title: "Failed",
-      value: (stats as any)?.failed || 0,
-      icon: "fas fa-exclamation-triangle",
-      color: "text-red-500",
-      testId: "stat-failed-trades",
+      testId: "stat-completed-trades",
     },
   ];
 

@@ -75,11 +75,10 @@ export const trades = pgTable("trades", {
   takeProfit2: decimal("take_profit_2", { precision: 20, scale: 8 }),
   takeProfit3: decimal("take_profit_3", { precision: 20, scale: 8 }),
   stopLossTrigger: decimal("stop_loss_trigger", { precision: 20, scale: 8 }),
-  status: varchar("status").notNull().default('pending'), // 'pending', 'posted', 'failed'
+  status: varchar("status").notNull().default('active'), // 'active', 'completed'
+  completionReason: varchar("completion_reason"), // 'stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'
+  notes: text("notes"), // User notes when marking as completed
   channelId: varchar("channel_id").references(() => telegramChannels.id),
-  messageId: varchar("message_id"), // Telegram message ID after posting
-  errorMessage: text("error_message"),
-  retryCount: integer("retry_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -145,6 +144,13 @@ export const insertTradeSchema = createInsertSchema(trades).omit({
   updatedAt: true,
 });
 
+export const completeTradeSchema = z.object({
+  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'], {
+    required_error: "Please select completion reason",
+  }),
+  notes: z.string().optional(),
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
@@ -156,3 +162,4 @@ export type MessageTemplate = typeof messageTemplates.$inferSelect;
 export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
 export type Trade = typeof trades.$inferSelect;
 export type InsertTrade = z.infer<typeof insertTradeSchema>;
+export type CompleteTrade = z.infer<typeof completeTradeSchema>;

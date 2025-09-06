@@ -5,7 +5,7 @@ import { setupAuth, isAuthenticated } from "./auth";
 import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -74,23 +74,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/trades/:id/retry', isAuthenticated, async (req, res) => {
+  app.post('/api/trades/:id/complete', isAuthenticated, async (req, res) => {
     try {
       const trade = await storage.getTrade(req.params.id);
       if (!trade) {
         return res.status(404).json({ message: "Trade not found" });
       }
 
-      // Reset status to pending to trigger retry
-      await storage.updateTrade(trade.id, {
-        status: 'pending',
-        errorMessage: null,
-      });
+      if (trade.status !== 'active') {
+        return res.status(400).json({ message: "Only active trades can be completed" });
+      }
 
-      res.json({ message: "Trade queued for retry" });
+      const completionData = completeTradeSchema.parse(req.body);
+      const updatedTrade = await storage.completeTrade(trade.id, completionData);
+
+      res.json(updatedTrade);
     } catch (error) {
-      console.error("Error retrying trade:", error);
-      res.status(500).json({ message: "Failed to retry trade" });
+      console.error("Error completing trade:", error);
+      res.status(500).json({ message: "Failed to complete trade" });
     }
   });
 

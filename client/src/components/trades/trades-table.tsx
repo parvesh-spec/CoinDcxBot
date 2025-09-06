@@ -43,35 +43,10 @@ export default function TradesTable({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const retryMutation = useMutation({
-    mutationFn: async (tradeId: string) => {
-      await apiRequest("POST", `/api/trades/${tradeId}/retry`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trades"] });
-      toast({
-        title: "Success",
-        description: "Trade queued for retry",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to retry trade",
-        variant: "destructive",
-      });
-    },
-  });
+  // No longer needed - completion is handled in the detail modal
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "posted":
-        return (
-          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-            <i className="fas fa-check mr-1" />
-            Posted
-          </Badge>
-        );
       case "active":
         return (
           <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
@@ -79,18 +54,11 @@ export default function TradesTable({
             Active
           </Badge>
         );
-      case "pending":
+      case "completed":
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
-            <i className="fas fa-clock mr-1" />
-            Pending
-          </Badge>
-        );
-      case "failed":
-        return (
-          <Badge variant="destructive">
-            <i className="fas fa-times mr-1" />
-            Failed
+          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+            <i className="fas fa-check mr-1" />
+            Completed
           </Badge>
         );
       default:
@@ -263,16 +231,15 @@ export default function TradesTable({
                     >
                       <i className="fas fa-eye" />
                     </Button>
-                    {trade.status === "failed" && (
+                    {trade.status === "active" && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => retryMutation.mutate(trade.id)}
-                        disabled={retryMutation.isPending}
-                        className="text-muted-foreground hover:text-foreground"
-                        data-testid={`button-retry-trade-${trade.id}`}
+                        onClick={() => onTradeSelect(trade)}
+                        className="text-green-600 hover:text-green-700"
+                        data-testid={`button-complete-trade-${trade.id}`}
                       >
-                        <i className="fas fa-redo" />
+                        <i className="fas fa-check" />
                       </Button>
                     )}
                   </td>
