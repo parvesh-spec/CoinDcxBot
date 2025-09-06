@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
-import { Plus, Trash2, FileText, Loader2 } from "lucide-react";
+import { Plus, Trash2, FileText, Loader2, Edit } from "lucide-react";
 import { MessageTemplate, insertMessageTemplateSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -438,7 +438,7 @@ export default function TemplatesPage() {
                         onClick={() => handleEditTemplate(template)}
                         data-testid={`button-edit-${template.id}`}
                       >
-                        <i className="fas fa-edit text-sm" />
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <AlertDialog open={deleteTemplateId === template.id} onOpenChange={(open) => !open && setDeleteTemplateId(null)}>
                         <AlertDialogTrigger asChild>
