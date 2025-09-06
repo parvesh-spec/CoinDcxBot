@@ -142,6 +142,9 @@ export const insertTradeSchema = createInsertSchema(trades).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  status: z.enum(['active', 'completed']).optional(),
+  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit']).optional(),
 });
 
 export const completeTradeSchema = z.object({

@@ -76,6 +76,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/trades/:id/complete', isAuthenticated, async (req, res) => {
     try {
+      // Parse and validate request body first
+      const completionData = completeTradeSchema.parse(req.body);
+      
       const trade = await storage.getTrade(req.params.id);
       if (!trade) {
         return res.status(404).json({ message: "Trade not found" });
@@ -85,12 +88,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Only active trades can be completed" });
       }
 
-      const completionData = completeTradeSchema.parse(req.body);
       const updatedTrade = await storage.completeTrade(trade.id, completionData);
 
       res.json(updatedTrade);
     } catch (error) {
       console.error("Error completing trade:", error);
+      
+      // Handle Zod validation errors
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.issues 
+        });
+      }
+      
       res.status(500).json({ message: "Failed to complete trade" });
     }
   });

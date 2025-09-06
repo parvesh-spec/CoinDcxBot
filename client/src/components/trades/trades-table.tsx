@@ -17,6 +17,8 @@ interface Trade {
   takeProfit3?: string | null;
   stopLossTrigger?: string | null;
   status: string;
+  completionReason?: string | null;
+  notes?: string | null;
   createdAt: string;
   channel?: {
     name: string;
@@ -216,32 +218,49 @@ export default function TradesTable({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(trade.status)}
+                    {trade.status === "active" ? (
+                      <button
+                        className="cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                        onClick={() => onTradeSelect(trade)}
+                        aria-label="Click to complete trade"
+                        data-testid={`status-badge-${trade.id}`}
+                      >
+                        {getStatusBadge(trade.status)}
+                      </button>
+                    ) : (
+                      <div data-testid={`status-badge-${trade.id}`}>
+                        {getStatusBadge(trade.status)}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {formatTime(trade.createdAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onTradeSelect(trade)}
-                      className="text-primary hover:text-primary/80 mr-2"
-                      data-testid={`button-view-trade-${trade.id}`}
-                    >
-                      <i className="fas fa-eye" />
-                    </Button>
-                    {trade.status === "active" && (
+                    <div className="flex items-center justify-end space-x-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => onTradeSelect(trade)}
-                        className="text-green-600 hover:text-green-700"
-                        data-testid={`button-complete-trade-${trade.id}`}
+                        className="text-blue-600 hover:text-blue-700 border-blue-200"
+                        data-testid={`button-view-trade-${trade.id}`}
                       >
-                        <i className="fas fa-check" />
+                        <i className="fas fa-eye mr-1" />
+                        View
                       </Button>
-                    )}
+                      {trade.status === "active" && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => onTradeSelect(trade)}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          data-testid={`button-complete-trade-${trade.id}`}
+                        >
+                          <i className="fas fa-check mr-1" />
+                          Complete
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
