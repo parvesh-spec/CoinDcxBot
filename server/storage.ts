@@ -3,6 +3,8 @@ import {
   telegramChannels,
   messageTemplates,
   trades,
+  automations,
+  sentMessages,
   type User,
   type InsertUser,
   type TelegramChannel,
@@ -12,6 +14,10 @@ import {
   type Trade,
   type InsertTrade,
   type CompleteTrade,
+  type Automation,
+  type InsertAutomation,
+  type SentMessage,
+  type InsertSentMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, ilike } from "drizzle-orm";
@@ -54,6 +60,21 @@ export interface IStorage {
     active: number;
     completed: number;
   }>;
+
+  // Automation operations
+  getAutomations(): Promise<any[]>; // Returns automations with channel and template names
+  getAutomation(id: string): Promise<Automation | undefined>;
+  createAutomation(automation: InsertAutomation): Promise<Automation>;
+  updateAutomation(id: string, automation: Partial<InsertAutomation>): Promise<Automation | undefined>;
+  deleteAutomation(id: string): Promise<boolean>;
+
+  // Sent message operations
+  getSentMessages(filters?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]>; // Returns sent messages with automation and trade details
+  logSentMessage(message: InsertSentMessage): Promise<SentMessage>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -251,6 +272,108 @@ export class DatabaseStorage implements IStorage {
       .where(eq(trades.id, id))
       .returning();
     return updatedTrade;
+  }
+
+  // Automation operations
+  async getAutomations(): Promise<any[]> {
+    return await db
+      .select({
+        id: automations.id,
+        name: automations.name,
+        channelId: automations.channelId,
+        templateId: automations.templateId,
+        triggerType: automations.triggerType,
+        isActive: automations.isActive,
+        createdAt: automations.createdAt,
+        updatedAt: automations.updatedAt,
+        channel: {
+          name: telegramChannels.name,
+        },
+        template: {
+          name: messageTemplates.name,
+        },
+      })
+      .from(automations)
+      .leftJoin(telegramChannels, eq(automations.channelId, telegramChannels.id))
+      .leftJoin(messageTemplates, eq(automations.templateId, messageTemplates.id))
+      .orderBy(desc(automations.createdAt));
+  }
+
+  async getAutomation(id: string): Promise<Automation | undefined> {
+    const [automation] = await db.select().from(automations).where(eq(automations.id, id));
+    return automation;
+  }
+
+  async createAutomation(automation: InsertAutomation): Promise<Automation> {
+    const [newAutomation] = await db.insert(automations).values(automation).returning();
+    return newAutomation;
+  }
+
+  async updateAutomation(id: string, automation: Partial<InsertAutomation>): Promise<Automation | undefined> {
+    const [updatedAutomation] = await db
+      .update(automations)
+      .set({ ...automation, updatedAt: new Date() })
+      .where(eq(automations.id, id))
+      .returning();
+    return updatedAutomation;
+  }
+
+  async deleteAutomation(id: string): Promise<boolean> {
+    const result = await db.delete(automations).where(eq(automations.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Sent message operations
+  async getSentMessages(filters?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]> {
+    const { status, limit = 100, offset = 0 } = filters || {};
+
+    let conditions = [];
+    
+    if (status) {
+      conditions.push(eq(sentMessages.status, status));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    return await db
+      .select({
+        id: sentMessages.id,
+        automationId: sentMessages.automationId,
+        tradeId: sentMessages.tradeId,
+        telegramMessageId: sentMessages.telegramMessageId,
+        channelId: sentMessages.channelId,
+        status: sentMessages.status,
+        errorMessage: sentMessages.errorMessage,
+        sentAt: sentMessages.sentAt,
+        createdAt: sentMessages.createdAt,
+        automation: {
+          name: automations.name,
+        },
+        trade: {
+          pair: trades.pair,
+          type: trades.type,
+        },
+        channel: {
+          name: telegramChannels.name,
+        },
+      })
+      .from(sentMessages)
+      .leftJoin(automations, eq(sentMessages.automationId, automations.id))
+      .leftJoin(trades, eq(sentMessages.tradeId, trades.id))
+      .leftJoin(telegramChannels, eq(sentMessages.channelId, telegramChannels.channelId))
+      .where(whereClause)
+      .orderBy(desc(sentMessages.sentAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async logSentMessage(message: InsertSentMessage): Promise<SentMessage> {
+    const [newMessage] = await db.insert(sentMessages).values(message).returning();
+    return newMessage;
   }
 }
 

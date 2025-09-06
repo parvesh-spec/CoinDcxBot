@@ -6,16 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Settings, Send, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { Automation, SentMessage } from "@shared/schema";
 
-// Types
-interface Automation {
-  id: string;
-  name: string;
-  channelId: string;
-  templateId: string;
-  triggerType: "trade_registered" | "trade_completed";
-  isActive: boolean;
-  createdAt: string;
+// Extended types with relations for API responses
+interface AutomationWithRelations extends Automation {
   channel?: {
     name: string;
   };
@@ -24,21 +18,16 @@ interface Automation {
   };
 }
 
-interface SentMessage {
-  id: string;
-  automationId: string;
-  tradeId: string;
-  telegramMessageId: string;
-  channelId: string;
-  status: "sent" | "failed" | "pending";
-  errorMessage?: string;
-  sentAt: string;
+interface SentMessageWithRelations extends SentMessage {
   automation?: {
     name: string;
   };
   trade?: {
     pair: string;
     type: string;
+  };
+  channel?: {
+    name: string;
   };
 }
 
@@ -47,23 +36,13 @@ export default function AutomationPage() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Fetch automations
-  const { data: automations = [], isLoading: automationsLoading } = useQuery({
+  const { data: automations = [], isLoading: automationsLoading } = useQuery<AutomationWithRelations[]>({
     queryKey: ["/api/automations"],
-    queryFn: async () => {
-      const response = await fetch("/api/automations", { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch automations");
-      return response.json() as Promise<Automation[]>;
-    },
   });
 
   // Fetch sent messages history
-  const { data: sentMessages = [], isLoading: messagesLoading } = useQuery({
+  const { data: sentMessages = [], isLoading: messagesLoading } = useQuery<SentMessageWithRelations[]>({
     queryKey: ["/api/sent-messages"],
-    queryFn: async () => {
-      const response = await fetch("/api/sent-messages", { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch sent messages");
-      return response.json() as Promise<SentMessage[]>;
-    },
   });
 
   const getTriggerBadge = (triggerType: string) => {
@@ -238,13 +217,13 @@ export default function AutomationPage() {
                         {message.trade ? `${message.trade.pair} (${message.trade.type.toUpperCase()})` : "Unknown"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                        {message.channelId}
+                        {message.channel?.name || message.channelId}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(message.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(message.sentAt), { addSuffix: true })}
+                        {message.sentAt ? formatDistanceToNow(new Date(message.sentAt), { addSuffix: true }) : 'Unknown'}
                       </td>
                     </tr>
                   ))}

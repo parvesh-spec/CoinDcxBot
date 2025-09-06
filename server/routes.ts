@@ -5,7 +5,7 @@ import { setupAuth, isAuthenticated } from "./auth";
 import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, insertAutomationSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -322,6 +322,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending test message:", error);
       res.status(500).json({ message: "Failed to send test message" });
+    }
+  });
+
+  // Automation routes
+  app.get('/api/automations', isAuthenticated, async (req, res) => {
+    try {
+      const automations = await storage.getAutomations();
+      res.json(automations);
+    } catch (error) {
+      console.error("Error fetching automations:", error);
+      res.status(500).json({ message: "Failed to fetch automations" });
+    }
+  });
+
+  app.post('/api/automations', isAuthenticated, async (req, res) => {
+    try {
+      const automationData = insertAutomationSchema.parse(req.body);
+      
+      // Verify channel and template exist
+      const channel = await storage.getTelegramChannel(automationData.channelId);
+      const template = await storage.getMessageTemplate(automationData.templateId);
+      
+      if (!channel) {
+        return res.status(400).json({ message: "Selected channel does not exist" });
+      }
+      
+      if (!template) {
+        return res.status(400).json({ message: "Selected template does not exist" });
+      }
+      
+      if (!channel.isActive) {
+        return res.status(400).json({ message: "Selected channel is not active" });
+      }
+      
+      if (!template.isActive) {
+        return res.status(400).json({ message: "Selected template is not active" });
+      }
+      
+      const automation = await storage.createAutomation(automationData);
+      res.status(201).json(automation);
+    } catch (error) {
+      console.error("Error creating automation:", error);
+      
+      // Handle Zod validation errors
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.issues 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to create automation" });
+    }
+  });
+
+  app.patch('/api/automations/:id', isAuthenticated, async (req, res) => {
+    try {
+      const updates = insertAutomationSchema.partial().parse(req.body);
+      const automation = await storage.updateAutomation(req.params.id, updates);
+      
+      if (!automation) {
+        return res.status(404).json({ message: "Automation not found" });
+      }
+      
+      res.json(automation);
+    } catch (error) {
+      console.error("Error updating automation:", error);
+      
+      // Handle Zod validation errors
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.issues 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to update automation" });
+    }
+  });
+
+  app.delete('/api/automations/:id', isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deleteAutomation(req.params.id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Automation not found" });
+      }
+      
+      res.json({ message: "Automation deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting automation:", error);
+      res.status(500).json({ message: "Failed to delete automation" });
+    }
+  });
+
+  // Sent messages routes
+  app.get('/api/sent-messages', isAuthenticated, async (req, res) => {
+    try {
+      const { status, limit, offset } = req.query;
+      
+      // Safe integer parsing with defaults
+      let parsedLimit = 100;
+      let parsedOffset = 0;
+      
+      if (limit) {
+        const limitNum = parseInt(limit as string);
+        if (!isNaN(limitNum) && limitNum > 0 && limitNum <= 1000) {
+          parsedLimit = limitNum;
+        }
+      }
+      
+      if (offset) {
+        const offsetNum = parseInt(offset as string);
+        if (!isNaN(offsetNum) && offsetNum >= 0) {
+          parsedOffset = offsetNum;
+        }
+      }
+      
+      const messages = await storage.getSentMessages({
+        status: status as string,
+        limit: parsedLimit,
+        offset: parsedOffset,
+      });
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching sent messages:", error);
+      res.status(500).json({ message: "Failed to fetch sent messages" });
     }
   });
 
