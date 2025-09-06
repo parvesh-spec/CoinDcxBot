@@ -102,6 +102,7 @@ export const sentMessages = pgTable("sent_messages", {
   tradeId: varchar("trade_id").notNull().references(() => trades.id),
   telegramMessageId: varchar("telegram_message_id"), // Telegram's message ID
   channelId: varchar("channel_id").notNull(), // Telegram channel ID
+  messageText: text("message_text"), // The actual message content sent
   status: varchar("status").notNull().default('pending'), // 'sent', 'failed', 'pending'
   errorMessage: text("error_message"), // Error details if failed
   sentAt: timestamp("sent_at").defaultNow(),

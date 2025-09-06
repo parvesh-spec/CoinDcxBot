@@ -3,11 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Settings, Send, AlertCircle } from "lucide-react";
+import { Plus, Settings, Send, AlertCircle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Automation, SentMessage } from "@shared/schema";
 import AddAutomationModal from "@/components/automation/add-automation-modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Extended types with relations for API responses
 interface AutomationWithRelations extends Automation {
@@ -35,6 +41,7 @@ interface SentMessageWithRelations extends SentMessage {
 export default function AutomationPage() {
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [viewMessage, setViewMessage] = useState<{text: string, title: string} | null>(null);
 
   // Fetch automations
   const { data: automations = [], isLoading: automationsLoading } = useQuery<AutomationWithRelations[]>({
@@ -206,6 +213,9 @@ export default function AutomationPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Sent At
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-background divide-y divide-border">
@@ -226,6 +236,22 @@ export default function AutomationPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                         {message.sentAt ? formatDistanceToNow(new Date(message.sentAt), { addSuffix: true }) : 'Unknown'}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {message.messageText && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setViewMessage({
+                              text: message.messageText || '',
+                              title: `Message to ${message.channel?.name || 'Channel'}`
+                            })}
+                            data-testid={`button-view-message-${message.id}`}
+                            className="hover:bg-muted"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -240,6 +266,22 @@ export default function AutomationPage() {
         isOpen={showAddModal} 
         onClose={() => setShowAddModal(false)} 
       />
+      
+      {/* View Message Dialog */}
+      <Dialog open={!!viewMessage} onOpenChange={() => setViewMessage(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{viewMessage?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="bg-muted p-4 rounded-lg">
+              <pre className="whitespace-pre-wrap text-sm font-mono text-foreground">
+                {viewMessage?.text}
+              </pre>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

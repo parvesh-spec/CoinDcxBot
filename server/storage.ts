@@ -346,6 +346,7 @@ export class DatabaseStorage implements IStorage {
         tradeId: sentMessages.tradeId,
         telegramMessageId: sentMessages.telegramMessageId,
         channelId: sentMessages.channelId,
+        messageText: sentMessages.messageText,
         status: sentMessages.status,
         errorMessage: sentMessages.errorMessage,
         sentAt: sentMessages.sentAt,

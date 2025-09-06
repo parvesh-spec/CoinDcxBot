@@ -72,37 +72,54 @@ export class AutomationService {
         return;
       }
       
-      // Send message to Telegram
-      const result = await telegramService.sendMessage(channel.channelId, {
-        text: messageText,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true
-      });
-      
-      // Record the result in database (both success and failure)
-      if (result.success && result.messageId) {
-        await storage.logSentMessage({
-          automationId: automation.id,
-          tradeId: trade.id,
-          channelId: channel.channelId,
-          telegramMessageId: result.messageId,
-          status: 'sent',
-          sentAt: new Date()
+      // Send message to Telegram with exception handling
+      try {
+        const result = await telegramService.sendMessage(channel.channelId, {
+          text: messageText,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true
         });
         
-        console.log(`✅ Message sent successfully to ${channel.name} (Message ID: ${result.messageId})`);
-      } else {
-        // Log failed messages to database for debugging
+        // Record the result in database (both success and failure)
+        if (result.success && result.messageId) {
+          await storage.logSentMessage({
+            automationId: automation.id,
+            tradeId: trade.id,
+            channelId: channel.channelId,
+            telegramMessageId: result.messageId,
+            messageText: messageText,
+            status: 'sent',
+            sentAt: new Date()
+          });
+          
+          console.log(`✅ Message sent successfully to ${channel.name} (Message ID: ${result.messageId})`);
+        } else {
+          // Log failed messages to database for debugging
+          await storage.logSentMessage({
+            automationId: automation.id,
+            tradeId: trade.id,
+            channelId: channel.channelId,
+            messageText: messageText,
+            status: 'failed',
+            errorMessage: result.error || 'Unknown error',
+            sentAt: new Date()
+          });
+          
+          console.error(`❌ Failed to send message to ${channel.name}: ${result.error}`);
+        }
+      } catch (error) {
+        // Handle thrown exceptions (network errors, 429 rate limits, etc.)
         await storage.logSentMessage({
           automationId: automation.id,
           tradeId: trade.id,
           channelId: channel.channelId,
+          messageText: messageText,
           status: 'failed',
-          errorMessage: result.error || 'Unknown error',
+          errorMessage: error instanceof Error ? error.message : 'Network or API error',
           sentAt: new Date()
         });
         
-        console.error(`❌ Failed to send message to ${channel.name}: ${result.error}`);
+        console.error(`❌ Exception sending message to ${channel.name}:`, error);
       }
       
     } catch (error) {
@@ -126,18 +143,22 @@ export class AutomationService {
         .replace(/'/g, '&#039;');
     };
     
-    // Define available variables and their values (with HTML escaping for user content)
+    // Define available variables and their values (with HTML escaping for all string content)
     const variables: Record<string, string> = {
-      'pair': trade.pair || '',
-      'type': trade.type || '',
+      'pair': htmlEscape(trade.pair || ''),
+      'type': htmlEscape(trade.type || ''),
       'price': trade.price ? `$${Number(trade.price).toFixed(4)}` : '',
       'total': trade.total ? Number(trade.total).toFixed(4) : '',
       'leverage': trade.leverage ? `${trade.leverage}x` : '',
-      'status': trade.status || '',
-      'tradeId': trade.tradeId || '',
-      'timestamp': trade.createdAt ? new Date(trade.createdAt).toLocaleString() : '',
+      'status': htmlEscape(trade.status || ''),
+      'tradeId': htmlEscape(trade.tradeId || ''),
+      'timestamp': trade.createdAt ? new Date(trade.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
       'fee': trade.fee ? `$${Number(trade.fee).toFixed(4)}` : '$0.00',
-      'notes': trade.notes ? htmlEscape(trade.notes) : '' // HTML escape user notes
+      'stopLoss': trade.stopLossTrigger ? `$${Number(trade.stopLossTrigger).toFixed(4)}` : '',
+      'takeProfit1': trade.takeProfitTrigger ? `$${Number(trade.takeProfitTrigger).toFixed(4)}` : '',
+      'takeProfit2': trade.takeProfit2 ? `$${Number(trade.takeProfit2).toFixed(4)}` : '',
+      'takeProfit3': trade.takeProfit3 ? `$${Number(trade.takeProfit3).toFixed(4)}` : '',
+      'notes': htmlEscape(trade.notes || '') // HTML escape user notes
     };
     
     // Filter variables based on template's includeFields setting
@@ -162,8 +183,12 @@ export class AutomationService {
       }
     }
     
-    // Remove any remaining unreplaced placeholders to avoid {placeholder} artifacts
-    messageText = messageText.replace(/{[^}]+}/g, '');
+    // Remove only known unreplaced placeholders to avoid artifacts
+    const knownPlaceholders = Object.keys(variables).map(key => `{${key}}`);
+    for (const placeholder of knownPlaceholders) {
+      // Remove any remaining instances of known placeholders that weren't replaced
+      messageText = messageText.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), '');
+    }
     
     return messageText;
   }
