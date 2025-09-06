@@ -313,11 +313,11 @@ export default function ChannelsPage() {
                     </TableCell>
                     <TableCell>
                       <Select
-                        value={channel.templateId || ""}
+                        value={channel.templateId || "none"}
                         onValueChange={(templateId) =>
                           updateTemplateMutation.mutate({
                             id: channel.id,
-                            templateId,
+                            templateId: templateId === "none" ? null : templateId,
                           })
                         }
                         disabled={updateTemplateMutation.isPending}
@@ -326,7 +326,7 @@ export default function ChannelsPage() {
                           <SelectValue placeholder="Select template" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No template</SelectItem>
+                          <SelectItem value="none">No template</SelectItem>
                           {safeTemplates.map((template) => (
                             <SelectItem key={template.id} value={template.id}>
                               {template.name}
