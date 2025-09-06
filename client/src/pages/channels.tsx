@@ -57,10 +57,11 @@ export default function ChannelsPage() {
     staleTime: 0, // Always fetch fresh data
   });
   
-  // Ensure channels is always an array and debug
+  // Ensure channels is always an array
   const channels = Array.isArray(channelsResponse) ? channelsResponse : [];
-  console.log("Final channels array:", channels);
-  console.log("Channels count:", channels.length);
+
+  // Ensure templates is always an array too
+  const safeTemplates = Array.isArray(templates) ? templates : [];
 
   // Fetch templates for dropdown - use default query function
   const { data: templates = [] } = useQuery<Template[]>({
@@ -273,10 +274,6 @@ export default function ChannelsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Debug info */}
-          <div style={{fontSize: '12px', color: 'gray', marginBottom: '10px'}}>
-            Debug: channels.length = {channels.length}, channels = {JSON.stringify(channels)}
-          </div>
           {channels.length === 0 ? (
             <div className="text-center py-8">
               <i className="fas fa-comments text-4xl text-muted-foreground mb-4" />
@@ -330,7 +327,7 @@ export default function ChannelsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="">No template</SelectItem>
-                          {templates.map((template) => (
+                          {safeTemplates.map((template) => (
                             <SelectItem key={template.id} value={template.id}>
                               {template.name}
                             </SelectItem>
