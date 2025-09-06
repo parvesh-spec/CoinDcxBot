@@ -7,6 +7,7 @@ import { Plus, Settings, Send, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Automation, SentMessage } from "@shared/schema";
+import AddAutomationModal from "@/components/automation/add-automation-modal";
 
 // Extended types with relations for API responses
 interface AutomationWithRelations extends Automation {
@@ -233,6 +234,12 @@ export default function AutomationPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Automation Modal */}
+      <AddAutomationModal 
+        isOpen={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+      />
     </div>
   );
 }
