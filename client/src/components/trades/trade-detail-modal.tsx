@@ -57,8 +57,15 @@ export default function TradeDetailModal({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trades"] });
+      // Invalidate all trade-related queries
+      queryClient.invalidateQueries({ queryKey: ["trades"] });
       queryClient.invalidateQueries({ queryKey: ["/api/trades/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trades"] });
+      
+      // Force refetch to ensure immediate update
+      queryClient.refetchQueries({ queryKey: ["trades"] });
+      queryClient.refetchQueries({ queryKey: ["/api/trades/stats"] });
+      
       toast({
         title: "Success",
         description: "Trade marked as completed",
