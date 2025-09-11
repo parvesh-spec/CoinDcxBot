@@ -108,6 +108,16 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
         return "When Trade is Registered (Active Status)";
       case "trade_completed":
         return "When Trade is Completed";
+      case "stop_loss_hit":
+        return "When Stop Loss is Triggered";
+      case "safe_book_hit":
+        return "When Safe Book is Triggered";
+      case "target_1_hit":
+        return "When Target 1 is Hit";
+      case "target_2_hit":
+        return "When Target 2 is Hit";
+      case "target_3_hit":
+        return "When Target 3 is Hit";
       default:
         return value;
     }
@@ -247,6 +257,21 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
                       </SelectItem>
                       <SelectItem value="trade_completed">
                         {getTriggerLabel("trade_completed")}
+                      </SelectItem>
+                      <SelectItem value="stop_loss_hit">
+                        {getTriggerLabel("stop_loss_hit")}
+                      </SelectItem>
+                      <SelectItem value="safe_book_hit">
+                        {getTriggerLabel("safe_book_hit")}
+                      </SelectItem>
+                      <SelectItem value="target_1_hit">
+                        {getTriggerLabel("target_1_hit")}
+                      </SelectItem>
+                      <SelectItem value="target_2_hit">
+                        {getTriggerLabel("target_2_hit")}
+                      </SelectItem>
+                      <SelectItem value="target_3_hit">
+                        {getTriggerLabel("target_3_hit")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
