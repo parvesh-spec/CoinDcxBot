@@ -252,16 +252,20 @@ export default function TradeHistoryPage() {
                 {trade.stopLossTrigger && (
                   <div className={`p-2 rounded border transition-all ${
                     trade.completionReason === 'stop_loss_hit' 
-                      ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800/50' 
+                      ? 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/50' 
                       : 'bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700/50'
                   }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Stop Loss</span>
                       {trade.completionReason === 'stop_loss_hit' && (
-                        <Star className="w-3 h-3 text-red-500 fill-red-500" />
+                        <Star className="w-3 h-3 text-slate-500 fill-slate-500" />
                       )}
                     </div>
-                    <p className="font-semibold text-xs text-red-600 dark:text-red-400 mt-0.5" data-testid={`text-stop-loss-${trade.id}`}>
+                    <p className={`font-semibold text-xs mt-0.5 ${
+                      trade.completionReason === 'stop_loss_hit' 
+                        ? 'text-slate-600 dark:text-slate-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`} data-testid={`text-stop-loss-${trade.id}`}>
                       ${Number(trade.stopLossTrigger).toLocaleString('en-IN')}
                     </p>
                   </div>
