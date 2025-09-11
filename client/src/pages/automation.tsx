@@ -1,19 +1,30 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Settings, Send, AlertCircle, Eye } from "lucide-react";
+import { Plus, Settings, Send, AlertCircle, Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Automation, SentMessage } from "@shared/schema";
 import AddAutomationModal from "@/components/automation/add-automation-modal";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Extended types with relations for API responses
 interface AutomationWithRelations extends Automation {
@@ -42,6 +53,7 @@ export default function AutomationPage() {
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewMessage, setViewMessage] = useState<{text: string, title: string} | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
 
   // Fetch automations
   const { data: automations = [], isLoading: automationsLoading } = useQuery<AutomationWithRelations[]>({
@@ -52,6 +64,43 @@ export default function AutomationPage() {
   const { data: sentMessages = [], isLoading: messagesLoading } = useQuery<SentMessageWithRelations[]>({
     queryKey: ["/api/sent-messages"],
   });
+
+  // Delete automation mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (automationId: string) => {
+      return await apiRequest("DELETE", `/api/automations/${automationId}`);
+    },
+    onSuccess: (_, automationId) => {
+      toast({
+        title: "Success",
+        description: "Automation deleted successfully",
+      });
+      // Invalidate and refetch automation data
+      queryClient.invalidateQueries({ queryKey: ["/api/automations"] });
+      setDeleteConfirm(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete automation",
+        variant: "destructive",
+      });
+      setDeleteConfirm(null);
+    },
+  });
+
+  const handleDeleteAutomation = (automation: AutomationWithRelations) => {
+    setDeleteConfirm({
+      id: automation.id,
+      name: automation.name
+    });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      deleteMutation.mutate(deleteConfirm.id);
+    }
+  };
 
   const getTriggerBadge = (triggerType: string) => {
     switch (triggerType) {
@@ -168,6 +217,16 @@ export default function AutomationPage() {
                     >
                       {automation.isActive ? "Active" : "Inactive"}
                     </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteAutomation(automation)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      data-testid={`button-delete-automation-${automation.id}`}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -282,6 +341,35 @@ export default function AutomationPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Automation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the automation "{deleteConfirm?.name}"? 
+              This action cannot be undone and will stop all automated messages for this trigger.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              disabled={deleteMutation.isPending}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
