@@ -213,10 +213,14 @@ export default function TradesTable({
             ...old,
             trades: old.trades.map((trade: any) => {
               if (trade.id === tradeId) {
-                console.log('✅ Marking trade as completed:', completionReason);
+                // Match backend logic: only stop_loss_hit and target_3_hit complete the trade
+                const shouldComplete = completionReason === 'stop_loss_hit' || completionReason === 'target_3_hit';
+                const newStatus = shouldComplete ? 'completed' : 'active';
+                
+                console.log('✅ Updating trade status:', completionReason, '→', newStatus);
                 return {
                   ...trade,
-                  status: 'completed',
+                  status: newStatus,
                   completionReason: completionReason,
                   ...(safebookPrice && { safebookPrice })
                 };
