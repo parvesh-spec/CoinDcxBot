@@ -107,30 +107,6 @@ export default function TemplateEditor({
     },
   });
 
-  const testMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", "/api/templates/test", {
-        template: formData.template,
-        channelId: null, // No channel needed for testing
-        buttons: formData.buttons,
-        parseMode: formData.parseMode,
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Test message sent successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send test message",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleSave = () => {
     if (!formData.name || !formData.template) {
       toast({
@@ -150,19 +126,6 @@ export default function TemplateEditor({
       imageUrl: formData.imageUrl,
       isActive: true,
     });
-  };
-
-  const handleTest = () => {
-    if (!formData.template) {
-      toast({
-        title: "Validation Error", 
-        description: "Please enter a template",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    testMutation.mutate();
   };
 
   // Button management functions
@@ -447,25 +410,6 @@ export default function TemplateEditor({
               <>
                 <i className="fas fa-save mr-2" />
                 {selectedTemplate ? "Update Template" : "Save Template"}
-              </>
-            )}
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={handleTest}
-            disabled={testMutation.isPending || !formData.channelId}
-            data-testid="button-test-template"
-          >
-            {testMutation.isPending ? (
-              <>
-                <i className="fas fa-spinner fa-spin mr-2" />
-                Testing...
-              </>
-            ) : (
-              <>
-                <i className="fas fa-paper-plane mr-2" />
-                Test
               </>
             )}
           </Button>
