@@ -62,6 +62,30 @@ export default function TradeHistoryPage() {
     if (isYesterday(date)) return 'Yesterday';
     return format(date, 'MMM d, yyyy');
   };
+  
+  // Calculate statistics
+  const totalTrades = trades.length;
+  const currentMonth = format(new Date(), 'yyyy-MM');
+  const thisMonthTrades = trades.filter(trade => {
+    const tradeDate = trade.updatedAt ? new Date(trade.updatedAt) : new Date(trade.createdAt!);
+    return format(tradeDate, 'yyyy-MM') === currentMonth;
+  });
+  
+  // Only count trades that have gainLoss data for accurate calculations
+  const thisMonthWithGainLoss = thisMonthTrades.filter(trade => trade.gainLoss);
+  const gainTrades = thisMonthWithGainLoss.filter(trade => trade.gainLoss?.isGain);
+  const accuracy = thisMonthWithGainLoss.length > 0 ? Math.round((gainTrades.length / thisMonthWithGainLoss.length) * 100) : 0;
+  
+  // Calculate average gain % this month (only from trades with gainLoss data)
+  const avgGain = thisMonthWithGainLoss.length > 0 
+    ? thisMonthWithGainLoss.reduce((sum, trade) => {
+        if (trade.gainLoss!.isGain) {
+          return sum + trade.gainLoss!.percentage;
+        } else {
+          return sum - trade.gainLoss!.percentage;
+        }
+      }, 0) / thisMonthWithGainLoss.length
+    : 0;
 
   if (isLoading) {
     return (
@@ -83,9 +107,27 @@ export default function TradeHistoryPage() {
             <h1 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">
               📚 Campus For Wisdom
             </h1>
-            <p className="text-xs italic text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            <p className="text-xs italic text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-3">
               "The market is a device for transferring money from the impatient to the patient." - Warren Buffett
             </p>
+            
+            {/* Statistics */}
+            <div className="flex items-center justify-center gap-6 text-xs">
+              <div className="text-center">
+                <p className="font-semibold text-slate-700 dark:text-slate-300">{totalTrades}</p>
+                <p className="text-slate-500 dark:text-slate-400">Total Trades</p>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold text-slate-700 dark:text-slate-300">{accuracy}%</p>
+                <p className="text-slate-500 dark:text-slate-400">Accuracy</p>
+              </div>
+              <div className="text-center">
+                <p className={`font-semibold ${avgGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {avgGain >= 0 ? '+' : ''}{avgGain.toFixed(1)}%
+                </p>
+                <p className="text-slate-500 dark:text-slate-400">This Month</p>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -170,30 +212,27 @@ export default function TradeHistoryPage() {
                     </Badge>
                   </div>
                   
-                  {/* Gain/Loss Display */}
+                  {/* Gain/Loss Display - Better positioned */}
                   {trade.gainLoss && (
-                    <div className="text-right">
+                    <div className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded px-2 py-1 border border-slate-200/50 dark:border-slate-700/50">
                       <div className="flex items-center gap-1">
                         {trade.gainLoss.isGain ? (
                           <TrendingUp className="w-3 h-3 text-emerald-500" />
                         ) : (
                           <TrendingDown className="w-3 h-3 text-red-500" />
                         )}
-                        <span className={`text-sm font-semibold ${
+                        <span className={`text-xs font-semibold ${
                           trade.gainLoss.isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
                         }`}>
                           {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(1)}%
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-400">
-                        {trade.gainLoss.isGain ? 'Gain' : 'Loss'}
-                      </span>
                     </div>
                   )}
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-3 pt-0 px-3 pb-3">
+              <CardContent className="space-y-3 pt-0 px-3 pb-6 pr-6">
                 {/* Price & Leverage */}
                 <div className="flex gap-2">
                   <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
@@ -303,8 +342,8 @@ export default function TradeHistoryPage() {
                   </div>
                 )}
                 
-                {/* Time in bottom corner */}
-                <div className="absolute bottom-2 right-2 text-[9px] text-slate-400 dark:text-slate-500 bg-slate-50/80 dark:bg-slate-800/80 px-1.5 py-0.5 rounded" data-testid={`text-time-${trade.id}`}>
+                {/* Time in bottom corner with reserved space */}
+                <div className="absolute bottom-1.5 right-1.5 text-[8px] text-slate-400 dark:text-slate-500 bg-slate-50/90 dark:bg-slate-800/90 px-1.5 py-0.5 rounded" data-testid={`text-time-${trade.id}`}>
                   {trade.updatedAt 
                     ? format(new Date(trade.updatedAt), 'HH:mm')
                     : trade.createdAt 
