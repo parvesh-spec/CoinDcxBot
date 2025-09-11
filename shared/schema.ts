@@ -272,6 +272,35 @@ export const insertSentMessageSchema = createInsertSchema(sentMessages).omit({
   status: z.enum(['sent', 'failed', 'pending']).optional(),
 });
 
+// Image upload schemas
+export const uploadUrlRequestSchema = z.object({
+  // Upload URL requests don't require any body parameters
+});
+
+export const finalizeImageUploadSchema = z.object({
+  imageURL: z.string()
+    .url("Must be a valid URL")
+    .refine((url) => {
+      try {
+        const parsedUrl = new URL(url);
+        // Must be from Google Cloud Storage for our storage service
+        return parsedUrl.hostname === 'storage.googleapis.com';
+      } catch {
+        return false;
+      }
+    }, "Image URL must be from authorized storage provider")
+    .refine((url) => {
+      try {
+        const parsedUrl = new URL(url);
+        const path = parsedUrl.pathname;
+        // Must be in the uploads directory structure
+        return path.includes('/uploads/') && !path.includes('../') && !path.includes('..\\');
+      } catch {
+        return false;
+      }
+    }, "Invalid image URL path - path traversal detected"),
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
@@ -289,3 +318,5 @@ export type Automation = typeof automations.$inferSelect;
 export type InsertAutomation = z.infer<typeof insertAutomationSchema>;
 export type SentMessage = typeof sentMessages.$inferSelect;
 export type InsertSentMessage = z.infer<typeof insertSentMessageSchema>;
+export type UploadUrlRequest = z.infer<typeof uploadUrlRequestSchema>;
+export type FinalizeImageUpload = z.infer<typeof finalizeImageUploadSchema>;

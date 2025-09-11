@@ -5,7 +5,8 @@ import { setupAuth, isAuthenticated } from "./auth";
 import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, insertAutomationSchema, updateTradeSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema } from "@shared/schema";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -414,6 +415,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending test message:", error);
       res.status(500).json({ message: "Failed to send test message" });
+    }
+  });
+
+  // Image upload routes for templates
+  app.post('/api/templates/images/upload-url', isAuthenticated, async (req, res) => {
+    try {
+      // Validate request body (even though empty, it ensures proper parsing)
+      uploadUrlRequestSchema.parse(req.body);
+      
+      // Get authenticated user ID
+      const user = req.user as User;
+      if (!user || !user.id) {
+        return res.status(401).json({ message: 'User authentication required' });
+      }
+      
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getTemplateImageUploadURL(user.id);
+      
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error('Error getting upload URL:', error);
+      
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          message: 'Validation failed', 
+          errors: error.issues 
+        });
+      }
+      
+      if (error instanceof Error && error.message.includes('Invalid user ID')) {
+        return res.status(400).json({ message: error.message });
+      }
+      
+      res.status(500).json({ message: 'Failed to get upload URL' });
+    }
+  });
+
+  app.post('/api/templates/images/finalize', isAuthenticated, async (req, res) => {
+    try {
+      // Validate request body with proper schema
+      const { imageURL } = finalizeImageUploadSchema.parse(req.body);
+      
+      // Get authenticated user ID
+      const user = req.user as User;
+      if (!user || !user.id) {
+        return res.status(401).json({ message: 'User authentication required' });
+      }
+      
+      const objectStorageService = new ObjectStorageService();
+      
+      // Validate that the image URL belongs to this user's namespace
+      if (!objectStorageService.validateUserTemplateImageURL(imageURL, user.id)) {
+        return res.status(403).json({ 
+          message: 'Access denied: Image URL does not belong to your namespace' 
+        });
+      }
+      
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        imageURL,
+        {
+          owner: user.id,
+          visibility: "public", // Template images are public for Telegram to access
+        }
+      );
+
+      res.json({ objectPath });
+    } catch (error) {
+      console.error('Error finalizing image upload:', error);
+      
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          message: 'Validation failed', 
+          errors: error.issues 
+        });
+      }
+      
+      if (error instanceof ObjectNotFoundError) {
+        return res.status(404).json({ message: 'Image not found' });
+      }
+      
+      res.status(500).json({ message: 'Failed to finalize image upload' });
+    }
+  });
+
+  app.get('/objects/:objectPath(*)', async (req, res) => {
+    try {
+      const objectPath = `/objects/${req.params.objectPath}`;
+      
+      // Validate object path format
+      if (!objectPath || typeof objectPath !== 'string') {
+        return res.status(400).json({ message: 'Invalid object path' });
+      }
+      
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+      
+      // For authenticated routes, check ACL permissions
+      if (req.user) {
+        const user = req.user as User;
+        const canAccess = await objectStorageService.canAccessObjectEntity({
+          userId: user.id,
+          objectFile,
+        });
+        
+        if (!canAccess) {
+          return res.status(403).json({ message: 'Access denied' });
+        }
+      }
+      
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error('Error serving object:', error);
+      
+      if (error instanceof ObjectNotFoundError) {
+        return res.status(404).json({ message: 'Object not found' });
+      }
+      
+      return res.status(500).json({ message: 'Failed to serve object' });
     }
   });
 

@@ -154,9 +154,75 @@ export class ObjectStorageService {
     });
   }
 
+  // Gets the upload URL for a user-scoped template image entity.
+  async getTemplateImageUploadURL(userId: string): Promise<string> {
+    if (!userId || typeof userId !== 'string') {
+      throw new Error("Valid user ID is required for template image uploads");
+    }
+
+    const privateObjectDir = this.getPrivateObjectDir();
+    if (!privateObjectDir) {
+      throw new Error(
+        "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
+          "tool and set PRIVATE_OBJECT_DIR env var."
+      );
+    }
+
+    // Sanitize userId to prevent path traversal
+    const sanitizedUserId = userId.replace(/[^a-zA-Z0-9-_]/g, '');
+    if (sanitizedUserId !== userId) {
+      throw new Error("Invalid user ID format");
+    }
+
+    const objectId = randomUUID();
+    const fullPath = `${privateObjectDir}/templates/${sanitizedUserId}/uploads/${objectId}`;
+
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+
+    // Sign URL for PUT method with TTL
+    return signObjectURL({
+      bucketName,
+      objectName,
+      method: "PUT",
+      ttlSec: 900,
+    });
+  }
+
+  // Validates that an image URL belongs to a specific user's template namespace.
+  validateUserTemplateImageURL(imageURL: string, userId: string): boolean {
+    try {
+      const parsedUrl = new URL(imageURL);
+      
+      // Must be from our storage provider
+      if (parsedUrl.hostname !== 'storage.googleapis.com') {
+        return false;
+      }
+
+      const path = parsedUrl.pathname;
+      const privateObjectDir = this.getPrivateObjectDir();
+      
+      // Sanitize userId to match what we use in upload URLs
+      const sanitizedUserId = userId.replace(/[^a-zA-Z0-9-_]/g, '');
+      
+      // Path must be in user's template uploads directory
+      const expectedPathPrefix = `${privateObjectDir}/templates/${sanitizedUserId}/uploads/`;
+      
+      return path.includes(expectedPathPrefix) && 
+             !path.includes('../') && 
+             !path.includes('..\\');
+    } catch {
+      return false;
+    }
+  }
+
   // Gets the object entity file from the object path.
   async getObjectEntityFile(objectPath: string): Promise<File> {
     if (!objectPath.startsWith("/objects/")) {
+      throw new ObjectNotFoundError();
+    }
+
+    // Additional security: check for path traversal attempts
+    if (objectPath.includes('../') || objectPath.includes('..\\') || objectPath.includes('%2e%2e')) {
       throw new ObjectNotFoundError();
     }
 
@@ -166,6 +232,12 @@ export class ObjectStorageService {
     }
 
     const entityId = parts.slice(1).join("/");
+    
+    // Additional security: sanitize entityId to prevent path traversal  
+    if (entityId.includes('../') || entityId.includes('..\\')) {
+      throw new ObjectNotFoundError();
+    }
+    
     let entityDir = this.getPrivateObjectDir();
     if (!entityDir.endsWith("/")) {
       entityDir = `${entityDir}/`;
