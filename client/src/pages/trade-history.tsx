@@ -235,7 +235,7 @@ export default function TradeHistoryPage() {
                   <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Price</p>
                     <p className="font-semibold text-xs text-slate-700 dark:text-slate-300" data-testid={`text-price-${trade.id}`}>
-                      ₹{trade.price ? Number(trade.price).toLocaleString('en-IN') : 'N/A'}
+                      ${trade.price ? Number(trade.price).toLocaleString('en-IN') : 'N/A'}
                     </p>
                   </div>
                   {trade.leverage && (
@@ -262,7 +262,7 @@ export default function TradeHistoryPage() {
                       )}
                     </div>
                     <p className="font-semibold text-xs text-red-600 dark:text-red-400 mt-0.5" data-testid={`text-stop-loss-${trade.id}`}>
-                      ₹{Number(trade.stopLossTrigger).toLocaleString('en-IN')}
+                      ${Number(trade.stopLossTrigger).toLocaleString('en-IN')}
                     </p>
                   </div>
                 )}
