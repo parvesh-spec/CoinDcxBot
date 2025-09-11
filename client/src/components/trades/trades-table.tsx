@@ -68,16 +68,54 @@ export default function TradesTable({
         hit: true
       });
     },
+    onMutate: async ({ tradeId, targetType }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ['/api/trades'] });
+
+      // Snapshot the previous value
+      const previousTrades = queryClient.getQueryData(['/api/trades']);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['/api/trades'], (old: any) => {
+        if (!old) return old;
+        
+        return {
+          ...old,
+          trades: old.trades.map((trade: any) => {
+            if (trade.id === tradeId) {
+              const newTargetStatus = { ...(trade.targetStatus || {}) };
+              newTargetStatus[targetType] = true;
+              return {
+                ...trade,
+                targetStatus: newTargetStatus
+              };
+            }
+            return trade;
+          })
+        };
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousTrades };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
       toast({ title: "Target status updated successfully" });
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousTrades) {
+        queryClient.setQueryData(['/api/trades'], context.previousTrades);
+      }
       toast({ 
         title: "Failed to update target status", 
         description: error.message, 
         variant: "destructive" 
       });
+    },
+    // Always refetch after error or success:
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
     },
   });
 
