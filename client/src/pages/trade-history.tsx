@@ -108,7 +108,7 @@ export default function TradeHistoryPage() {
               📚 Campus For Wisdom
             </h1>
             <p className="text-xs italic text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-3">
-              "The market is a device for transferring money from the impatient to the patient." - Warren Buffett
+              "Consistency in trading beats perfection. Profit and loss are just part of the journey, discipline is the destination."
             </p>
             
             {/* Statistics */}
@@ -134,12 +134,9 @@ export default function TradeHistoryPage() {
         {/* Header and Filter */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Trade History
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {filteredTrades.length} completed trades
-            </p>
           </div>
           
           {/* Date Filter */}
