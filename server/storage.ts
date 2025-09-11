@@ -334,6 +334,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined> {
+    // Get current trade to access targetStatus
+    const currentTrade = await this.getTrade(id);
+    if (!currentTrade) return undefined;
+
+    // Parse current target status or initialize if empty
+    let targetStatus: Record<string, boolean> = {};
+    if (currentTrade.targetStatus && typeof currentTrade.targetStatus === 'object') {
+      targetStatus = { ...currentTrade.targetStatus as Record<string, boolean> };
+    }
+
+    // Update target status based on completion reason
+    switch (completion.completionReason) {
+      case 'safe_book':
+        targetStatus.safebook = true;
+        break;
+      case 'target_1_hit':
+        targetStatus.t1 = true;
+        break;
+      case 'target_2_hit':
+        targetStatus.t2 = true;
+        break;
+      case 'target_3_hit':
+        targetStatus.t3 = true;
+        break;
+      case 'stop_loss_hit':
+        targetStatus.stop_loss = true;
+        break;
+    }
+
     // Only mark trade as completed for stop_loss_hit and target_3_hit
     // Keep trade active for safe_book, target_1_hit, target_2_hit
     const shouldComplete = completion.completionReason === 'stop_loss_hit' || completion.completionReason === 'target_3_hit';
@@ -345,6 +374,7 @@ export class DatabaseStorage implements IStorage {
         completionReason: completion.completionReason,
         safebookPrice: completion.safebookPrice ? completion.safebookPrice : null,
         notes: completion.notes,
+        targetStatus: targetStatus,
         updatedAt: new Date() 
       })
       .where(eq(trades.id, id))
