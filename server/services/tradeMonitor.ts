@@ -42,26 +42,25 @@ export class TradeMonitorService {
   async triggerTradeCompleted(tradeId: string): Promise<void> {
     try {
       const trade = await storage.getTrade(tradeId);
-      if (trade && trade.status === 'completed') {
-        // Trigger only specific completion reason events (no generic trade_completed)
-        if (trade.completionReason) {
-          // Map completion reason to automation trigger type
-          let specificTrigger = trade.completionReason;
-          
-          // Handle legacy/schema name mapping
-          if (specificTrigger === 'safe_book') {
-            specificTrigger = 'safe_book_hit';
-          }
-          
-          if (['stop_loss_hit', 'safe_book_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'].includes(specificTrigger)) {
-            console.log(`🎯 Triggering specific completion automation: ${specificTrigger} for trade ${trade.tradeId} (completion reason: ${trade.completionReason})`);
-            await automationService.triggerAutomations(trade, specificTrigger as any);
-          } else {
-            console.log(`⚠️ Unknown completion reason: ${trade.completionReason} for trade ${trade.tradeId}`);
-          }
-        } else {
-          console.log(`⚠️ Trade ${trade.tradeId} completed without completion reason`);
+      if (trade && trade.completionReason) {
+        // Trigger automation for any trade with completion reason (regardless of status)
+        // This handles safe_book, target_1_hit, target_2_hit which keep trade active
+        // Map completion reason to automation trigger type
+        let specificTrigger = trade.completionReason;
+        
+        // Handle legacy/schema name mapping
+        if (specificTrigger === 'safe_book') {
+          specificTrigger = 'safe_book_hit';
         }
+        
+        if (['stop_loss_hit', 'safe_book_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'].includes(specificTrigger)) {
+          console.log(`🎯 Triggering specific completion automation: ${specificTrigger} for trade ${trade.tradeId} (completion reason: ${trade.completionReason})`);
+          await automationService.triggerAutomations(trade, specificTrigger as any);
+        } else {
+          console.log(`⚠️ Unknown completion reason: ${trade.completionReason} for trade ${trade.tradeId}`);
+        }
+      } else {
+        console.log(`⚠️ Trade ${trade?.tradeId || tradeId} has no completion reason to trigger automation`);
       }
     } catch (error) {
       console.error(`Error triggering trade completed automation for ${tradeId}:`, error);
