@@ -216,10 +216,10 @@ export default function TradeHistoryPage() {
                         {trade.gainLoss.isGain ? (
                           <TrendingUp className="w-3 h-3 text-emerald-500" />
                         ) : (
-                          <TrendingDown className="w-3 h-3 text-red-500" />
+                          <TrendingDown className="w-3 h-3 text-slate-500" />
                         )}
                         <span className={`text-xs font-semibold ${
-                          trade.gainLoss.isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                          trade.gainLoss.isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'
                         }`}>
                           {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(1)}%
                         </span>
@@ -258,7 +258,7 @@ export default function TradeHistoryPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Stop Loss</span>
                       {trade.completionReason === 'stop_loss_hit' && (
-                        <Star className="w-3 h-3 text-slate-500 fill-slate-500" />
+                        <span className="text-lg font-bold text-slate-500">•</span>
                       )}
                     </div>
                     <p className={`font-semibold text-xs mt-0.5 ${
