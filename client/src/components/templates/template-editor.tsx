@@ -51,6 +51,7 @@ export default function TemplateEditor({
       takeProfit1: true,
       takeProfit2: true,
       takeProfit3: true,
+      safebookPrice: true,
       timestamp: true,
       profitLoss: false,
     },
@@ -107,6 +108,7 @@ export default function TemplateEditor({
             takeProfit1: true,
             takeProfit2: true,
             takeProfit3: true,
+            safebookPrice: true,
             timestamp: true,
             profitLoss: false,
           },
@@ -234,7 +236,7 @@ export default function TemplateEditor({
             data-testid="textarea-template"
           />
           <p className="text-xs text-muted-foreground mt-2">
-            Use variables: {"{pair}"}, {"{price}"}, {"{type}"}, {"{leverage}"}, {"{stopLoss}"}, {"{takeProfit1}"}, {"{takeProfit2}"}, {"{takeProfit3}"}, {"{timestamp}"}
+            Use variables: {"{pair}"}, {"{price}"}, {"{type}"}, {"{leverage}"}, {"{stopLoss}"}, {"{takeProfit1}"}, {"{takeProfit2}"}, {"{takeProfit3}"}, {"{safebookPrice}"}, {"{timestamp}"}
           </p>
         </div>
 
@@ -256,6 +258,7 @@ export default function TemplateEditor({
                    field === "takeProfit2" ? "Take Profit 2" :
                    field === "takeProfit3" ? "Take Profit 3" :
                    field === "stopLoss" ? "Stop Loss" :
+                   field === "safebookPrice" ? "Safe Book Price" :
                    field.replace(/([A-Z])/g, ' $1')}
                 </Label>
               </div>
