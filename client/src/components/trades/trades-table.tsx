@@ -60,6 +60,26 @@ export default function TradesTable({
     price: '',
   });
 
+  // Edit trade dialog state
+  const [editDialog, setEditDialog] = useState<{
+    isOpen: boolean;
+    trade: Trade | null;
+  }>({
+    isOpen: false,
+    trade: null,
+  });
+
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    tradeId: string | null;
+    tradePair: string | null;
+  }>({
+    isOpen: false,
+    tradeId: null,
+    tradePair: null,
+  });
+
   // Mutation for updating target status (T1, T2)
   const updateTargetStatusMutation = useMutation({
     mutationFn: async ({ tradeId, targetType }: { tradeId: string; targetType: 't1' | 't2' }) => {
@@ -204,6 +224,49 @@ export default function TradesTable({
     },
   });
 
+  // Mutation for editing trade
+  const editTradeMutation = useMutation({
+    mutationFn: async ({ tradeId, tradeData }: { tradeId: string; tradeData: any }) => {
+      return apiRequest('PUT', `/api/trades/${tradeId}`, tradeData);
+    },
+    onSuccess: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades" });
+      }, 100);
+      toast({ title: "Trade updated successfully" });
+      setEditDialog({ isOpen: false, trade: null });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to update trade", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Mutation for deleting trade
+  const deleteTradeMutation = useMutation({
+    mutationFn: async (tradeId: string) => {
+      return apiRequest('DELETE', `/api/trades/${tradeId}`, {});
+    },
+    onSuccess: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades" });
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades/stats" || (Array.isArray(query.queryKey) && query.queryKey.includes("/api/trades/stats")) });
+      }, 100);
+      toast({ title: "Trade deleted successfully" });
+      setDeleteDialog({ isOpen: false, tradeId: null, tradePair: null });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to delete trade", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
   // Handler functions
   const handleTargetHit = (tradeId: string, targetType: 't1' | 't2') => {
     updateTargetStatusMutation.mutate({ tradeId, targetType });
@@ -231,6 +294,14 @@ export default function TradesTable({
     });
     
     setSafebookDialog({ isOpen: false, tradeId: null, price: '' });
+  };
+
+  const handleEditTrade = (trade: Trade) => {
+    setEditDialog({ isOpen: true, trade });
+  };
+
+  const handleDeleteTrade = (tradeId: string, tradePair: string) => {
+    setDeleteDialog({ isOpen: true, tradeId, tradePair });
   };
 
   // Function to render target status content
@@ -523,7 +594,26 @@ export default function TradesTable({
                     {formatTime(trade.createdAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {/* Actions column kept empty for future use */}
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditTrade(trade)}
+                        className="text-xs h-7 px-2"
+                        data-testid={`button-edit-${trade.id}`}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteTrade(trade.id, trade.pair)}
+                        className="text-xs h-7 px-2"
+                        data-testid={`button-delete-${trade.id}`}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -630,6 +720,115 @@ export default function TradesTable({
                 data-testid="button-submit-safebook"
               >
                 {completeTradeBaseMutation.isPending ? 'Processing...' : 'Complete Trade'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Trade Dialog */}
+      <Dialog open={editDialog.isOpen} onOpenChange={(open) => 
+        setEditDialog(prev => ({ ...prev, isOpen: open }))
+      }>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Trade</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Pair: {editDialog.trade?.pair}</Label>
+            </div>
+            <div>
+              <Label htmlFor="edit-price">Entry Price (USDT)</Label>
+              <Input
+                id="edit-price"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={editDialog.trade?.price}
+                data-testid="input-edit-price"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-leverage">Leverage</Label>
+              <Input
+                id="edit-leverage"
+                type="number"
+                min="1"
+                max="100"
+                defaultValue={editDialog.trade?.leverage}
+                data-testid="input-edit-leverage"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-notes">Notes</Label>
+              <Input
+                id="edit-notes"
+                defaultValue={editDialog.trade?.notes || ''}
+                placeholder="Trade notes (optional)"
+                data-testid="input-edit-notes"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setEditDialog({ isOpen: false, trade: null })}
+                data-testid="button-cancel-edit"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  // TODO: Implement edit functionality
+                  toast({ title: "Edit functionality coming soon!" });
+                }}
+                disabled={editTradeMutation.isPending}
+                data-testid="button-submit-edit"
+              >
+                {editTradeMutation.isPending ? 'Updating...' : 'Update Trade'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.isOpen} onOpenChange={(open) => 
+        setDeleteDialog(prev => ({ ...prev, isOpen: open }))
+      }>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Trade</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this trade?
+            </p>
+            <div className="bg-destructive/10 p-3 rounded-md">
+              <p className="text-sm font-medium">Trade: {deleteDialog.tradePair}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                This action cannot be undone. The trade will be permanently removed from your records.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setDeleteDialog({ isOpen: false, tradeId: null, tradePair: null })}
+                data-testid="button-cancel-delete"
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => {
+                  if (deleteDialog.tradeId) {
+                    deleteTradeMutation.mutate(deleteDialog.tradeId);
+                  }
+                }}
+                disabled={deleteTradeMutation.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteTradeMutation.isPending ? 'Deleting...' : 'Delete Trade'}
               </Button>
             </div>
           </div>
