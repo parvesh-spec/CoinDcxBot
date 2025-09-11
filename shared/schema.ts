@@ -43,6 +43,7 @@ export const messageTemplates = pgTable("message_templates", {
   name: varchar("name").notNull(),
   channelId: varchar("channel_id"), // Nullable, no FK to avoid circular reference
   template: text("template").notNull(),
+  templateType: varchar("template_type").notNull().default('trade'), // 'simple' or 'trade'
   includeFields: jsonb("include_fields").notNull(),
   buttons: jsonb("buttons").default([]), // Inline keyboard buttons
   parseMode: varchar("parse_mode").default("HTML"), // HTML or Markdown
@@ -94,7 +95,10 @@ export const automations = pgTable("automations", {
   name: varchar("name").notNull(),
   channelId: varchar("channel_id").notNull().references(() => telegramChannels.id),
   templateId: varchar("template_id").notNull().references(() => messageTemplates.id),
-  triggerType: varchar("trigger_type").notNull(), // 'trade_registered', 'trade_completed'
+  automationType: varchar("automation_type").notNull(), // 'trade' or 'simple'
+  triggerType: varchar("trigger_type").notNull(), // For trade: 'trade_registered', 'trade_completed', etc. For simple: 'scheduled'
+  scheduledTime: varchar("scheduled_time"), // For simple automations: "09:00" (24h format, Kolkata timezone)
+  scheduledDays: jsonb("scheduled_days").default(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']), // Days of week for simple automations
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -104,7 +108,7 @@ export const automations = pgTable("automations", {
 export const sentMessages = pgTable("sent_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   automationId: varchar("automation_id").notNull().references(() => automations.id),
-  tradeId: varchar("trade_id").notNull().references(() => trades.id),
+  tradeId: varchar("trade_id").references(() => trades.id), // Nullable for simple message automations
   telegramMessageId: varchar("telegram_message_id"), // Telegram's message ID
   replyToMessageId: varchar("reply_to_message_id"), // Reply to this telegram message ID
   channelId: varchar("channel_id").notNull(), // Telegram channel ID
@@ -193,6 +197,9 @@ export const insertMessageTemplateSchema = createInsertSchema(messageTemplates).
   createdAt: true,
   updatedAt: true,
 }).extend({
+  templateType: z.enum(['simple', 'trade'], {
+    required_error: "Please select template type",
+  }),
   includeFields: z.any().optional(), // Make includeFields optional since UI no longer sends it
 });
 
@@ -261,16 +268,35 @@ export const insertAutomationSchema = createInsertSchema(automations).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  triggerType: z.enum([
-    'trade_registered', 
-    'stop_loss_hit',
-    'safe_book_hit', 
-    'target_1_hit',
-    'target_2_hit',
-    'target_3_hit'
-  ], {
-    required_error: "Please select trigger type",
+  automationType: z.enum(['trade', 'simple'], {
+    required_error: "Please select automation type",
   }),
+  triggerType: z.string().min(1, "Please select trigger type"),
+  scheduledTime: z.string().optional(), // For simple automations - "09:00" format
+  scheduledDays: z.array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])).optional(),
+}).refine((data) => {
+  // For simple automations, require scheduledTime
+  if (data.automationType === 'simple') {
+    if (!data.scheduledTime || !/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(data.scheduledTime)) {
+      return false;
+    }
+    if (data.triggerType !== 'scheduled') {
+      return false;
+    }
+  }
+  
+  // For trade automations, validate triggerType is one of the trade types
+  if (data.automationType === 'trade') {
+    const validTradeTypes = ['trade_registered', 'stop_loss_hit', 'safe_book_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'];
+    if (!validTradeTypes.includes(data.triggerType)) {
+      return false;
+    }
+  }
+  
+  return true;
+}, {
+  message: "Invalid automation configuration. Simple automations require scheduled time in HH:MM format and triggerType must be 'scheduled'. Trade automations require valid trade trigger type.",
+  path: ['scheduledTime']
 });
 
 export const insertSentMessageSchema = createInsertSchema(sentMessages).omit({
