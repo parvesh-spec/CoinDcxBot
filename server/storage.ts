@@ -334,10 +334,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined> {
+    // Only mark trade as completed for stop_loss_hit and target_3_hit
+    // Keep trade active for safe_book, target_1_hit, target_2_hit
+    const shouldComplete = completion.completionReason === 'stop_loss_hit' || completion.completionReason === 'target_3_hit';
+    
     const [updatedTrade] = await db
       .update(trades)
       .set({ 
-        status: 'completed',
+        status: shouldComplete ? 'completed' : 'active',
         completionReason: completion.completionReason,
         safebookPrice: completion.safebookPrice ? completion.safebookPrice : null,
         notes: completion.notes,
