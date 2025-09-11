@@ -308,7 +308,8 @@ export default function TradeHistoryPage() {
                         </div>
                       )}
                       
-                      {trade.takeProfit3 && (
+                      {/* Show T3 or Safebook based on completion reason */}
+                      {trade.takeProfit3 && trade.completionReason !== 'safe_book' && (
                         <div className={`flex-1 p-1.5 rounded border transition-all ${
                           trade.completionReason === 'target_3_hit' 
                             ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
@@ -322,6 +323,19 @@ export default function TradeHistoryPage() {
                           </div>
                           <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit3-${trade.id}`}>
                             ₹{Number(trade.takeProfit3).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Show Safebook when completion reason is safe_book */}
+                      {trade.completionReason === 'safe_book' && trade.safebookPrice && (
+                        <div className="flex-1 p-1.5 rounded border transition-all bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">Safebook</span>
+                            <Star className="w-2.5 h-2.5 text-blue-500 fill-blue-500" />
+                          </div>
+                          <p className="text-[10px] font-medium text-blue-700 dark:text-blue-300" data-testid={`text-safebook-${trade.id}`}>
+                            ₹{Number(trade.safebookPrice).toLocaleString('en-IN')}
                           </p>
                         </div>
                       )}
