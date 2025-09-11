@@ -19,14 +19,6 @@ export default function TemplatesPage() {
 ⏰ Time: {timestamp}
 
 #CoinDCX #Trading`,
-    includeFields: {
-      pair: true,
-      price: true,
-      type: true,
-      quantity: true,
-      timestamp: true,
-      profitLoss: false,
-    },
     buttons: [] as any[][],
     parseMode: "HTML",
   });
@@ -54,10 +46,9 @@ export default function TemplatesPage() {
     return null;
   }
 
-  const handleTemplateChange = (template: string, includeFields: any, buttons?: any[][], parseMode?: string) => {
+  const handleTemplateChange = (template: string, buttons?: any[][], parseMode?: string) => {
     setPreviewData({ 
       template, 
-      includeFields, 
       buttons: buttons || [],
       parseMode: parseMode || "HTML"
     });
@@ -67,7 +58,6 @@ export default function TemplatesPage() {
     setSelectedTemplate(template);
     setPreviewData({
       template: template.template,
-      includeFields: template.includeFields,
       buttons: template.buttons || [],
       parseMode: template.parseMode || "HTML",
     });
@@ -99,7 +89,6 @@ export default function TemplatesPage() {
           <div className="space-y-6">
             <TemplatePreview
               template={previewData.template}
-              includeFields={previewData.includeFields}
               buttons={previewData.buttons}
               parseMode={previewData.parseMode}
             />

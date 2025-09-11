@@ -3,12 +3,11 @@ import { Button } from "@/components/ui/button";
 
 interface TemplatePreviewProps {
   template: string;
-  includeFields: any;
   buttons?: any[][];
   parseMode?: string;
 }
 
-export default function TemplatePreview({ template, includeFields, buttons = [], parseMode = "HTML" }: TemplatePreviewProps) {
+export default function TemplatePreview({ template, buttons = [], parseMode = "HTML" }: TemplatePreviewProps) {
   const generatePreview = () => {
     let preview = template;
 
@@ -27,17 +26,10 @@ export default function TemplatePreview({ template, includeFields, buttons = [],
       profitLoss: "+₹5,234",
     };
 
-    // Replace variables with sample data only if field is included
+    // Replace all variables with sample data
     Object.entries(sampleData).forEach(([key, value]) => {
-      const fieldKey = key;
-      if (includeFields[fieldKey]) {
-        const regex = new RegExp(`{${key}}`, "g");
-        preview = preview.replace(regex, value);
-      } else {
-        // Remove variables that are not included
-        const regex = new RegExp(`{${key}}`, "g");
-        preview = preview.replace(regex, `{${key}}`);
-      }
+      const regex = new RegExp(`{${key}}`, "g");
+      preview = preview.replace(regex, value);
     });
 
     return preview;

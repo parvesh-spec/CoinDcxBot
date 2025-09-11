@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 interface TemplateEditorProps {
   channels: any[];
   selectedTemplate: any;
-  onTemplateChange: (template: string, includeFields: any, buttons?: any[][], parseMode?: string) => void;
+  onTemplateChange: (template: string, buttons?: any[][], parseMode?: string) => void;
   onTemplateSaved: () => void;
   onClearSelection: () => void;
 }
@@ -42,19 +42,6 @@ export default function TemplateEditor({
 ⏰ Time: {timestamp}
 
 #CoinDCX #Trading`,
-    includeFields: {
-      pair: true,
-      price: true,
-      type: true,
-      leverage: true,
-      stopLoss: true,
-      takeProfit1: true,
-      takeProfit2: true,
-      takeProfit3: true,
-      safebookPrice: true,
-      timestamp: true,
-      profitLoss: false,
-    },
     buttons: [] as any[][],
     parseMode: "HTML",
   });
@@ -65,7 +52,6 @@ export default function TemplateEditor({
         name: selectedTemplate.name,
         channelId: selectedTemplate.channelId,
         template: selectedTemplate.template,
-        includeFields: selectedTemplate.includeFields,
         buttons: selectedTemplate.buttons || [],
         parseMode: selectedTemplate.parseMode || "HTML",
       });
@@ -73,8 +59,8 @@ export default function TemplateEditor({
   }, [selectedTemplate]);
 
   useEffect(() => {
-    onTemplateChange(formData.template, formData.includeFields, formData.buttons, formData.parseMode);
-  }, [formData.template, formData.includeFields, formData.buttons, formData.parseMode, onTemplateChange]);
+    onTemplateChange(formData.template, formData.buttons, formData.parseMode);
+  }, [formData.template, formData.buttons, formData.parseMode, onTemplateChange]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -103,19 +89,6 @@ export default function TemplateEditor({
 ⏰ Time: {timestamp}
 
 #CoinDCX #Trading`,
-          includeFields: {
-            pair: true,
-            price: true,
-            type: true,
-            leverage: true,
-            stopLoss: true,
-            takeProfit1: true,
-            takeProfit2: true,
-            takeProfit3: true,
-            safebookPrice: true,
-            timestamp: true,
-            profitLoss: false,
-          },
           buttons: [],
           parseMode: "HTML",
         });
@@ -135,7 +108,6 @@ export default function TemplateEditor({
       await apiRequest("POST", "/api/templates/test", {
         template: formData.template,
         channelId: null, // No channel needed for testing
-        includeFields: formData.includeFields,
         buttons: formData.buttons,
         parseMode: formData.parseMode,
       });
@@ -169,7 +141,6 @@ export default function TemplateEditor({
       name: formData.name,
       channelId: null, // No channel selection needed
       template: formData.template,
-      includeFields: formData.includeFields,
       buttons: formData.buttons,
       parseMode: formData.parseMode,
       isActive: true,
@@ -187,16 +158,6 @@ export default function TemplateEditor({
     }
 
     testMutation.mutate();
-  };
-
-  const handleFieldChange = (field: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      includeFields: {
-        ...prev.includeFields,
-        [field]: checked,
-      },
-    }));
   };
 
   // Button management functions
@@ -328,32 +289,6 @@ export default function TemplateEditor({
                 📈 Type: <code>&lt;i&gt;{"{type}"}&lt;/i&gt;</code>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Data Selection */}
-        <div>
-          <Label>Include Data Fields</Label>
-          <div className="space-y-2 mt-2">
-            {Object.entries(formData.includeFields).map(([field, checked]) => (
-              <div key={field} className="flex items-center space-x-2">
-                <Checkbox
-                  id={field}
-                  checked={checked}
-                  onCheckedChange={(checked) => handleFieldChange(field, !!checked)}
-                  data-testid={`checkbox-${field}`}
-                />
-                <Label htmlFor={field} className="text-sm capitalize">
-                  {field === "profitLoss" ? "Profit/Loss" : 
-                   field === "takeProfit1" ? "Take Profit 1" :
-                   field === "takeProfit2" ? "Take Profit 2" :
-                   field === "takeProfit3" ? "Take Profit 3" :
-                   field === "stopLoss" ? "Stop Loss" :
-                   field === "safebookPrice" ? "Safe Book Price" :
-                   field.replace(/([A-Z])/g, ' $1')}
-                </Label>
-              </div>
-            ))}
           </div>
         </div>
 
