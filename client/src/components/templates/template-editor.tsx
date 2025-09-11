@@ -30,6 +30,7 @@ export default function TemplateEditor({
   const [formData, setFormData] = useState({
     name: "",
     channelId: "",
+    templateType: "trade",
     template: `🚨 TRADE ALERT 🚨
 
 📊 Pair: {pair}
@@ -53,6 +54,7 @@ export default function TemplateEditor({
       setFormData({
         name: selectedTemplate.name,
         channelId: selectedTemplate.channelId,
+        templateType: selectedTemplate.templateType || "trade",
         template: selectedTemplate.template,
         buttons: selectedTemplate.buttons || [],
         parseMode: selectedTemplate.parseMode || "HTML",
@@ -79,6 +81,7 @@ export default function TemplateEditor({
         setFormData({
           name: "",
           channelId: "",
+          templateType: "trade",
           template: `🚨 TRADE ALERT 🚨
 
 📊 Pair: {pair}
@@ -117,9 +120,24 @@ export default function TemplateEditor({
       return;
     }
 
+    // Check for variables in simple message templates
+    if (formData.templateType === 'simple') {
+      const variablePattern = /{[a-zA-Z_][a-zA-Z0-9_]*}/g;
+      const variables = formData.template.match(variablePattern);
+      if (variables && variables.length > 0) {
+        toast({
+          title: "Validation Error",
+          description: `Simple message templates cannot contain variables. Found: ${variables.join(', ')}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     saveMutation.mutate({
       name: formData.name,
       channelId: null, // No channel selection needed
+      templateType: formData.templateType,
       template: formData.template,
       buttons: formData.buttons,
       parseMode: formData.parseMode,
@@ -213,6 +231,53 @@ export default function TemplateEditor({
           />
         </div>
 
+        {/* Template Type Selection */}
+        <div>
+          <Label htmlFor="templateType">Template Type *</Label>
+          <Select
+            value={formData.templateType}
+            onValueChange={(value) => {
+              setFormData(prev => ({ 
+                ...prev, 
+                templateType: value,
+                // Reset template content when switching types
+                template: value === 'simple' 
+                  ? `📢 Daily Update
+
+Good morning! Hope you're having a great day.
+
+Stay tuned for more updates.
+
+#CoinDCX` 
+                  : `🚨 TRADE ALERT 🚨
+
+📊 Pair: {pair}
+💰 Price: {price}
+📈 Type: {type}
+⚡ Leverage: {leverage}x
+🛑 Stop Loss: {stopLoss}
+🎯 Take Profit 1: {takeProfit1}
+🎯 Take Profit 2: {takeProfit2}
+🎯 Take Profit 3: {takeProfit3}
+⏰ Time: {timestamp}
+
+#CoinDCX #Trading`
+              }));
+            }}
+          >
+            <SelectTrigger data-testid="select-template-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="trade">Trade Message (with variables)</SelectItem>
+              <SelectItem value="simple">Simple Message (no variables)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Trade messages can use variables like {"{pair}"}, {"{price}"}. Simple messages cannot use variables.
+          </p>
+        </div>
+
         {/* Message Template */}
         <div>
           <Label htmlFor="template">Message Template *</Label>
@@ -227,12 +292,21 @@ export default function TemplateEditor({
           <div className="mt-3 p-3 border rounded-lg bg-muted/30 space-y-2">
             <div className="text-xs font-medium text-foreground">📚 Formatting Guide</div>
             
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">🔧 Available Variables:</div>
-              <div className="text-xs text-muted-foreground">
-                {"{pair}"} {"{price}"} {"{type}"} {"{leverage}"} {"{stopLoss}"} {"{takeProfit1}"} {"{takeProfit2}"} {"{takeProfit3}"} {"{safebookPrice}"} {"{timestamp}"} {"{profitLoss}"}
+            {formData.templateType === 'trade' ? (
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-muted-foreground">🔧 Available Variables:</div>
+                <div className="text-xs text-muted-foreground">
+                  {"{pair}"} {"{price}"} {"{type}"} {"{leverage}"} {"{stopLoss}"} {"{takeProfit1}"} {"{takeProfit2}"} {"{takeProfit3}"} {"{safebookPrice}"} {"{timestamp}"} {"{profitLoss}"}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-muted-foreground">⚠️ Variable Restriction:</div>
+                <div className="text-xs text-muted-foreground text-orange-600">
+                  Simple message templates cannot use variables like {"{pair}"}, {"{price}"}, etc. Use static text only.
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1">
               <div className="text-xs font-medium text-muted-foreground">🎨 HTML Formatting:</div>

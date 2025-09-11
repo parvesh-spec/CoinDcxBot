@@ -37,9 +37,18 @@ interface AddAutomationModalProps {
   onClose: () => void;
 }
 
-// Form schema with validation
-const formSchema = insertAutomationSchema.extend({
+// Form schema with validation - create our own since insertAutomationSchema uses .refine()
+const formSchema = z.object({
   name: z.string().min(1, "Automation name is required").max(100, "Name too long"),
+  channelId: z.string().min(1, "Please select a channel"),
+  templateId: z.string().min(1, "Please select a template"),
+  automationType: z.enum(['trade', 'simple'], {
+    required_error: "Please select automation type",
+  }),
+  triggerType: z.string().min(1, "Please select trigger type"),
+  scheduledTime: z.string().optional(),
+  scheduledDays: z.array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])).optional(),
+  isActive: z.boolean().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -65,7 +74,10 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
       name: "",
       channelId: "",
       templateId: "",
+      automationType: "trade",
       triggerType: "trade_registered",
+      scheduledTime: "",
+      scheduledDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       isActive: true,
     },
   });
@@ -158,6 +170,37 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
               )}
             />
 
+            {/* Automation Type Selection */}
+            <FormField
+              control={form.control}
+              name="automationType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Automation Type</FormLabel>
+                  <Select onValueChange={(value) => {
+                    field.onChange(value);
+                    // Reset trigger type when automation type changes
+                    if (value === 'trade') {
+                      form.setValue('triggerType', 'trade_registered');
+                    } else {
+                      form.setValue('triggerType', 'scheduled');
+                    }
+                  }} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-automation-type">
+                        <SelectValue placeholder="Select automation type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="trade">Trade-Based (Triggered by trade events)</SelectItem>
+                      <SelectItem value="simple">Time-Based (Scheduled messages)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Channel Selection */}
             <FormField
               control={form.control}
@@ -197,20 +240,30 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
               )}
             />
 
-            {/* Template Selection */}
+            {/* Message Template with filtering based on automation type */}
             <FormField
               control={form.control}
               name="templateId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Message Template</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger data-testid="select-template">
-                        <SelectValue placeholder="Select a template" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
+              render={({ field }) => {
+                const automationType = form.watch('automationType');
+                const filteredTemplates = activeTemplates.filter(template => {
+                  if (automationType === 'trade') {
+                    return template.templateType === 'trade' || !template.templateType; // Default to trade for existing templates
+                  } else {
+                    return template.templateType === 'simple';
+                  }
+                });
+
+                return (
+                  <FormItem>
+                    <FormLabel>Message Template</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-template">
+                          <SelectValue placeholder="Select a template" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
                       {templatesLoading ? (
                         <SelectItem value="loading" disabled>
                           <div className="flex items-center">
@@ -222,10 +275,14 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
                         <SelectItem value="no-templates" disabled>
                           No active templates available
                         </SelectItem>
+                      ) : filteredTemplates.length === 0 ? (
+                        <SelectItem value="no-filtered-templates" disabled>
+                          No {automationType} templates available
+                        </SelectItem>
                       ) : (
-                        activeTemplates.map((template) => (
+                        filteredTemplates.map((template) => (
                           <SelectItem key={template.id} value={template.id}>
-                            {template.name}
+                            {template.name} ({template.templateType || 'trade'})
                           </SelectItem>
                         ))
                       )}
@@ -233,47 +290,84 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
                   </Select>
                   <FormMessage />
                 </FormItem>
-              )}
+                );
+              }}
             />
 
-            {/* Trigger Type Selection */}
+            {/* Conditional Trigger Type Selection based on automation type */}
             <FormField
               control={form.control}
               name="triggerType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Trigger Event</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger data-testid="select-trigger-type">
-                        <SelectValue placeholder="Select when to trigger" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="trade_registered">
-                        {getTriggerLabel("trade_registered")}
-                      </SelectItem>
-                      <SelectItem value="stop_loss_hit">
-                        {getTriggerLabel("stop_loss_hit")}
-                      </SelectItem>
-                      <SelectItem value="safe_book_hit">
-                        {getTriggerLabel("safe_book_hit")}
-                      </SelectItem>
-                      <SelectItem value="target_1_hit">
-                        {getTriggerLabel("target_1_hit")}
-                      </SelectItem>
-                      <SelectItem value="target_2_hit">
-                        {getTriggerLabel("target_2_hit")}
-                      </SelectItem>
-                      <SelectItem value="target_3_hit">
-                        {getTriggerLabel("target_3_hit")}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const automationType = form.watch('automationType');
+                return (
+                  <FormItem>
+                    <FormLabel>Trigger Event</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-trigger-type">
+                          <SelectValue placeholder="Select when to trigger" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {automationType === 'trade' ? (
+                          <>
+                            <SelectItem value="trade_registered">
+                              {getTriggerLabel("trade_registered")}
+                            </SelectItem>
+                            <SelectItem value="stop_loss_hit">
+                              {getTriggerLabel("stop_loss_hit")}
+                            </SelectItem>
+                            <SelectItem value="safe_book_hit">
+                              {getTriggerLabel("safe_book_hit")}
+                            </SelectItem>
+                            <SelectItem value="target_1_hit">
+                              {getTriggerLabel("target_1_hit")}
+                            </SelectItem>
+                            <SelectItem value="target_2_hit">
+                              {getTriggerLabel("target_2_hit")}
+                            </SelectItem>
+                            <SelectItem value="target_3_hit">
+                              {getTriggerLabel("target_3_hit")}
+                            </SelectItem>
+                          </>
+                        ) : (
+                          <SelectItem value="scheduled">
+                            Scheduled Time (Time-based automation)
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
+
+            {/* Time Scheduling Fields for Simple Automations */}
+            {form.watch('automationType') === 'simple' && (
+              <FormField
+                control={form.control}
+                name="scheduledTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Scheduled Time (Kolkata Timezone)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="time"
+                        {...field}
+                        placeholder="09:00"
+                        data-testid="input-scheduled-time"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-xs text-muted-foreground">
+                      Messages will be sent daily at this time in Kolkata timezone (UTC+5:30)
+                    </p>
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Form Actions */}
             <div className="flex justify-end space-x-2 pt-4">
