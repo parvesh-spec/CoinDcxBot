@@ -72,13 +72,23 @@ export class AutomationService {
         return;
       }
       
+      // Prepare message options with buttons if available
+      const messageOptions: any = {
+        text: messageText,
+        parse_mode: template.parseMode || 'HTML',
+        disable_web_page_preview: true
+      };
+
+      // Add inline keyboard if template has buttons
+      if (template.buttons && Array.isArray(template.buttons) && template.buttons.length > 0) {
+        messageOptions.reply_markup = {
+          inline_keyboard: this.renderButtons(template.buttons, trade)
+        };
+      }
+
       // Send message to Telegram with exception handling
       try {
-        const result = await telegramService.sendMessage(channel.channelId, {
-          text: messageText,
-          parse_mode: 'HTML',
-          disable_web_page_preview: true
-        });
+        const result = await telegramService.sendMessage(channel.channelId, messageOptions);
         
         // Record the result in database (both success and failure)
         if (result.success && result.messageId) {
@@ -192,6 +202,75 @@ export class AutomationService {
     }
     
     return messageText;
+  }
+
+  /**
+   * Render inline keyboard buttons with variable substitution
+   */
+  private renderButtons(buttons: any[], trade: Trade): any[][] {
+    const variables = this.getVariables(trade);
+    
+    return buttons.map((row: any[]) => {
+      return row.map((button: any) => {
+        let buttonText = button.text || '';
+        let buttonUrl = button.url || '';
+        let callbackData = button.callback_data || '';
+        
+        // Replace variables in button text
+        for (const [key, value] of Object.entries(variables)) {
+          const placeholder = `{${key}}`;
+          buttonText = buttonText.replace(new RegExp(placeholder, 'g'), value);
+          if (buttonUrl) {
+            buttonUrl = buttonUrl.replace(new RegExp(placeholder, 'g'), value);
+          }
+          if (callbackData) {
+            callbackData = callbackData.replace(new RegExp(placeholder, 'g'), value);
+          }
+        }
+        
+        const renderedButton: any = { text: buttonText };
+        
+        if (button.url) {
+          renderedButton.url = buttonUrl;
+        } else if (button.callback_data) {
+          renderedButton.callback_data = callbackData;
+        }
+        
+        return renderedButton;
+      });
+    });
+  }
+
+  /**
+   * Get variables for substitution (shared by template and buttons)
+   */
+  private getVariables(trade: Trade): Record<string, string> {
+    const htmlEscape = (text: string): string => {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+    
+    return {
+      'pair': htmlEscape(trade.pair || ''),
+      'type': htmlEscape(trade.type || ''),
+      'price': trade.price ? `$${Number(trade.price).toFixed(4)}` : '',
+      'total': trade.total ? Number(trade.total).toFixed(4) : '',
+      'leverage': trade.leverage ? `${trade.leverage}x` : '',
+      'status': htmlEscape(trade.status || ''),
+      'tradeId': htmlEscape(trade.tradeId || ''),
+      'timestamp': trade.createdAt ? new Date(trade.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '',
+      'fee': trade.fee ? `$${Number(trade.fee).toFixed(4)}` : '$0.00',
+      'stopLoss': trade.stopLossTrigger ? `$${Number(trade.stopLossTrigger).toFixed(4)}` : '',
+      'takeProfit1': trade.takeProfitTrigger ? `$${Number(trade.takeProfitTrigger).toFixed(4)}` : '',
+      'takeProfit2': trade.takeProfit2 ? `$${Number(trade.takeProfit2).toFixed(4)}` : '',
+      'takeProfit3': trade.takeProfit3 ? `$${Number(trade.takeProfit3).toFixed(4)}` : '',
+      'safebookPrice': trade.safebookPrice ? `$${Number(trade.safebookPrice).toFixed(4)}` : '',
+      'notes': htmlEscape(trade.notes || '')
+    };
   }
 }
 

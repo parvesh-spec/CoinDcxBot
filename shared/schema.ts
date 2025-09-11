@@ -44,6 +44,8 @@ export const messageTemplates = pgTable("message_templates", {
   channelId: varchar("channel_id"), // Nullable, no FK to avoid circular reference
   template: text("template").notNull(),
   includeFields: jsonb("include_fields").notNull(),
+  buttons: jsonb("buttons").default([]), // Inline keyboard buttons
+  parseMode: varchar("parse_mode").default("HTML"), // HTML or Markdown
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
