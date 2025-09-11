@@ -295,9 +295,40 @@ export default function TemplateEditor({
             onChange={(e) => setFormData(prev => ({ ...prev, template: e.target.value }))}
             data-testid="textarea-template"
           />
-          <p className="text-xs text-muted-foreground mt-2">
-            Use variables: {"{pair}"}, {"{price}"}, {"{type}"}, {"{leverage}"}, {"{stopLoss}"}, {"{takeProfit1}"}, {"{takeProfit2}"}, {"{takeProfit3}"}, {"{safebookPrice}"}, {"{timestamp}"}
-          </p>
+          <div className="mt-3 p-3 border rounded-lg bg-muted/30 space-y-2">
+            <div className="text-xs font-medium text-foreground">📚 Formatting Guide</div>
+            
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-muted-foreground">🔧 Available Variables:</div>
+              <div className="text-xs text-muted-foreground">
+                {"{pair}"} {"{price}"} {"{type}"} {"{leverage}"} {"{stopLoss}"} {"{takeProfit1}"} {"{takeProfit2}"} {"{takeProfit3}"} {"{safebookPrice}"} {"{timestamp}"} {"{profitLoss}"}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-muted-foreground">🎨 HTML Formatting:</div>
+              <div className="text-xs text-muted-foreground font-mono">
+                <code>&lt;b&gt;Bold text&lt;/b&gt;</code> • <code>&lt;i&gt;Italic text&lt;/i&gt;</code> • <code>&lt;code&gt;Code text&lt;/code&gt;</code>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-muted-foreground">📝 Markdown Formatting:</div>
+              <div className="text-xs text-muted-foreground font-mono">
+                <code>**Bold text**</code> • <code>*Italic text*</code> • <code>`Code text`</code>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-muted-foreground">💡 Example Template:</div>
+              <div className="text-xs text-muted-foreground font-mono bg-background p-2 rounded border">
+                🚨 <code>&lt;b&gt;TRADE ALERT&lt;/b&gt;</code><br/>
+                📊 Pair: <code>{"{pair}"}</code><br/>
+                💰 Price: <code>&lt;code&gt;{"{price}"}&lt;/code&gt;</code><br/>
+                📈 Type: <code>&lt;i&gt;{"{type}"}&lt;/i&gt;</code>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Data Selection */}
@@ -436,9 +467,14 @@ export default function TemplateEditor({
             </div>
           )}
           
-          <p className="text-xs text-muted-foreground mt-2">
-            Add interactive buttons to your messages. Use variables like {"{tradeId}"} in URLs for dynamic links.
-          </p>
+          <div className="mt-2 p-2 border rounded bg-muted/20">
+            <div className="text-xs font-medium text-muted-foreground mb-1">🔘 Button Variables:</div>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <div>• Use any template variable in button text: <code>{"{pair}"}</code>, <code>{"{price}"}</code>, etc.</div>
+              <div>• Use variables in URLs: <code>https://example.com/trade/{"{pair}"}</code></div>
+              <div>• Example: Text: "View {"{pair}"}" • URL: "https://site.com/{"{pair}"}"</div>
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons */}
