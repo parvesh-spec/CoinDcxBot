@@ -43,10 +43,43 @@ export class TradeMonitorService {
     try {
       const trade = await storage.getTrade(tradeId);
       if (trade && trade.status === 'completed') {
+        // Trigger both generic trade_completed and specific completion reason events
         await automationService.triggerAutomations(trade, 'trade_completed');
+        
+        // Trigger specific automation events based on completion reason
+        if (trade.completionReason) {
+          // Map completion reason to automation trigger type
+          let specificTrigger = trade.completionReason;
+          
+          // Handle legacy/schema name mapping
+          if (specificTrigger === 'safe_book') {
+            specificTrigger = 'safe_book_hit';
+          }
+          
+          if (['stop_loss_hit', 'safe_book_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'].includes(specificTrigger)) {
+            console.log(`🎯 Triggering specific automation: ${specificTrigger} for trade ${trade.tradeId} (completion reason: ${trade.completionReason})`);
+            await automationService.triggerAutomations(trade, specificTrigger as any);
+          }
+        }
       }
     } catch (error) {
       console.error(`Error triggering trade completed automation for ${tradeId}:`, error);
+    }
+  }
+
+  /**
+   * Trigger automation for target hits (T1, T2 status updates)
+   */
+  async triggerTargetHit(tradeId: string, targetType: 't1' | 't2'): Promise<void> {
+    try {
+      const trade = await storage.getTrade(tradeId);
+      if (trade && trade.status === 'active') {
+        const triggerType = targetType === 't1' ? 'target_1_hit' : 'target_2_hit';
+        console.log(`🎯 Triggering target hit automation: ${triggerType} for trade ${trade.tradeId}`);
+        await automationService.triggerAutomations(trade, triggerType as any);
+      }
+    } catch (error) {
+      console.error(`Error triggering target hit automation for ${tradeId}:`, error);
     }
   }
 

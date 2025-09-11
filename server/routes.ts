@@ -141,6 +141,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to update target status" });
       }
       
+      // Trigger automation for target hit if hit is true
+      if (hit) {
+        await tradeMonitor.triggerTargetHit(updatedTrade.id, targetType);
+      }
+      
       res.json(updatedTrade);
     } catch (error) {
       console.error("Error updating target status:", error);
