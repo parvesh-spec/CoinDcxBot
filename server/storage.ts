@@ -55,6 +55,7 @@ export interface IStorage {
   createTrade(trade: InsertTrade): Promise<Trade>;
   updateTrade(id: string, trade: Partial<InsertTrade>): Promise<Trade | undefined>;
   completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined>;
+  updateTradeTargetStatus(id: string, targetType: 't1' | 't2', hit: boolean): Promise<Trade | undefined>;
   getTradeStats(): Promise<{
     total: number;
     active: number;
@@ -323,6 +324,31 @@ export class DatabaseStorage implements IStorage {
         completionReason: completion.completionReason,
         safebookPrice: completion.safebookPrice ? completion.safebookPrice : null,
         notes: completion.notes,
+        updatedAt: new Date() 
+      })
+      .where(eq(trades.id, id))
+      .returning();
+    return updatedTrade;
+  }
+
+  async updateTradeTargetStatus(id: string, targetType: 't1' | 't2', hit: boolean): Promise<Trade | undefined> {
+    // Get current trade
+    const currentTrade = await this.getTrade(id);
+    if (!currentTrade) return undefined;
+
+    // Parse current target status or initialize if empty
+    let targetStatus: Record<string, boolean> = {};
+    if (currentTrade.targetStatus && typeof currentTrade.targetStatus === 'object') {
+      targetStatus = { ...currentTrade.targetStatus as Record<string, boolean> };
+    }
+
+    // Update the specific target status
+    targetStatus[targetType] = hit;
+
+    const [updatedTrade] = await db
+      .update(trades)
+      .set({ 
+        targetStatus: targetStatus,
         updatedAt: new Date() 
       })
       .where(eq(trades.id, id))

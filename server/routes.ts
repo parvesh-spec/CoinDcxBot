@@ -74,7 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/trades/:id/complete', isAuthenticated, async (req, res) => {
+  app.patch('/api/trades/:id/complete', isAuthenticated, async (req, res) => {
     try {
       // Parse and validate request body first
       const completionData = completeTradeSchema.parse(req.body);
@@ -109,6 +109,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ message: "Failed to complete trade" });
+    }
+  });
+
+  // Endpoint to update target status (for T1, T2) without completing the trade
+  app.patch('/api/trades/:id/target-status', isAuthenticated, async (req, res) => {
+    try {
+      const { targetType, hit } = req.body;
+      
+      // Validate input
+      if (!['t1', 't2'].includes(targetType)) {
+        return res.status(400).json({ message: "Invalid target type. Must be t1 or t2" });
+      }
+      
+      if (typeof hit !== 'boolean') {
+        return res.status(400).json({ message: "Hit must be a boolean value" });
+      }
+
+      const trade = await storage.getTrade(req.params.id);
+      if (!trade) {
+        return res.status(404).json({ message: "Trade not found" });
+      }
+
+      if (trade.status !== 'active') {
+        return res.status(400).json({ message: "Only active trades can have target status updated" });
+      }
+
+      const updatedTrade = await storage.updateTradeTargetStatus(trade.id, targetType, hit);
+      if (!updatedTrade) {
+        return res.status(500).json({ message: "Failed to update target status" });
+      }
+      
+      res.json(updatedTrade);
+    } catch (error) {
+      console.error("Error updating target status:", error);
+      res.status(500).json({ message: "Failed to update target status" });
     }
   });
 
