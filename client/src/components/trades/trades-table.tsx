@@ -142,12 +142,60 @@ export default function TradesTable({
         safebookPrice
       });
     },
+    onMutate: async ({ tradeId, completionReason, safebookPrice }) => {
+      console.log('🎯 Starting optimistic trade completion for:', tradeId, completionReason);
+      
+      // Cancel all trades queries
+      await queryClient.cancelQueries({ predicate: (query) => query.queryKey[0] === "trades" });
+
+      // Snapshot previous data
+      const previousQueries = queryClient.getQueriesData({ predicate: (query) => query.queryKey[0] === "trades" });
+
+      // Optimistically update trade to completed status
+      queryClient.setQueriesData(
+        { predicate: (query) => query.queryKey[0] === "trades" },
+        (old: any) => {
+          console.log('🔄 Completing trade in cache:', old);
+          if (!old) return old;
+          
+          const updated = {
+            ...old,
+            trades: old.trades.map((trade: any) => {
+              if (trade.id === tradeId) {
+                console.log('✅ Marking trade as completed:', completionReason);
+                return {
+                  ...trade,
+                  status: 'completed',
+                  completionReason: completionReason,
+                  ...(safebookPrice && { safebookPrice })
+                };
+              }
+              return trade;
+            })
+          };
+          console.log('🚀 Updated cache with completed trade:', updated);
+          return updated;
+        }
+      );
+
+      // Return context for rollback
+      return { previousQueries };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/trades/stats'] });
+      // Invalidate with delay for smooth UX
+      setTimeout(() => {
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades" });
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades/stats" || (Array.isArray(query.queryKey) && query.queryKey.includes("/api/trades/stats")) });
+      }, 100);
       toast({ title: "Trade completed successfully" });
     },
-    onError: (error: any) => {
+    onError: (error: any, variables, context) => {
+      // Rollback optimistic updates
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]: [any, any]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       toast({ 
         title: "Failed to complete trade", 
         description: error.message, 
