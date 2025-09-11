@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format, isToday, isYesterday, parseISO } from "date-fns";
 import { Calendar, Star, TrendingUp, TrendingDown } from "lucide-react";
 import { Trade } from "@shared/schema";
 
@@ -39,6 +39,30 @@ export default function TradeHistoryPage() {
       })
     : trades;
 
+  // Group trades by date
+  const groupedTrades = filteredTrades.reduce((groups, trade) => {
+    const tradeDate = trade.updatedAt ? new Date(trade.updatedAt) : new Date(trade.createdAt!);
+    const dateKey = format(tradeDate, 'yyyy-MM-dd');
+    
+    if (!groups[dateKey]) {
+      groups[dateKey] = [];
+    }
+    groups[dateKey].push(trade);
+    
+    return groups;
+  }, {} as Record<string, TradeWithGainLoss[]>);
+
+  // Sort dates in descending order (newest first)
+  const sortedDates = Object.keys(groupedTrades).sort((a, b) => b.localeCompare(a));
+  
+  // Helper function to format date headers
+  const getDateLabel = (dateString: string) => {
+    const date = parseISO(dateString);
+    if (isToday(date)) return 'Today';
+    if (isYesterday(date)) return 'Yesterday';
+    return format(date, 'MMM d, yyyy');
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -53,16 +77,31 @@ export default function TradeHistoryPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       <div className="container mx-auto px-6 py-6">
+        {/* Branding and Quote */}
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-2">
-            Trade History
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {filteredTrades.length} completed trades
-          </p>
+          <div className="mb-4">
+            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">
+              📚 Campus For Wisdom
+            </h1>
+            <p className="text-xs italic text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              "The market is a device for transferring money from the impatient to the patient." - Warren Buffett
+            </p>
+          </div>
+        </div>
+        
+        {/* Header and Filter */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Trade History
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {filteredTrades.length} completed trades
+            </p>
+          </div>
           
           {/* Date Filter */}
-          <div className="flex items-center justify-center gap-3 mt-4">
+          <div className="flex items-center gap-3">
             <Calendar className="w-4 h-4 text-slate-400" />
             <Input
               type="date"
@@ -96,17 +135,22 @@ export default function TradeHistoryPage() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredTrades.map((trade) => (
-            <Card key={trade.id} className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm hover:shadow-md hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all duration-200 rounded-lg overflow-hidden" data-testid={`trade-card-${trade.id}`}>
-              <div className="absolute top-2 right-2 text-[10px] text-slate-400 dark:text-slate-500" data-testid={`text-time-${trade.id}`}>
-                {trade.updatedAt 
-                  ? formatDistanceToNow(new Date(trade.updatedAt), { addSuffix: true })
-                  : trade.createdAt 
-                    ? formatDistanceToNow(new Date(trade.createdAt), { addSuffix: true })
-                    : 'Unknown'
-                }
+        <div className="space-y-6">
+          {sortedDates.map((dateKey) => (
+            <div key={dateKey}>
+              {/* Date Header */}
+              <div className="flex items-center justify-center mb-4">
+                <div className="bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-full">
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    {getDateLabel(dateKey)}
+                  </span>
+                </div>
               </div>
+              
+              {/* Trades for this date */}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {groupedTrades[dateKey].map((trade) => (
+                  <Card key={trade.id} className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm hover:shadow-md hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all duration-200 rounded-lg overflow-hidden" data-testid={`trade-card-${trade.id}`}>
 
               <CardHeader className="pb-2 pt-3 px-3">
                 <div className="flex items-start justify-between pr-6">
@@ -258,8 +302,21 @@ export default function TradeHistoryPage() {
                     </p>
                   </div>
                 )}
+                
+                {/* Time in bottom corner */}
+                <div className="absolute bottom-2 right-2 text-[9px] text-slate-400 dark:text-slate-500 bg-slate-50/80 dark:bg-slate-800/80 px-1.5 py-0.5 rounded" data-testid={`text-time-${trade.id}`}>
+                  {trade.updatedAt 
+                    ? format(new Date(trade.updatedAt), 'HH:mm')
+                    : trade.createdAt 
+                      ? format(new Date(trade.createdAt), 'HH:mm')
+                      : 'N/A'
+                  }
+                </div>
               </CardContent>
-            </Card>
+                </Card>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
