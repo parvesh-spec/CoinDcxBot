@@ -4,10 +4,41 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+// Edit form schema
+const editTradeSchema = z.object({
+  price: z.string().min(1, "Price is required"),
+  leverage: z.coerce.number().min(1, "Leverage must be at least 1").max(100, "Leverage cannot exceed 100"),
+  notes: z.string().optional(),
+  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book']).optional(),
+  safebookPrice: z.string().optional(),
+}).refine((data) => {
+  // Require safebook price when completion reason is safe_book
+  if (data.completionReason === 'safe_book') {
+    if (!data.safebookPrice || data.safebookPrice.trim() === '') {
+      return false;
+    }
+    const price = parseFloat(data.safebookPrice);
+    if (isNaN(price) || price <= 0) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Safe book price is required and must be greater than 0 when completion reason is safe book",
+  path: ['safebookPrice']
+});
+
+type EditTradeFormData = z.infer<typeof editTradeSchema>;
 
 interface Trade {
   id: string;
@@ -727,70 +758,17 @@ export default function TradesTable({
       </Dialog>
 
       {/* Edit Trade Dialog */}
-      <Dialog open={editDialog.isOpen} onOpenChange={(open) => 
-        setEditDialog(prev => ({ ...prev, isOpen: open }))
-      }>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Trade</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Pair: {editDialog.trade?.pair}</Label>
-            </div>
-            <div>
-              <Label htmlFor="edit-price">Entry Price (USDT)</Label>
-              <Input
-                id="edit-price"
-                type="number"
-                step="0.01"
-                min="0"
-                defaultValue={editDialog.trade?.price}
-                data-testid="input-edit-price"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-leverage">Leverage</Label>
-              <Input
-                id="edit-leverage"
-                type="number"
-                min="1"
-                max="100"
-                defaultValue={editDialog.trade?.leverage}
-                data-testid="input-edit-leverage"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Input
-                id="edit-notes"
-                defaultValue={editDialog.trade?.notes || ''}
-                placeholder="Trade notes (optional)"
-                data-testid="input-edit-notes"
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setEditDialog({ isOpen: false, trade: null })}
-                data-testid="button-cancel-edit"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={() => {
-                  // TODO: Implement edit functionality
-                  toast({ title: "Edit functionality coming soon!" });
-                }}
-                disabled={editTradeMutation.isPending}
-                data-testid="button-submit-edit"
-              >
-                {editTradeMutation.isPending ? 'Updating...' : 'Update Trade'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EditTradeModal 
+        isOpen={editDialog.isOpen}
+        trade={editDialog.trade}
+        onClose={() => setEditDialog({ isOpen: false, trade: null })}
+        onSubmit={(data) => {
+          if (editDialog.trade) {
+            editTradeMutation.mutate({ tradeId: editDialog.trade.id, tradeData: data });
+          }
+        }}
+        isLoading={editTradeMutation.isPending}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog.isOpen} onOpenChange={(open) => 
@@ -835,5 +813,200 @@ export default function TradesTable({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+// Edit Trade Modal Component
+interface EditTradeModalProps {
+  isOpen: boolean;
+  trade: Trade | null;
+  onClose: () => void;
+  onSubmit: (data: EditTradeFormData) => void;
+  isLoading: boolean;
+}
+
+function EditTradeModal({ isOpen, trade, onClose, onSubmit, isLoading }: EditTradeModalProps) {
+  const form = useForm<EditTradeFormData>({
+    resolver: zodResolver(editTradeSchema),
+    defaultValues: {
+      price: "",
+      leverage: 1,
+      notes: "",
+      completionReason: undefined,
+      safebookPrice: "",
+    },
+  });
+
+  const watchedCompletionReason = form.watch("completionReason");
+  const showSafebookPrice = watchedCompletionReason === "safe_book";
+
+  // Reset form when trade changes
+  useEffect(() => {
+    if (trade) {
+      form.reset({
+        price: trade.price || "",
+        leverage: trade.leverage || 1,
+        notes: trade.notes || "",
+        completionReason: trade.completionReason as any || undefined,
+        safebookPrice: "",
+      });
+    }
+  }, [trade, form]);
+
+  const handleSubmit = (data: EditTradeFormData) => {
+    onSubmit(data);
+  };
+
+  const completionReasons = [
+    { value: 'target_1_hit', label: 'Target 1 Hit' },
+    { value: 'target_2_hit', label: 'Target 2 Hit' },
+    { value: 'target_3_hit', label: 'Target 3 Hit' },
+    { value: 'stop_loss_hit', label: 'Stop Loss Hit' },
+    { value: 'safe_book', label: 'Safe Book' },
+  ];
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Trade</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div>
+              <Label>Pair: {trade?.pair}</Label>
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Entry Price (USDT)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Enter price"
+                      data-testid="input-edit-price"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="leverage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Leverage</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      placeholder="Enter leverage"
+                      data-testid="input-edit-leverage"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Trade notes (optional)"
+                      data-testid="input-edit-notes"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {trade?.status === 'completed' && (
+              <FormField
+                control={form.control}
+                name="completionReason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Completion Reason</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} data-testid="select-completion-reason">
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select completion reason" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {completionReasons.map((reason) => (
+                          <SelectItem key={reason.value} value={reason.value}>
+                            {reason.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {showSafebookPrice && (
+              <FormField
+                control={form.control}
+                name="safebookPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Safe Book Price (USDT)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Enter safe book price"
+                        data-testid="input-edit-safebook-price"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={onClose}
+                data-testid="button-cancel-edit"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={isLoading}
+                data-testid="button-submit-edit"
+              >
+                {isLoading ? 'Updating...' : 'Update Trade'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

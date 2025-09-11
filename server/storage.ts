@@ -290,9 +290,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTrade(id: string, trade: UpdateTrade): Promise<Trade | undefined> {
+    // Clear safebook price if completion reason is not safe_book to avoid stale data
+    const updateData = { ...trade };
+    if (trade.completionReason && trade.completionReason !== 'safe_book') {
+      updateData.safebookPrice = null;
+    }
+    
     const [updatedTrade] = await db
       .update(trades)
-      .set({ ...trade, updatedAt: new Date() })
+      .set({ ...updateData, updatedAt: new Date() })
       .where(eq(trades.id, id))
       .returning();
     return updatedTrade;
