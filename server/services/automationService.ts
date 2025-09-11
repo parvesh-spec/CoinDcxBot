@@ -2,7 +2,14 @@ import { storage } from '../storage';
 import { telegramService } from './telegram';
 import { Trade, Automation, TelegramChannel, MessageTemplate, InsertSentMessage } from '../../shared/schema';
 
-export type AutomationTrigger = 'trade_registered' | 'trade_completed';
+export type AutomationTrigger = 
+  | 'trade_registered' 
+  | 'trade_completed'
+  | 'stop_loss_hit'
+  | 'safe_book_hit'
+  | 'target_1_hit'
+  | 'target_2_hit'
+  | 'target_3_hit';
 
 export class AutomationService {
   
@@ -124,6 +131,103 @@ export class AutomationService {
   }
   
   /**
+   * Find original trade registration message ID for reply functionality
+   * @param tradeId The trade ID to find the original message for
+   * @param channelId The specific channel ID to match (prevents channel mismatch)
+   * @returns Telegram message ID to reply to, or null if not found
+   */
+  private async getOriginalTradeMessageId(tradeId: string, channelId: string): Promise<string | null> {
+    try {
+      console.log(`🔍 Looking for original trade registration message for trade ${tradeId} in channel ${channelId}`);
+      
+      // Find sent messages for this trade in this specific channel
+      const sentMessages = await storage.getSentMessages();
+      
+      // Filter by tradeId, channelId, and successful status
+      let candidateMessages = sentMessages.filter(msg => 
+        msg.tradeId === tradeId && 
+        msg.channelId === channelId &&
+        msg.status === 'sent' && 
+        msg.telegramMessageId
+      );
+      
+      console.log(`📋 Found ${candidateMessages.length} candidate messages for trade ${tradeId} in channel ${channelId}`);
+      
+      if (candidateMessages.length === 0) {
+        console.log(`⚠️ No sent messages found for trade ${tradeId} in channel ${channelId}`);
+        return null;
+      }
+      
+      // Try to find trade_registered message first (with fallback logic)
+      let originalMessage = null;
+      
+      // Method 1: Try to find message with trade_registered automation (if hydrated)
+      const tradeRegisteredMessage = candidateMessages.find(msg => 
+        msg.automation?.triggerType === 'trade_registered'
+      );
+      
+      if (tradeRegisteredMessage) {
+        originalMessage = tradeRegisteredMessage;
+        console.log(`✅ Found trade_registered message via automation relation: ${originalMessage.telegramMessageId}`);
+      } else {
+        console.log(`⚠️ No trade_registered message found via automation relation, using fallback logic`);
+        
+        // Method 2: Fallback - pick the earliest message by sentAt timestamp
+        // Sort by sentAt ascending to get the first (earliest) message sent for this trade
+        candidateMessages.sort((a, b) => {
+          const dateA = new Date(a.sentAt || 0).getTime();
+          const dateB = new Date(b.sentAt || 0).getTime();
+          return dateA - dateB;
+        });
+        
+        originalMessage = candidateMessages[0];
+        console.log(`✅ Using earliest message as fallback: ${originalMessage.telegramMessageId} (sent at ${originalMessage.sentAt})`);
+      }
+      
+      return originalMessage?.telegramMessageId || null;
+      
+    } catch (error) {
+      console.error(`❌ Error finding original trade message for ${tradeId} in channel ${channelId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Comprehensive reply error detection for all Telegram variants
+   * @param error The error message from Telegram API
+   * @returns True if this is a reply-related error
+   */
+  private isReplyError(error?: string): boolean {
+    if (!error) return false;
+    
+    const replyErrorPatterns = [
+      // Direct text matches (case-insensitive)
+      'replied message not found',
+      'reply message not found',
+      'message to reply not found',
+      'REPLY_MESSAGE_NOT_FOUND',
+      'MESSAGE_ID_INVALID',
+      'Bad Request: reply message not found',
+      'Bad Request: message to reply not found',
+      // HTTP 400 status with reply context
+      'Bad Request: invalid message ID',
+      'Bad Request: REPLY_MESSAGE_NOT_FOUND',
+      // Numeric error codes
+      '400: Bad Request',
+      // Additional Telegram error variants
+      'invalid message id to reply',
+      'replied message is deleted',
+      'message_id_invalid',
+      'reply_message_not_found'
+    ];
+    
+    const errorLower = error.toLowerCase();
+    return replyErrorPatterns.some(pattern => 
+      errorLower.includes(pattern.toLowerCase())
+    );
+  }
+
+  /**
    * Process a single automation - send message to channel using template
    */
   private async processAutomation(automation: Automation, trade: Trade, trigger: AutomationTrigger): Promise<void> {
@@ -145,6 +249,22 @@ export class AutomationService {
       }
       
       console.log(`📤 Processing automation: ${automation.name} -> Channel: ${channel.name}, Template: ${template.name}`);
+      
+      // Check if this is a reply-type trigger (target hits, stop loss, safe book)
+      const isReplyTrigger = ['stop_loss_hit', 'safe_book_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'].includes(trigger);
+      let originalMessageId: string | null = null;
+      
+      if (isReplyTrigger) {
+        // For reply triggers, try to find the original trade registration message
+        originalMessageId = await this.getOriginalTradeMessageId(trade.id, channel.channelId);
+        
+        if (originalMessageId) {
+          console.log(`💬 Will reply to original message ID: ${originalMessageId}`);
+        } else {
+          console.log(`⚠️ Cannot find original trade registration message for ${trade.tradeId} in channel ${channel.name}`);
+          console.log(`📤 Will send as new message instead of reply to ensure notification is not missed`);
+        }
+      }
       
       // Generate message from template with trade data
       const messageText = this.renderTemplate(template, trade);
@@ -174,6 +294,12 @@ export class AutomationService {
             caption: messageText,
             parse_mode: template.parseMode || 'HTML'
           };
+          
+          // Add reply functionality for target/stop loss triggers
+          if (isReplyTrigger && originalMessageId) {
+            photoMessageOptions.reply_to_message_id = originalMessageId;
+            photoMessageOptions.allow_sending_without_reply = true; // Better resilience
+          }
           
           // Add inline keyboard if template has buttons
           if (template.buttons && Array.isArray(template.buttons) && template.buttons.length > 0) {
@@ -209,6 +335,12 @@ export class AutomationService {
           disable_web_page_preview: !includeImageLink // Enable preview if we include image link
         };
         
+        // Add reply functionality for target/stop loss triggers
+        if (isReplyTrigger && originalMessageId) {
+          textOptions.reply_to_message_id = originalMessageId;
+          textOptions.allow_sending_without_reply = true; // Better resilience
+        }
+        
         // Add inline keyboard if template has buttons
         if (template.buttons && Array.isArray(template.buttons) && template.buttons.length > 0) {
           textOptions.reply_markup = {
@@ -219,14 +351,17 @@ export class AutomationService {
         return textOptions;
       };
 
-      // Send message to Telegram with runtime fallback handling
+      // Send message to Telegram with runtime fallback handling and reply resilience
       let finalResult: any = null;
       let messageType = 'text';
+      let wasReplyAttempted = false;
       
       try {
         if (shouldTryPhoto && photoMessageOptions) {
           // First attempt: Send as photo message
           console.log(`📸 Attempting to send photo message to ${channel.name}`);
+          wasReplyAttempted = !!(isReplyTrigger && originalMessageId && photoMessageOptions.reply_to_message_id);
+          
           const photoResult = await telegramService.sendMessage(channel.channelId, photoMessageOptions);
           
           if (photoResult.success && photoResult.messageId) {
@@ -236,34 +371,117 @@ export class AutomationService {
             console.log(`✅ Photo message sent successfully to ${channel.name} (Message ID: ${photoResult.messageId})`);
             
           } else {
-            // Photo message failed - immediate fallback to text with image link
-            console.log(`⚠️ Photo message failed (${photoResult.error}), falling back to text message with image link`);
+            // Photo message failed - check if it's a reply failure
+            const isReplyFailure = wasReplyAttempted && this.isReplyError(photoResult.error);
             
-            const textOptions = createTextMessage(true); // Include image link
-            const textResult = await telegramService.sendMessage(channel.channelId, textOptions);
-            
-            finalResult = textResult;
-            messageType = 'text_fallback';
-            
-            if (textResult.success && textResult.messageId) {
-              console.log(`✅ Fallback text message sent successfully to ${channel.name} (Message ID: ${textResult.messageId})`);
+            if (isReplyFailure) {
+              console.log(`⚠️ Photo reply failed (${photoResult.error}), retrying without reply`);
+              
+              // Remove reply and try again
+              const photoOptionsNoReply = { ...photoMessageOptions };
+              delete photoOptionsNoReply.reply_to_message_id;
+              
+              const photoRetryResult = await telegramService.sendMessage(channel.channelId, photoOptionsNoReply);
+              
+              if (photoRetryResult.success && photoRetryResult.messageId) {
+                finalResult = photoRetryResult;
+                messageType = 'photo_no_reply';
+                console.log(`✅ Photo message sent successfully without reply to ${channel.name} (Message ID: ${photoRetryResult.messageId})`);
+              } else {
+                // Still failed, fall back to text
+                console.log(`⚠️ Photo retry failed (${photoRetryResult.error}), falling back to text message`);
+                const textOptions = createTextMessage(true); // Include image link
+                delete textOptions.reply_to_message_id; // Don't attempt reply again
+                
+                const textResult = await telegramService.sendMessage(channel.channelId, textOptions);
+                finalResult = textResult;
+                messageType = 'text_fallback_no_reply';
+                
+                if (textResult.success && textResult.messageId) {
+                  console.log(`✅ Fallback text message sent successfully to ${channel.name} (Message ID: ${textResult.messageId})`);
+                } else {
+                  console.error(`❌ All photo fallbacks failed for ${channel.name}: ${textResult.error}`);
+                }
+              }
             } else {
-              console.error(`❌ Both photo and text fallback failed for ${channel.name}: ${textResult.error}`);
+              // Non-reply failure - immediate fallback to text with image link
+              console.log(`⚠️ Photo message failed (${photoResult.error}), falling back to text message with image link`);
+              
+              const textOptions = createTextMessage(true); // Include image link
+              const textResult = await telegramService.sendMessage(channel.channelId, textOptions);
+              
+              if (textResult.success && textResult.messageId) {
+                finalResult = textResult;
+                messageType = 'text_fallback';
+                console.log(`✅ Fallback text message sent successfully to ${channel.name} (Message ID: ${textResult.messageId})`);
+              } else {
+                // CRITICAL FIX: Check if text fallback failed due to reply error
+                const wasTextReplyAttempted = !!(isReplyTrigger && originalMessageId && textOptions.reply_to_message_id);
+                const isTextReplyFailure = wasTextReplyAttempted && this.isReplyError(textResult.error);
+                
+                if (isTextReplyFailure) {
+                  console.log(`⚠️ Text fallback reply failed (${textResult.error}), retrying without reply`);
+                  
+                  // Remove reply and try text message again
+                  const textOptionsNoReply = createTextMessage(true); // Include image link
+                  delete textOptionsNoReply.reply_to_message_id;
+                  delete textOptionsNoReply.allow_sending_without_reply;
+                  
+                  const textRetryResult = await telegramService.sendMessage(channel.channelId, textOptionsNoReply);
+                  
+                  if (textRetryResult.success && textRetryResult.messageId) {
+                    finalResult = textRetryResult;
+                    messageType = 'text_fallback_no_reply';
+                    console.log(`✅ Text fallback sent successfully without reply to ${channel.name} (Message ID: ${textRetryResult.messageId})`);
+                  } else {
+                    finalResult = textRetryResult;
+                    console.error(`❌ All fallbacks failed for ${channel.name}: ${textRetryResult.error}`);
+                  }
+                } else {
+                  // Non-reply text failure
+                  finalResult = textResult;
+                  console.error(`❌ Both photo and text fallback failed for ${channel.name}: ${textResult.error}`);
+                }
+              }
             }
           }
         } else {
           // Send as regular text message (no photo attempted)
           console.log(`📝 Sending text message to ${channel.name}`);
+          wasReplyAttempted = !!(isReplyTrigger && originalMessageId);
+          
           const textOptions = createTextMessage(false); // No image link needed
           const textResult = await telegramService.sendMessage(channel.channelId, textOptions);
           
-          finalResult = textResult;
-          messageType = 'text';
-          
           if (textResult.success && textResult.messageId) {
+            finalResult = textResult;
+            messageType = 'text';
             console.log(`✅ Text message sent successfully to ${channel.name} (Message ID: ${textResult.messageId})`);
           } else {
-            console.error(`❌ Text message failed for ${channel.name}: ${textResult.error}`);
+            // Check if it's a reply failure
+            const isReplyFailure = wasReplyAttempted && this.isReplyError(textResult.error);
+            
+            if (isReplyFailure) {
+              console.log(`⚠️ Text reply failed (${textResult.error}), retrying without reply`);
+              
+              // Remove reply and try again
+              const textOptionsNoReply = createTextMessage(false);
+              delete textOptionsNoReply.reply_to_message_id;
+              
+              const textRetryResult = await telegramService.sendMessage(channel.channelId, textOptionsNoReply);
+              
+              if (textRetryResult.success && textRetryResult.messageId) {
+                finalResult = textRetryResult;
+                messageType = 'text_no_reply';
+                console.log(`✅ Text message sent successfully without reply to ${channel.name} (Message ID: ${textRetryResult.messageId})`);
+              } else {
+                finalResult = textRetryResult;
+                console.error(`❌ Text retry also failed for ${channel.name}: ${textRetryResult.error}`);
+              }
+            } else {
+              finalResult = textResult;
+              console.error(`❌ Text message failed for ${channel.name}: ${textResult.error}`);
+            }
           }
         }
         
@@ -274,6 +492,7 @@ export class AutomationService {
             tradeId: trade.id,
             channelId: channel.channelId,
             telegramMessageId: finalResult.messageId,
+            replyToMessageId: isReplyTrigger ? originalMessageId : undefined,
             messageText: messageText + (messageType === 'text_fallback' ? ' [sent with image link fallback]' : ''),
             status: 'sent',
             sentAt: new Date()
@@ -284,6 +503,7 @@ export class AutomationService {
             automationId: automation.id,
             tradeId: trade.id,
             channelId: channel.channelId,
+            replyToMessageId: isReplyTrigger ? originalMessageId : undefined,
             messageText: messageText,
             status: 'failed',
             errorMessage: finalResult?.error || 'Unknown error',
@@ -297,6 +517,7 @@ export class AutomationService {
           automationId: automation.id,
           tradeId: trade.id,
           channelId: channel.channelId,
+          replyToMessageId: isReplyTrigger ? originalMessageId : undefined,
           messageText: messageText,
           status: 'failed',
           errorMessage: error instanceof Error ? error.message : 'Network or API error',
