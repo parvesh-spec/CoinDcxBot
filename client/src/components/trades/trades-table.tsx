@@ -232,13 +232,19 @@ export default function TradesTable({
       // Return context for rollback
       return { previousQueries };
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       // Invalidate with delay for smooth UX
       setTimeout(() => {
         queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades" });
         queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades/stats" || (Array.isArray(query.queryKey) && query.queryKey.includes("/api/trades/stats")) });
       }, 100);
-      toast({ title: "Trade completed successfully" });
+      
+      // Show different message based on completion reason
+      const message = variables.completionReason === 'safe_book' 
+        ? "Safebook updated" 
+        : "Trade completed successfully";
+      
+      toast({ title: message });
     },
     onError: (error: any, variables, context) => {
       // Rollback optimistic updates
