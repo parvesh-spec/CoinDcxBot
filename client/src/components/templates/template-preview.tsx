@@ -94,23 +94,36 @@ export default function TemplatePreview({ template, includeFields, buttons = [],
   };
 
   const renderFormattedText = (text: string) => {
+    let formattedText = text;
+    
     if (parseMode === "HTML") {
-      // Simple HTML preview - just show tags visually
-      return text
-        .replace(/<b>/g, '𝗕')
-        .replace(/<\/b>/g, '𝗕')
-        .replace(/<i>/g, '𝘐')
-        .replace(/<\/i>/g, '𝘐')
-        .replace(/<code>/g, '`')
-        .replace(/<\/code>/g, '`');
+      // Convert HTML tags to proper HTML for rendering
+      formattedText = formattedText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/&lt;b&gt;/g, '<strong>')
+        .replace(/&lt;\/b&gt;/g, '</strong>')
+        .replace(/&lt;i&gt;/g, '<em>')
+        .replace(/&lt;\/i&gt;/g, '</em>')
+        .replace(/&lt;code&gt;/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs font-mono">')
+        .replace(/&lt;\/code&gt;/g, '</code>');
     } else if (parseMode === "Markdown") {
-      // Simple Markdown preview
-      return text
-        .replace(/\*\*(.*?)\*\*/g, '𝗕$1𝗕')
-        .replace(/\*(.*?)\*/g, '𝘐$1𝘐')
-        .replace(/`(.*?)`/g, '`$1`');
+      // Convert Markdown to HTML
+      formattedText = formattedText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs font-mono">$1</code>');
     }
-    return text;
+    
+    return formattedText;
+  };
+
+  const createMarkup = (text: string) => {
+    return { __html: renderFormattedText(text) };
   };
 
   return (
@@ -119,14 +132,20 @@ export default function TemplatePreview({ template, includeFields, buttons = [],
         <CardTitle>Message Preview</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="bg-muted rounded-lg p-4 border-l-4 border-primary space-y-3">
+        <div className="bg-background border rounded-lg p-4 shadow-sm space-y-3" style={{
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          border: '1px solid #e2e8f0'
+        }}>
           {/* Text Preview */}
           <div
-            className="text-sm font-mono text-foreground whitespace-pre-wrap"
+            className="text-sm text-foreground whitespace-pre-wrap leading-relaxed"
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+              lineHeight: '1.5'
+            }}
             data-testid="text-template-preview"
-          >
-            {renderFormattedText(generatePreview())}
-          </div>
+            dangerouslySetInnerHTML={createMarkup(generatePreview())}
+          />
           
           {/* Buttons Preview */}
           {buttons && buttons.length > 0 && (
