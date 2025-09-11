@@ -33,15 +33,16 @@ export default function TradeHistoryPage() {
   // Filter trades by date if filter is applied
   const filteredTrades = dateFilter 
     ? trades.filter(trade => {
-        if (!trade.updatedAt) return false;
-        const tradeDate = format(new Date(trade.updatedAt), 'yyyy-MM-dd');
+        if (!trade.createdAt) return false;
+        const tradeDate = format(new Date(trade.createdAt), 'yyyy-MM-dd');
         return tradeDate === dateFilter;
       })
     : trades;
 
   // Group trades by date
   const groupedTrades = filteredTrades.reduce((groups, trade) => {
-    const tradeDate = trade.updatedAt ? new Date(trade.updatedAt) : new Date(trade.createdAt!);
+    if (!trade.createdAt) return groups; // Skip trades without createdAt
+    const tradeDate = new Date(trade.createdAt);
     const dateKey = format(tradeDate, 'yyyy-MM-dd');
     
     if (!groups[dateKey]) {
@@ -67,7 +68,8 @@ export default function TradeHistoryPage() {
   const totalTrades = trades.length;
   const currentMonth = format(new Date(), 'yyyy-MM');
   const thisMonthTrades = trades.filter(trade => {
-    const tradeDate = trade.updatedAt ? new Date(trade.updatedAt) : new Date(trade.createdAt!);
+    if (!trade.createdAt) return false; // Skip trades without createdAt
+    const tradeDate = new Date(trade.createdAt);
     return format(tradeDate, 'yyyy-MM') === currentMonth;
   });
   
@@ -375,11 +377,9 @@ export default function TradeHistoryPage() {
                 
                 {/* Time in bottom corner with reserved space */}
                 <div className="absolute bottom-1.5 right-1.5 text-[8px] text-slate-400 dark:text-slate-500 bg-slate-50/90 dark:bg-slate-800/90 px-1.5 py-0.5 rounded" data-testid={`text-time-${trade.id}`}>
-                  {trade.updatedAt 
-                    ? format(new Date(trade.updatedAt), 'HH:mm')
-                    : trade.createdAt 
-                      ? format(new Date(trade.createdAt), 'HH:mm')
-                      : 'N/A'
+                  {trade.createdAt 
+                    ? format(new Date(trade.createdAt), 'HH:mm')
+                    : 'N/A'
                   }
                 </div>
               </CardContent>
