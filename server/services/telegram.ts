@@ -4,6 +4,8 @@ interface TelegramMessage {
   text: string;
   parse_mode?: 'HTML' | 'Markdown';
   disable_web_page_preview?: boolean;
+  reply_to_message_id?: string;
+  allow_sending_without_reply?: boolean;
   reply_markup?: {
     inline_keyboard: any[][];
   };
@@ -13,6 +15,8 @@ interface TelegramPhotoMessage {
   photo: string;
   caption?: string;
   parse_mode?: 'HTML' | 'Markdown';
+  reply_to_message_id?: string;
+  allow_sending_without_reply?: boolean;
   reply_markup?: {
     inline_keyboard: any[][];
   };
@@ -62,6 +66,19 @@ export class TelegramService {
         disable_web_page_preview: message.disable_web_page_preview !== false,
       };
 
+      // Add reply parameters if provided
+      if (message.reply_to_message_id) {
+        const messageId = parseInt(message.reply_to_message_id);
+        if (Number.isInteger(messageId) && messageId > 0) {
+          payload.reply_to_message_id = messageId;
+        } else {
+          console.warn(`Invalid reply_to_message_id: ${message.reply_to_message_id}`);
+        }
+      }
+      if (message.allow_sending_without_reply !== undefined) {
+        payload.allow_sending_without_reply = message.allow_sending_without_reply;
+      }
+
       // Add inline keyboard if provided
       if (message.reply_markup) {
         payload.reply_markup = message.reply_markup;
@@ -82,9 +99,19 @@ export class TelegramService {
       }
     } catch (error) {
       console.error('Error sending Telegram message:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
+      
+      // Extract Telegram error details if available
+      if (axios.isAxiosError(error) && error.response?.data?.description) {
+        return {
+          success: false,
+          error: error.response.data.description,
+        };
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send message',
+        error: errorMessage,
       };
     }
   }
@@ -100,6 +127,19 @@ export class TelegramService {
         photo: message.photo,
         parse_mode: message.parse_mode || 'HTML',
       };
+
+      // Add reply parameters if provided
+      if (message.reply_to_message_id) {
+        const messageId = parseInt(message.reply_to_message_id);
+        if (Number.isInteger(messageId) && messageId > 0) {
+          payload.reply_to_message_id = messageId;
+        } else {
+          console.warn(`Invalid reply_to_message_id: ${message.reply_to_message_id}`);
+        }
+      }
+      if (message.allow_sending_without_reply !== undefined) {
+        payload.allow_sending_without_reply = message.allow_sending_without_reply;
+      }
 
       // Add caption if provided
       if (message.caption) {
@@ -126,9 +166,19 @@ export class TelegramService {
       }
     } catch (error) {
       console.error('Error sending Telegram photo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send photo';
+      
+      // Extract Telegram error details if available
+      if (axios.isAxiosError(error) && error.response?.data?.description) {
+        return {
+          success: false,
+          error: error.response.data.description,
+        };
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send photo',
+        error: errorMessage,
       };
     }
   }
