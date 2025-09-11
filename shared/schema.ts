@@ -202,8 +202,23 @@ export const completeTradeSchema = z.object({
   completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book'], {
     required_error: "Please select completion reason",
   }),
-  safebookPrice: z.string().optional(), // Price when safe booking
+  safebookPrice: z.string().optional(),
   notes: z.string().optional(),
+}).refine((data) => {
+  // Require safebook price when completion reason is safe_book
+  if (data.completionReason === 'safe_book') {
+    if (!data.safebookPrice || data.safebookPrice.trim() === '') {
+      return false;
+    }
+    const price = parseFloat(data.safebookPrice);
+    if (isNaN(price) || price <= 0) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Safe book price is required and must be greater than 0 when completion reason is safe book",
+  path: ['safebookPrice']
 });
 
 export const insertAutomationSchema = createInsertSchema(automations).omit({

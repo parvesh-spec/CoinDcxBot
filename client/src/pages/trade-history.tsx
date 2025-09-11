@@ -268,7 +268,7 @@ export default function TradeHistoryPage() {
                 )}
 
                 {/* Take Profits in compact boxes */}
-                {(trade.takeProfitTrigger || trade.takeProfit2 || trade.takeProfit3) && (
+                {(trade.takeProfitTrigger || trade.takeProfit2 || trade.takeProfit3 || (trade.completionReason === 'safe_book' && trade.safebookPrice)) && (
                   <div>
                     <p className="text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Targets</p>
                     <div className="flex gap-1">
