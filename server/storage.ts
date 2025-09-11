@@ -538,6 +538,7 @@ export class DatabaseStorage implements IStorage {
         createdAt: sentMessages.createdAt,
         automation: {
           name: automations.name,
+          triggerType: automations.triggerType,
         },
         trade: {
           pair: trades.pair,
