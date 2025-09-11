@@ -71,51 +71,56 @@ export default function TradesTable({
     onMutate: async ({ tradeId, targetType }) => {
       console.log('🎯 Starting optimistic update for:', tradeId, targetType);
       
-      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
-      await queryClient.cancelQueries({ queryKey: ['/api/trades'] });
+      // Get all queries that start with "trades" (parent uses ["trades", filters])
+      await queryClient.cancelQueries({ predicate: (query) => query.queryKey[0] === "trades" });
 
-      // Snapshot the previous value
-      const previousTrades = queryClient.getQueryData(['/api/trades']);
-      console.log('📊 Previous data:', previousTrades);
+      // Snapshot the previous values for all trades queries
+      const previousQueries = queryClient.getQueriesData({ predicate: (query) => query.queryKey[0] === "trades" });
+      console.log('📊 Previous queries:', previousQueries);
 
-      // Optimistically update to the new value
-      queryClient.setQueryData(['/api/trades'], (old: any) => {
-        console.log('🔄 Updating cache with old data:', old);
-        if (!old) return old;
-        
-        const updated = {
-          ...old,
-          trades: old.trades.map((trade: any) => {
-            if (trade.id === tradeId) {
-              const newTargetStatus = { ...(trade.targetStatus || {}) };
-              newTargetStatus[targetType] = true;
-              console.log('✅ Updated target status:', newTargetStatus);
-              return {
-                ...trade,
-                targetStatus: newTargetStatus
-              };
-            }
-            return trade;
-          })
-        };
-        console.log('🚀 New cache data:', updated);
-        return updated;
-      });
+      // Optimistically update all trades queries
+      queryClient.setQueriesData(
+        { predicate: (query) => query.queryKey[0] === "trades" },
+        (old: any) => {
+          console.log('🔄 Updating cache with old data:', old);
+          if (!old) return old;
+          
+          const updated = {
+            ...old,
+            trades: old.trades.map((trade: any) => {
+              if (trade.id === tradeId) {
+                const newTargetStatus = { ...(trade.targetStatus || {}) };
+                newTargetStatus[targetType] = true;
+                console.log('✅ Updated target status:', newTargetStatus);
+                return {
+                  ...trade,
+                  targetStatus: newTargetStatus
+                };
+              }
+              return trade;
+            })
+          };
+          console.log('🚀 New cache data:', updated);
+          return updated;
+        }
+      );
 
-      // Return a context object with the snapshotted value
-      return { previousTrades };
+      // Return context with all previous queries
+      return { previousQueries };
     },
     onSuccess: () => {
       // Don't invalidate immediately - let optimistic update show first
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades" });
       }, 100); // Small delay to let user see the optimistic update
       toast({ title: "Target status updated successfully" });
     },
     onError: (error: any, variables, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
-      if (context?.previousTrades) {
-        queryClient.setQueryData(['/api/trades'], context.previousTrades);
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]: [any, any]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
       }
       toast({ 
         title: "Failed to update target status", 
