@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Edit2, Copy, Trash2, Eye } from "lucide-react";
+import { ChevronDown, ChevronUp, Edit2, Copy, Trash2, Eye, Image } from "lucide-react";
 
 interface SavedTemplatesProps {
   templates: any[];
@@ -129,22 +129,47 @@ export default function SavedTemplates({
                 <CardContent className="p-6">
                   {/* Header Section */}
                   <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-base font-semibold text-foreground">
-                          {template.name}
-                        </h3>
-                        <Badge 
-                          variant={template.isActive ? "default" : "secondary"}
-                          className="text-xs"
-                        >
-                          {template.isActive ? "Active" : "Inactive"}
-                        </Badge>
+                    <div className="flex-1 flex items-start gap-3">
+                      {/* Image Thumbnail */}
+                      {template.imageUrl ? (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={template.imageUrl}
+                            alt={template.name}
+                            className="w-12 h-12 rounded-md object-cover border border-border shadow-sm"
+                            data-testid={`img-template-thumbnail-${template.id}`}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex-shrink-0 w-12 h-12 rounded-md bg-muted border border-border flex items-center justify-center">
+                          <Image className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      {/* Template Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-base font-semibold text-foreground truncate">
+                            {template.name}
+                          </h3>
+                          <Badge 
+                            variant={template.isActive ? "default" : "secondary"}
+                            className="text-xs flex-shrink-0"
+                          >
+                            {template.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-primary/60"></span>
+                          {template.channel?.name || "Unknown Channel"}
+                        </p>
+                        {template.imageUrl && (
+                          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <Image className="h-3 w-3" />
+                            Image attached
+                          </p>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-primary/60"></span>
-                        {template.channel?.name || "Unknown Channel"}
-                      </p>
                     </div>
                     
                     {/* Action Buttons */}
@@ -214,6 +239,21 @@ export default function SavedTemplates({
                       </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-3 mt-3">
+                      {/* Image Preview in Details */}
+                      {template.imageUrl && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Template Image</p>
+                          <div className="max-w-xs">
+                            <img
+                              src={template.imageUrl}
+                              alt={template.name}
+                              className="w-full rounded-md border border-border shadow-sm"
+                              data-testid={`img-template-full-${template.id}`}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Template Details */}
                       <div className="grid grid-cols-2 gap-4 p-3 bg-accent/30 rounded-md">
                         <div>
