@@ -234,6 +234,9 @@ export class DatabaseStorage implements IStorage {
         case 'target_3_hit':
           exitPrice = trade.takeProfit3 ? Number(trade.takeProfit3) : entryPrice;
           break;
+        case 'safe_book':
+          exitPrice = trade.safebookPrice ? Number(trade.safebookPrice) : entryPrice;
+          break;
         default:
           return { percentage: 0, isGain: true };
       }
@@ -318,6 +321,7 @@ export class DatabaseStorage implements IStorage {
       .set({ 
         status: 'completed',
         completionReason: completion.completionReason,
+        safebookPrice: completion.safebookPrice ? completion.safebookPrice : null,
         notes: completion.notes,
         updatedAt: new Date() 
       })
