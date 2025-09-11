@@ -14,16 +14,16 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
     // Sample data for preview
     const sampleData = {
       pair: "B-ETH_USDT",
-      price: "4285.67 USDT",
+      price: "$4,285.67",
       type: "BUY",
       leverage: "50x",
-      stopLoss: "4200.00 USDT",
-      takeProfit1: "4350.00 USDT",
-      takeProfit2: "4415.00 USDT",
-      takeProfit3: "4480.00 USDT",
-      safebookPrice: "4325.00 USDT",
+      stopLoss: "$4,200.00",
+      takeProfit1: "$4,350.00",
+      takeProfit2: "$4,415.00",
+      takeProfit3: "$4,480.00",
+      safebookPrice: "$4,325.00",
       timestamp: "Dec 15, 2024 14:32",
-      profitLoss: "+5234 USDT",
+      profitLoss: "+$5,234",
     };
 
     // Replace all variables with sample data
