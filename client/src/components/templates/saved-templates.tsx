@@ -159,10 +159,6 @@ export default function SavedTemplates({
                             {template.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-primary/60"></span>
-                          {template.channel?.name || "Unknown Channel"}
-                        </p>
                         {template.imageUrl && (
                           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                             <Image className="h-3 w-3" />
