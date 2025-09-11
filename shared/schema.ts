@@ -263,7 +263,6 @@ export const insertAutomationSchema = createInsertSchema(automations).omit({
 }).extend({
   triggerType: z.enum([
     'trade_registered', 
-    'trade_completed',
     'stop_loss_hit',
     'safe_book_hit', 
     'target_1_hit',

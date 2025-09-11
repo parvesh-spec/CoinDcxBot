@@ -4,7 +4,6 @@ import { Trade, Automation, TelegramChannel, MessageTemplate, InsertSentMessage 
 
 export type AutomationTrigger = 
   | 'trade_registered' 
-  | 'trade_completed'
   | 'stop_loss_hit'
   | 'safe_book_hit'
   | 'target_1_hit'

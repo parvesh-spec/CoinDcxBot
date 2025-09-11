@@ -106,8 +106,6 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
     switch (value) {
       case "trade_registered":
         return "When Trade is Registered (Active Status)";
-      case "trade_completed":
-        return "When Trade is Completed";
       case "stop_loss_hit":
         return "When Stop Loss is Triggered";
       case "safe_book_hit":
@@ -254,9 +252,6 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
                     <SelectContent>
                       <SelectItem value="trade_registered">
                         {getTriggerLabel("trade_registered")}
-                      </SelectItem>
-                      <SelectItem value="trade_completed">
-                        {getTriggerLabel("trade_completed")}
                       </SelectItem>
                       <SelectItem value="stop_loss_hit">
                         {getTriggerLabel("stop_loss_hit")}

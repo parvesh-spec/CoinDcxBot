@@ -43,10 +43,7 @@ export class TradeMonitorService {
     try {
       const trade = await storage.getTrade(tradeId);
       if (trade && trade.status === 'completed') {
-        // Trigger both generic trade_completed and specific completion reason events
-        await automationService.triggerAutomations(trade, 'trade_completed');
-        
-        // Trigger specific automation events based on completion reason
+        // Trigger only specific completion reason events (no generic trade_completed)
         if (trade.completionReason) {
           // Map completion reason to automation trigger type
           let specificTrigger = trade.completionReason;
@@ -57,9 +54,13 @@ export class TradeMonitorService {
           }
           
           if (['stop_loss_hit', 'safe_book_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'].includes(specificTrigger)) {
-            console.log(`🎯 Triggering specific automation: ${specificTrigger} for trade ${trade.tradeId} (completion reason: ${trade.completionReason})`);
+            console.log(`🎯 Triggering specific completion automation: ${specificTrigger} for trade ${trade.tradeId} (completion reason: ${trade.completionReason})`);
             await automationService.triggerAutomations(trade, specificTrigger as any);
+          } else {
+            console.log(`⚠️ Unknown completion reason: ${trade.completionReason} for trade ${trade.tradeId}`);
           }
+        } else {
+          console.log(`⚠️ Trade ${trade.tradeId} completed without completion reason`);
         }
       }
     } catch (error) {
