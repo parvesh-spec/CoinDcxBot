@@ -21,6 +21,7 @@ export default function TemplatesPage() {
 #CoinDCX #Trading`,
     buttons: [] as any[][],
     parseMode: "HTML",
+    imageUrl: "",
   });
 
   const { data: templatesData, refetch: refetchTemplates, error: templatesError } = useQuery({
@@ -46,11 +47,12 @@ export default function TemplatesPage() {
     return null;
   }
 
-  const handleTemplateChange = (template: string, buttons?: any[][], parseMode?: string) => {
+  const handleTemplateChange = (template: string, buttons?: any[][], parseMode?: string, imageUrl?: string) => {
     setPreviewData({ 
       template, 
       buttons: buttons || [],
-      parseMode: parseMode || "HTML"
+      parseMode: parseMode || "HTML",
+      imageUrl: imageUrl || "",
     });
   };
 
@@ -60,6 +62,7 @@ export default function TemplatesPage() {
       template: template.template,
       buttons: template.buttons || [],
       parseMode: template.parseMode || "HTML",
+      imageUrl: template.imageUrl || "",
     });
   };
 
@@ -91,6 +94,7 @@ export default function TemplatesPage() {
               template={previewData.template}
               buttons={previewData.buttons}
               parseMode={previewData.parseMode}
+              imageUrl={previewData.imageUrl}
             />
             
             <SavedTemplates

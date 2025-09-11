@@ -14,7 +14,7 @@ import ObjectUploader from "@/components/ui/object-uploader";
 interface TemplateEditorProps {
   channels: any[];
   selectedTemplate: any;
-  onTemplateChange: (template: string, buttons?: any[][], parseMode?: string) => void;
+  onTemplateChange: (template: string, buttons?: any[][], parseMode?: string, imageUrl?: string) => void;
   onTemplateSaved: () => void;
   onClearSelection: () => void;
 }
@@ -62,8 +62,8 @@ export default function TemplateEditor({
   }, [selectedTemplate]);
 
   useEffect(() => {
-    onTemplateChange(formData.template, formData.buttons, formData.parseMode);
-  }, [formData.template, formData.buttons, formData.parseMode, onTemplateChange]);
+    onTemplateChange(formData.template, formData.buttons, formData.parseMode, formData.imageUrl);
+  }, [formData.template, formData.buttons, formData.parseMode, formData.imageUrl, onTemplateChange]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {

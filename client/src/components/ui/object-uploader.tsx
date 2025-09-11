@@ -38,7 +38,7 @@ export default function ObjectUploader({
   const finalizeUploadMutation = useMutation({
     mutationFn: async (imageUrl: string) => {
       const response = await apiRequest("POST", "/api/templates/images/finalize", {
-        imageUrl,
+        imageURL: imageUrl,
       });
       return response.json();
     },

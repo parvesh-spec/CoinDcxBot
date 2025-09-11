@@ -5,9 +5,10 @@ interface TemplatePreviewProps {
   template: string;
   buttons?: any[][];
   parseMode?: string;
+  imageUrl?: string;
 }
 
-export default function TemplatePreview({ template, buttons = [], parseMode = "HTML" }: TemplatePreviewProps) {
+export default function TemplatePreview({ template, buttons = [], parseMode = "HTML", imageUrl }: TemplatePreviewProps) {
   const generatePreview = () => {
     let preview = template;
 
@@ -128,6 +129,19 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
           background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           border: '1px solid #e2e8f0'
         }}>
+          {/* Image Preview */}
+          {imageUrl && (
+            <div className="mb-3" data-testid="image-preview">
+              <img
+                src={imageUrl}
+                alt="Template image"
+                className="w-full max-w-md mx-auto h-auto rounded-lg border border-gray-200 shadow-sm"
+                style={{ maxHeight: '300px', objectFit: 'contain' }}
+                data-testid="img-template-preview"
+              />
+            </div>
+          )}
+          
           {/* Text Preview */}
           <div
             className="text-sm text-foreground whitespace-pre-wrap leading-relaxed"
@@ -154,7 +168,7 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
         
         <div className="text-xs text-muted-foreground mt-2 space-y-1">
           <p>This preview updates in real-time as you edit the template</p>
-          <p>Format: {parseMode} • Buttons: {buttons?.length || 0} rows</p>
+          <p>Format: {parseMode} • Buttons: {buttons?.length || 0} rows{imageUrl ? ' • Image: Yes' : ''}</p>
         </div>
       </CardContent>
     </Card>
