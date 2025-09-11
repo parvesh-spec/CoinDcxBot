@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 interface TemplateEditorProps {
   channels: any[];
   selectedTemplate: any;
-  onTemplateChange: (template: string, includeFields: any) => void;
+  onTemplateChange: (template: string, includeFields: any, buttons?: any[][], parseMode?: string) => void;
   onTemplateSaved: () => void;
   onClearSelection: () => void;
 }
@@ -73,8 +73,8 @@ export default function TemplateEditor({
   }, [selectedTemplate]);
 
   useEffect(() => {
-    onTemplateChange(formData.template, formData.includeFields);
-  }, [formData.template, formData.includeFields, onTemplateChange]);
+    onTemplateChange(formData.template, formData.includeFields, formData.buttons, formData.parseMode);
+  }, [formData.template, formData.includeFields, formData.buttons, formData.parseMode, onTemplateChange]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -136,6 +136,8 @@ export default function TemplateEditor({
         template: formData.template,
         channelId: null, // No channel needed for testing
         includeFields: formData.includeFields,
+        buttons: formData.buttons,
+        parseMode: formData.parseMode,
       });
     },
     onSuccess: () => {
@@ -168,6 +170,8 @@ export default function TemplateEditor({
       channelId: null, // No channel selection needed
       template: formData.template,
       includeFields: formData.includeFields,
+      buttons: formData.buttons,
+      parseMode: formData.parseMode,
       isActive: true,
     });
   };

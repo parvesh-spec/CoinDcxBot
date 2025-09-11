@@ -27,6 +27,8 @@ export default function TemplatesPage() {
       timestamp: true,
       profitLoss: false,
     },
+    buttons: [] as any[][],
+    parseMode: "HTML",
   });
 
   const { data: templatesData, refetch: refetchTemplates, error: templatesError } = useQuery({
@@ -52,8 +54,13 @@ export default function TemplatesPage() {
     return null;
   }
 
-  const handleTemplateChange = (template: string, includeFields: any) => {
-    setPreviewData({ template, includeFields });
+  const handleTemplateChange = (template: string, includeFields: any, buttons?: any[][], parseMode?: string) => {
+    setPreviewData({ 
+      template, 
+      includeFields, 
+      buttons: buttons || [],
+      parseMode: parseMode || "HTML"
+    });
   };
 
   const handleTemplateSelect = (template: any) => {
@@ -61,6 +68,8 @@ export default function TemplatesPage() {
     setPreviewData({
       template: template.template,
       includeFields: template.includeFields,
+      buttons: template.buttons || [],
+      parseMode: template.parseMode || "HTML",
     });
   };
 
@@ -91,6 +100,8 @@ export default function TemplatesPage() {
             <TemplatePreview
               template={previewData.template}
               includeFields={previewData.includeFields}
+              buttons={previewData.buttons}
+              parseMode={previewData.parseMode}
             />
             
             <SavedTemplates
