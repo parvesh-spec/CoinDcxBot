@@ -78,15 +78,15 @@ export default function TradeHistoryPage() {
   const gainTrades = thisMonthWithGainLoss.filter(trade => trade.gainLoss?.isGain);
   const accuracy = thisMonthWithGainLoss.length > 0 ? Math.round((gainTrades.length / thisMonthWithGainLoss.length) * 100) : 0;
   
-  // Calculate average gain % this month (only from trades with gainLoss data)
-  const avgGain = thisMonthWithGainLoss.length > 0 
+  // Calculate total cumulative gain % this month (only from trades with gainLoss data)
+  const totalGain = thisMonthWithGainLoss.length > 0 
     ? thisMonthWithGainLoss.reduce((sum, trade) => {
         if (trade.gainLoss!.isGain) {
           return sum + trade.gainLoss!.percentage;
         } else {
           return sum - trade.gainLoss!.percentage;
         }
-      }, 0) / thisMonthWithGainLoss.length
+      }, 0)
     : 0;
 
   if (isLoading) {
@@ -124,8 +124,8 @@ export default function TradeHistoryPage() {
                 <p className="text-slate-500 dark:text-slate-400">Accuracy</p>
               </div>
               <div className="text-center">
-                <p className={`font-semibold ${avgGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {avgGain >= 0 ? '+' : ''}{avgGain.toFixed(1)}%
+                <p className={`font-semibold ${totalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {totalGain >= 0 ? '+' : ''}{totalGain.toFixed(1)}%
                 </p>
                 <p className="text-slate-500 dark:text-slate-400">This Month</p>
               </div>
