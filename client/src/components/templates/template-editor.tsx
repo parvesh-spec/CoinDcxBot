@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import ObjectUploader from "@/components/ui/object-uploader";
 
 interface TemplateEditorProps {
   channels: any[];
@@ -44,6 +45,7 @@ export default function TemplateEditor({
 #CoinDCX #Trading`,
     buttons: [] as any[][],
     parseMode: "HTML",
+    imageUrl: "",
   });
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export default function TemplateEditor({
         template: selectedTemplate.template,
         buttons: selectedTemplate.buttons || [],
         parseMode: selectedTemplate.parseMode || "HTML",
+        imageUrl: selectedTemplate.imageUrl || "",
       });
     }
   }, [selectedTemplate]);
@@ -91,6 +94,7 @@ export default function TemplateEditor({
 #CoinDCX #Trading`,
           buttons: [],
           parseMode: "HTML",
+          imageUrl: "",
         });
       }
     },
@@ -143,6 +147,7 @@ export default function TemplateEditor({
       template: formData.template,
       buttons: formData.buttons,
       parseMode: formData.parseMode,
+      imageUrl: formData.imageUrl,
       isActive: true,
     });
   };
@@ -309,6 +314,19 @@ export default function TemplateEditor({
           </Select>
           <p className="text-xs text-muted-foreground mt-1">
             HTML supports <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;code&gt;</code> tags. Markdown supports **bold**, *italic*, `code`.
+          </p>
+        </div>
+
+        {/* Image Upload Section */}
+        <div>
+          <ObjectUploader
+            onImageUploaded={(imageUrl) => setFormData(prev => ({ ...prev, imageUrl }))}
+            onImageRemoved={() => setFormData(prev => ({ ...prev, imageUrl: "" }))}
+            currentImageUrl={formData.imageUrl}
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            Upload an optional image to include with your message template. Supports PNG, JPG, GIF up to 5MB.
           </p>
         </div>
 
