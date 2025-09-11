@@ -69,9 +69,9 @@ export default function TradesTable({
   };
 
   const formatPrice = (price: string) => {
-    return new Intl.NumberFormat('en-IN', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'INR',
+      currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(parseFloat(price));
