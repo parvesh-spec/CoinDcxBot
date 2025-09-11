@@ -76,8 +76,9 @@ export const trades = pgTable("trades", {
   takeProfit3: decimal("take_profit_3", { precision: 20, scale: 8 }),
   stopLossTrigger: decimal("stop_loss_trigger", { precision: 20, scale: 8 }),
   safebookPrice: decimal("safebook_price", { precision: 20, scale: 8 }),
+  targetStatus: jsonb("target_status").default({}), // Track which targets are hit: {t1: true, t2: false, t3: false, safebook: false, stop_loss: false}
   status: varchar("status").notNull().default('active'), // 'active', 'completed'
-  completionReason: varchar("completion_reason"), // 'stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'
+  completionReason: varchar("completion_reason"), // 'stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book'
   notes: text("notes"), // User notes when marking as completed
   channelId: varchar("channel_id").references(() => telegramChannels.id),
   createdAt: timestamp("created_at").defaultNow(),

@@ -1,9 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface Trade {
   id: string;
@@ -44,6 +48,174 @@ export default function TradesTable({
 }: TradesTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Safebook price dialog state
+  const [safebookDialog, setSafebookDialog] = useState<{
+    isOpen: boolean;
+    tradeId: string | null;
+    price: string;
+  }>({
+    isOpen: false,
+    tradeId: null,
+    price: '',
+  });
+
+  // Mutation for updating target status (T1, T2)
+  const updateTargetStatusMutation = useMutation({
+    mutationFn: async ({ tradeId, targetType }: { tradeId: string; targetType: 't1' | 't2' }) => {
+      return apiRequest('PATCH', `/api/trades/${tradeId}/target-status`, {
+        targetType, 
+        hit: true
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+      toast({ title: "Target status updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to update target status", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Mutation for completing trade
+  const completeTradeBaseMutation = useMutation({
+    mutationFn: async ({ tradeId, completionReason, safebookPrice }: { 
+      tradeId: string; 
+      completionReason: string;
+      safebookPrice?: string;
+    }) => {
+      return apiRequest('PATCH', `/api/trades/${tradeId}/complete`, {
+        completionReason, 
+        safebookPrice
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/trades/stats'] });
+      toast({ title: "Trade completed successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to complete trade", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Handler functions
+  const handleTargetHit = (tradeId: string, targetType: 't1' | 't2') => {
+    updateTargetStatusMutation.mutate({ tradeId, targetType });
+  };
+
+  const handleStopLoss = (tradeId: string) => {
+    completeTradeBaseMutation.mutate({ tradeId, completionReason: 'stop_loss_hit' });
+  };
+
+  const handleT3Hit = (tradeId: string) => {
+    completeTradeBaseMutation.mutate({ tradeId, completionReason: 'target_3_hit' });
+  };
+
+  const handleSafebookClick = (tradeId: string) => {
+    setSafebookDialog({ isOpen: true, tradeId, price: '' });
+  };
+
+  const handleSafebookSubmit = () => {
+    if (!safebookDialog.tradeId || !safebookDialog.price) return;
+    
+    completeTradeBaseMutation.mutate({ 
+      tradeId: safebookDialog.tradeId, 
+      completionReason: 'safe_book',
+      safebookPrice: safebookDialog.price
+    });
+    
+    setSafebookDialog({ isOpen: false, tradeId: null, price: '' });
+  };
+
+  // Function to render target status content
+  const renderTargetStatus = (trade: any) => {
+    if (trade.status === 'completed') {
+      // Show completion reason for completed trades
+      const reasonMap: Record<string, string> = {
+        'stop_loss_hit': 'Stop Loss Hit',
+        'target_1_hit': 'Target 1 Hit',
+        'target_2_hit': 'Target 2 Hit', 
+        'target_3_hit': 'Target 3 Hit',
+        'safe_book': 'Safe Book',
+      };
+      return (
+        <Badge variant="outline" className="text-xs">
+          {reasonMap[trade.completionReason] || trade.completionReason}
+        </Badge>
+      );
+    }
+
+    // Show clickable actions for active trades
+    return (
+      <div className="flex flex-wrap gap-1">
+        <Button
+          size="sm"
+          variant="destructive"
+          className="text-xs h-6 px-2"
+          onClick={() => handleStopLoss(trade.id)}
+          disabled={completeTradeBaseMutation.isPending}
+          data-testid={`button-stop-loss-${trade.id}`}
+        >
+          SL
+        </Button>
+        <Button
+          size="sm"
+          variant="default"
+          className="text-xs h-6 px-2 bg-blue-500 hover:bg-blue-600"
+          onClick={() => handleSafebookClick(trade.id)}
+          disabled={completeTradeBaseMutation.isPending}
+          data-testid={`button-safebook-${trade.id}`}
+        >
+          SB
+        </Button>
+        {trade.takeProfitTrigger && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="text-xs h-6 px-2"
+            onClick={() => handleTargetHit(trade.id, 't1')}
+            disabled={updateTargetStatusMutation.isPending}
+            data-testid={`button-t1-${trade.id}`}
+          >
+            T1
+          </Button>
+        )}
+        {trade.takeProfit2 && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="text-xs h-6 px-2"
+            onClick={() => handleTargetHit(trade.id, 't2')}
+            disabled={updateTargetStatusMutation.isPending}
+            data-testid={`button-t2-${trade.id}`}
+          >
+            T2
+          </Button>
+        )}
+        {trade.takeProfit3 && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs h-6 px-2"
+            onClick={() => handleT3Hit(trade.id)}
+            disabled={completeTradeBaseMutation.isPending}
+            data-testid={`button-t3-${trade.id}`}
+          >
+            T3
+          </Button>
+        )}
+      </div>
+    );
+  };
 
   // No longer needed - completion is handled in the detail modal
 
@@ -116,6 +288,7 @@ export default function TradesTable({
                 <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-12 w-32" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-6 w-16" /></td>
+                <td className="px-6 py-4"><Skeleton className="h-6 w-24" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
                 <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-16 ml-auto" /></td>
               </tr>
@@ -152,6 +325,9 @@ export default function TradesTable({
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Status
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Target Status
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Time
@@ -233,6 +409,9 @@ export default function TradesTable({
                       </div>
                     )}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm" data-testid={`target-status-${trade.id}`}>
+                    {renderTargetStatus(trade)}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {formatTime(trade.createdAt)}
                   </td>
@@ -307,6 +486,48 @@ export default function TradesTable({
           </div>
         </div>
       )}
+
+      {/* Safebook Price Dialog */}
+      <Dialog open={safebookDialog.isOpen} onOpenChange={(open) => 
+        setSafebookDialog(prev => ({ ...prev, isOpen: open }))
+      }>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter Safebook Price</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="safebook-price">Price (USDT)</Label>
+              <Input
+                id="safebook-price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={safebookDialog.price}
+                onChange={(e) => setSafebookDialog(prev => ({ ...prev, price: e.target.value }))}
+                placeholder="Enter safebook price"
+                data-testid="input-safebook-price"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setSafebookDialog({ isOpen: false, tradeId: null, price: '' })}
+                data-testid="button-cancel-safebook"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSafebookSubmit}
+                disabled={!safebookDialog.price || completeTradeBaseMutation.isPending}
+                data-testid="button-submit-safebook"
+              >
+                {completeTradeBaseMutation.isPending ? 'Processing...' : 'Complete Trade'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
