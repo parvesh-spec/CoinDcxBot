@@ -69,22 +69,27 @@ export default function TradesTable({
       });
     },
     onMutate: async ({ tradeId, targetType }) => {
+      console.log('🎯 Starting optimistic update for:', tradeId, targetType);
+      
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ['/api/trades'] });
 
       // Snapshot the previous value
       const previousTrades = queryClient.getQueryData(['/api/trades']);
+      console.log('📊 Previous data:', previousTrades);
 
       // Optimistically update to the new value
       queryClient.setQueryData(['/api/trades'], (old: any) => {
+        console.log('🔄 Updating cache with old data:', old);
         if (!old) return old;
         
-        return {
+        const updated = {
           ...old,
           trades: old.trades.map((trade: any) => {
             if (trade.id === tradeId) {
               const newTargetStatus = { ...(trade.targetStatus || {}) };
               newTargetStatus[targetType] = true;
+              console.log('✅ Updated target status:', newTargetStatus);
               return {
                 ...trade,
                 targetStatus: newTargetStatus
@@ -93,13 +98,18 @@ export default function TradesTable({
             return trade;
           })
         };
+        console.log('🚀 New cache data:', updated);
+        return updated;
       });
 
       // Return a context object with the snapshotted value
       return { previousTrades };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+      // Don't invalidate immediately - let optimistic update show first
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
+      }, 100); // Small delay to let user see the optimistic update
       toast({ title: "Target status updated successfully" });
     },
     onError: (error: any, variables, context) => {
@@ -112,10 +122,6 @@ export default function TradesTable({
         description: error.message, 
         variant: "destructive" 
       });
-    },
-    // Always refetch after error or success:
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/trades'] });
     },
   });
 
