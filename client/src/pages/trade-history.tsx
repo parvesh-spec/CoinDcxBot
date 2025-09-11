@@ -272,6 +272,19 @@ export default function TradeHistoryPage() {
                   <div>
                     <p className="text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Targets</p>
                     <div className="flex gap-1">
+                      {/* Show Safebook FIRST when completion reason is safe_book */}
+                      {trade.completionReason === 'safe_book' && trade.safebookPrice && (
+                        <div className="flex-1 p-1.5 rounded border transition-all bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">Safebook</span>
+                            <Star className="w-2.5 h-2.5 text-blue-500 fill-blue-500" />
+                          </div>
+                          <p className="text-[10px] font-medium text-blue-700 dark:text-blue-300" data-testid={`text-safebook-${trade.id}`}>
+                            ${Number(trade.safebookPrice).toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      )}
+                      
                       {trade.takeProfitTrigger && (
                         <div className={`flex-1 p-1.5 rounded border transition-all ${
                           trade.completionReason === 'target_1_hit' 
@@ -285,7 +298,7 @@ export default function TradeHistoryPage() {
                             )}
                           </div>
                           <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit1-${trade.id}`}>
-                            ₹{Number(trade.takeProfitTrigger).toLocaleString('en-IN')}
+                            ${Number(trade.takeProfitTrigger).toLocaleString('en-IN')}
                           </p>
                         </div>
                       )}
@@ -303,7 +316,7 @@ export default function TradeHistoryPage() {
                             )}
                           </div>
                           <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit2-${trade.id}`}>
-                            ₹{Number(trade.takeProfit2).toLocaleString('en-IN')}
+                            ${Number(trade.takeProfit2).toLocaleString('en-IN')}
                           </p>
                         </div>
                       )}
@@ -322,23 +335,11 @@ export default function TradeHistoryPage() {
                             )}
                           </div>
                           <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit3-${trade.id}`}>
-                            ₹{Number(trade.takeProfit3).toLocaleString('en-IN')}
+                            ${Number(trade.takeProfit3).toLocaleString('en-IN')}
                           </p>
                         </div>
                       )}
                       
-                      {/* Show Safebook when completion reason is safe_book */}
-                      {trade.completionReason === 'safe_book' && trade.safebookPrice && (
-                        <div className="flex-1 p-1.5 rounded border transition-all bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">Safebook</span>
-                            <Star className="w-2.5 h-2.5 text-blue-500 fill-blue-500" />
-                          </div>
-                          <p className="text-[10px] font-medium text-blue-700 dark:text-blue-300" data-testid={`text-safebook-${trade.id}`}>
-                            ₹{Number(trade.safebookPrice).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
