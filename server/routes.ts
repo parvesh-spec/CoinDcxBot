@@ -637,6 +637,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Toggle automation active/inactive status
+  app.patch('/api/automations/:id/toggle', isAuthenticated, async (req, res) => {
+    try {
+      const { isActive } = req.body;
+      
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+      
+      const updatedAutomation = await storage.toggleAutomationStatus(req.params.id, isActive);
+      
+      if (!updatedAutomation) {
+        return res.status(404).json({ message: "Automation not found" });
+      }
+      
+      res.json(updatedAutomation);
+    } catch (error) {
+      console.error("Error toggling automation status:", error);
+      res.status(500).json({ message: "Failed to toggle automation status" });
+    }
+  });
+
   // Sent messages routes
   app.get('/api/sent-messages', isAuthenticated, async (req, res) => {
     try {

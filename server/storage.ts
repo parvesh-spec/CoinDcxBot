@@ -458,8 +458,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAutomation(id: string): Promise<boolean> {
+    // First, delete related sent_messages to avoid foreign key constraint
+    await db.delete(sentMessages).where(eq(sentMessages.automationId, id));
+    
+    // Then delete the automation
     const result = await db.delete(automations).where(eq(automations.id, id));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async toggleAutomationStatus(id: string, isActive: boolean): Promise<Automation | undefined> {
+    const [updatedAutomation] = await db
+      .update(automations)
+      .set({ 
+        isActive: isActive,
+        updatedAt: new Date() 
+      })
+      .where(eq(automations.id, id))
+      .returning();
+    return updatedAutomation;
   }
 
   // Sent message operations

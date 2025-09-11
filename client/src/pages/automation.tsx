@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Settings, Send, AlertCircle, Eye, Trash2 } from "lucide-react";
+import { Plus, Settings, Send, AlertCircle, Eye, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Automation, SentMessage } from "@shared/schema";
@@ -89,6 +89,30 @@ export default function AutomationPage() {
     },
   });
 
+  // Toggle automation status mutation
+  const toggleMutation = useMutation({
+    mutationFn: async ({automationId, isActive}: {automationId: string, isActive: boolean}) => {
+      return await apiRequest("PATCH", `/api/automations/${automationId}/toggle`, {
+        isActive: isActive
+      });
+    },
+    onSuccess: (data, variables) => {
+      toast({
+        title: "Success",
+        description: `Automation ${variables.isActive ? 'activated' : 'deactivated'} successfully`,
+      });
+      // Invalidate and refetch automation data
+      queryClient.invalidateQueries({ queryKey: ["/api/automations"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error", 
+        description: error?.message || "Failed to toggle automation status",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteAutomation = (automation: AutomationWithRelations) => {
     setDeleteConfirm({
       id: automation.id,
@@ -100,6 +124,13 @@ export default function AutomationPage() {
     if (deleteConfirm) {
       deleteMutation.mutate(deleteConfirm.id);
     }
+  };
+
+  const handleToggleAutomation = (automation: AutomationWithRelations) => {
+    toggleMutation.mutate({
+      automationId: automation.id,
+      isActive: !automation.isActive
+    });
   };
 
   const getTriggerBadge = (triggerType: string) => {
@@ -220,10 +251,29 @@ export default function AutomationPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => handleToggleAutomation(automation)}
+                      className={`${automation.isActive 
+                        ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-100' 
+                        : 'text-green-600 hover:text-green-700 hover:bg-green-100'
+                      }`}
+                      data-testid={`button-toggle-automation-${automation.id}`}
+                      disabled={toggleMutation.isPending}
+                      title={automation.isActive ? "Deactivate automation" : "Activate automation"}
+                    >
+                      {automation.isActive ? (
+                        <ToggleRight className="w-4 h-4" />
+                      ) : (
+                        <ToggleLeft className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDeleteAutomation(automation)}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       data-testid={`button-delete-automation-${automation.id}`}
                       disabled={deleteMutation.isPending}
+                      title="Delete automation permanently"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
