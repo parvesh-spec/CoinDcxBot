@@ -72,12 +72,28 @@ export class AutomationService {
         return;
       }
       
-      // Prepare message options with buttons if available
-      const messageOptions: any = {
-        text: messageText,
-        parse_mode: template.parseMode || 'HTML',
-        disable_web_page_preview: true
-      };
+      // Prepare message options - choose between photo or text message
+      let messageOptions: any;
+      
+      if (template.imageUrl && template.imageUrl.trim()) {
+        // Send as photo message with caption
+        messageOptions = {
+          photo: template.imageUrl,
+          caption: messageText,
+          parse_mode: template.parseMode || 'HTML'
+        };
+        
+        console.log(`📸 Sending photo message with image: ${template.imageUrl.substring(0, 50)}...`);
+      } else {
+        // Send as regular text message
+        messageOptions = {
+          text: messageText,
+          parse_mode: template.parseMode || 'HTML',
+          disable_web_page_preview: true
+        };
+        
+        console.log(`📝 Sending text message`);
+      }
 
       // Add inline keyboard if template has buttons
       if (template.buttons && Array.isArray(template.buttons) && template.buttons.length > 0) {

@@ -155,7 +155,7 @@ export class ObjectStorageService {
   }
 
   // Gets the upload URL for a user-scoped template image entity.
-  async getTemplateImageUploadURL(userId: string): Promise<string> {
+  async getTemplateImageUploadURL(userId: string): Promise<{uploadURL: string, imageURL: string}> {
     if (!userId || typeof userId !== 'string') {
       throw new Error("Valid user ID is required for template image uploads");
     }
@@ -180,17 +180,37 @@ export class ObjectStorageService {
     const { bucketName, objectName } = parseObjectPath(fullPath);
 
     // Sign URL for PUT method with TTL
-    return signObjectURL({
+    const uploadURL = await signObjectURL({
       bucketName,
       objectName,
       method: "PUT",
       ttlSec: 900,
     });
+
+    // Generate the final image URL that will be accessible after upload
+    // This matches the pattern expected by the /objects/:objectPath(*) route
+    const imageURL = `/objects/templates/${sanitizedUserId}/uploads/${objectId}`;
+
+    return { uploadURL, imageURL };
   }
 
   // Validates that an image URL belongs to a specific user's template namespace.
   validateUserTemplateImageURL(imageURL: string, userId: string): boolean {
     try {
+      // Handle /objects/ URLs from our own server
+      if (imageURL.startsWith('/objects/')) {
+        // Sanitize userId to match what we use in upload URLs
+        const sanitizedUserId = userId.replace(/[^a-zA-Z0-9-_]/g, '');
+        
+        // Path must be in user's template uploads directory
+        const expectedPathPrefix = `/objects/templates/${sanitizedUserId}/uploads/`;
+        
+        return imageURL.startsWith(expectedPathPrefix) && 
+               !imageURL.includes('../') && 
+               !imageURL.includes('..\\');
+      }
+      
+      // Handle legacy Google Cloud Storage URLs
       const parsedUrl = new URL(imageURL);
       
       // Must be from our storage provider

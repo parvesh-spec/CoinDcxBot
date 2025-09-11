@@ -279,26 +279,31 @@ export const uploadUrlRequestSchema = z.object({
 
 export const finalizeImageUploadSchema = z.object({
   imageURL: z.string()
-    .url("Must be a valid URL")
+    .min(1, "Image URL is required")
     .refine((url) => {
+      // Accept relative /objects/ URLs from our own server
+      if (url.startsWith('/objects/')) {
+        // Must be in the templates/uploads directory structure
+        return url.includes('/templates/') && 
+               url.includes('/uploads/') && 
+               !url.includes('../') && 
+               !url.includes('..\\');
+      }
+      
+      // Also accept legacy Google Cloud Storage URLs
       try {
         const parsedUrl = new URL(url);
         // Must be from Google Cloud Storage for our storage service
-        return parsedUrl.hostname === 'storage.googleapis.com';
-      } catch {
-        return false;
-      }
-    }, "Image URL must be from authorized storage provider")
-    .refine((url) => {
-      try {
-        const parsedUrl = new URL(url);
+        if (parsedUrl.hostname !== 'storage.googleapis.com') {
+          return false;
+        }
         const path = parsedUrl.pathname;
         // Must be in the uploads directory structure
         return path.includes('/uploads/') && !path.includes('../') && !path.includes('..\\');
       } catch {
         return false;
       }
-    }, "Invalid image URL path - path traversal detected"),
+    }, "Invalid image URL - must be from authorized storage provider and in valid upload directory"),
 });
 
 // Types

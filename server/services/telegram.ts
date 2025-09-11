@@ -4,6 +4,18 @@ interface TelegramMessage {
   text: string;
   parse_mode?: 'HTML' | 'Markdown';
   disable_web_page_preview?: boolean;
+  reply_markup?: {
+    inline_keyboard: any[][];
+  };
+}
+
+interface TelegramPhotoMessage {
+  photo: string;
+  caption?: string;
+  parse_mode?: 'HTML' | 'Markdown';
+  reply_markup?: {
+    inline_keyboard: any[][];
+  };
 }
 
 interface TelegramResponse {
@@ -27,18 +39,35 @@ export class TelegramService {
     }
   }
 
-  async sendMessage(channelId: string, message: TelegramMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  async sendMessage(channelId: string, message: TelegramMessage | TelegramPhotoMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    // Check if this is a photo message
+    if ('photo' in message) {
+      return this.sendPhoto(channelId, message);
+    }
+    
+    // Handle regular text message
+    return this.sendTextMessage(channelId, message);
+  }
+
+  private async sendTextMessage(channelId: string, message: TelegramMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       if (!this.botToken) {
         throw new Error('Telegram Bot Token not configured');
       }
 
-      const response = await axios.post<TelegramResponse>(`${this.baseUrl}/sendMessage`, {
+      const payload: any = {
         chat_id: channelId,
         text: message.text,
         parse_mode: message.parse_mode || 'HTML',
         disable_web_page_preview: message.disable_web_page_preview || true,
-      });
+      };
+
+      // Add inline keyboard if provided
+      if (message.reply_markup) {
+        payload.reply_markup = message.reply_markup;
+      }
+
+      const response = await axios.post<TelegramResponse>(`${this.baseUrl}/sendMessage`, payload);
 
       if (response.data.ok) {
         return {
@@ -56,6 +85,50 @@ export class TelegramService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send message',
+      };
+    }
+  }
+
+  private async sendPhoto(channelId: string, message: TelegramPhotoMessage): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    try {
+      if (!this.botToken) {
+        throw new Error('Telegram Bot Token not configured');
+      }
+
+      const payload: any = {
+        chat_id: channelId,
+        photo: message.photo,
+        parse_mode: message.parse_mode || 'HTML',
+      };
+
+      // Add caption if provided
+      if (message.caption) {
+        payload.caption = message.caption;
+      }
+
+      // Add inline keyboard if provided
+      if (message.reply_markup) {
+        payload.reply_markup = message.reply_markup;
+      }
+
+      const response = await axios.post<TelegramResponse>(`${this.baseUrl}/sendPhoto`, payload);
+
+      if (response.data.ok) {
+        return {
+          success: true,
+          messageId: response.data.result?.message_id?.toString(),
+        };
+      } else {
+        return {
+          success: false,
+          error: response.data.description || 'Unknown error',
+        };
+      }
+    } catch (error) {
+      console.error('Error sending Telegram photo:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send photo',
       };
     }
   }

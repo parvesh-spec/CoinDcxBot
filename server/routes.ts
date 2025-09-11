@@ -431,9 +431,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getTemplateImageUploadURL(user.id);
+      const { uploadURL, imageURL } = await objectStorageService.getTemplateImageUploadURL(user.id);
       
-      res.json({ uploadURL });
+      // Return response matching what client expects: { uploadUrl, imageUrl }
+      res.json({ 
+        uploadUrl: uploadURL,
+        imageUrl: imageURL 
+      });
     } catch (error) {
       console.error('Error getting upload URL:', error);
       
