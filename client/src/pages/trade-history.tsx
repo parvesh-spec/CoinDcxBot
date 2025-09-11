@@ -258,7 +258,10 @@ export default function TradeHistoryPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Stop Loss</span>
                       {trade.completionReason === 'stop_loss_hit' && (
-                        <span className="text-lg font-bold text-slate-500">•</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-lg font-bold text-slate-500">•</span>
+                          <span className="text-xs">😰</span>
+                        </div>
                       )}
                     </div>
                     <p className={`font-semibold text-xs mt-0.5 ${
@@ -281,7 +284,10 @@ export default function TradeHistoryPage() {
                         <div className="flex-1 p-1.5 rounded border transition-all bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50">
                           <div className="flex items-center justify-between mb-0.5">
                             <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">Safebook</span>
-                            <Star className="w-2.5 h-2.5 text-blue-500 fill-blue-500" />
+                            <div className="flex items-center gap-1">
+                              <Star className="w-2.5 h-2.5 text-blue-500 fill-blue-500" />
+                              <span className="text-xs">🎉</span>
+                            </div>
                           </div>
                           <p className="text-[10px] font-medium text-blue-700 dark:text-blue-300" data-testid={`text-safebook-${trade.id}`}>
                             ${Number(trade.safebookPrice).toLocaleString('en-IN')}
@@ -298,7 +304,10 @@ export default function TradeHistoryPage() {
                           <div className="flex items-center justify-between mb-0.5">
                             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">T1</span>
                             {trade.completionReason === 'target_1_hit' && (
-                              <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
+                              <div className="flex items-center gap-1">
+                                <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
+                                <span className="text-xs">🎉</span>
+                              </div>
                             )}
                           </div>
                           <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit1-${trade.id}`}>
@@ -316,7 +325,10 @@ export default function TradeHistoryPage() {
                           <div className="flex items-center justify-between mb-0.5">
                             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">T2</span>
                             {trade.completionReason === 'target_2_hit' && (
-                              <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
+                              <div className="flex items-center gap-1">
+                                <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
+                                <span className="text-xs">🎉</span>
+                              </div>
                             )}
                           </div>
                           <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit2-${trade.id}`}>
@@ -335,7 +347,10 @@ export default function TradeHistoryPage() {
                           <div className="flex items-center justify-between mb-0.5">
                             <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">T3</span>
                             {trade.completionReason === 'target_3_hit' && (
-                              <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
+                              <div className="flex items-center gap-1">
+                                <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
+                                <span className="text-xs">🎉</span>
+                              </div>
                             )}
                           </div>
                           <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit3-${trade.id}`}>
