@@ -75,6 +75,7 @@ export const trades = pgTable("trades", {
   takeProfit2: decimal("take_profit_2", { precision: 20, scale: 8 }),
   takeProfit3: decimal("take_profit_3", { precision: 20, scale: 8 }),
   stopLossTrigger: decimal("stop_loss_trigger", { precision: 20, scale: 8 }),
+  safebookPrice: decimal("safebook_price", { precision: 20, scale: 8 }),
   status: varchar("status").notNull().default('active'), // 'active', 'completed'
   completionReason: varchar("completion_reason"), // 'stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'
   notes: text("notes"), // User notes when marking as completed
@@ -194,13 +195,14 @@ export const insertTradeSchema = createInsertSchema(trades).omit({
   updatedAt: true,
 }).extend({
   status: z.enum(['active', 'completed']).optional(),
-  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit']).optional(),
+  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book']).optional(),
 });
 
 export const completeTradeSchema = z.object({
-  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'], {
+  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book'], {
     required_error: "Please select completion reason",
   }),
+  safebookPrice: z.string().optional(), // Price when safe booking
   notes: z.string().optional(),
 });
 
