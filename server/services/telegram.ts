@@ -59,7 +59,7 @@ export class TelegramService {
         chat_id: channelId,
         text: message.text,
         parse_mode: message.parse_mode || 'HTML',
-        disable_web_page_preview: message.disable_web_page_preview || true,
+        disable_web_page_preview: message.disable_web_page_preview !== false,
       };
 
       // Add inline keyboard if provided

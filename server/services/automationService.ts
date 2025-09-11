@@ -7,6 +7,88 @@ export type AutomationTrigger = 'trade_registered' | 'trade_completed';
 export class AutomationService {
   
   /**
+   * Get validated public base URL for image hosting
+   * @returns Valid HTTPS base URL or null if none available
+   */
+  private getPublicBaseUrl(): string | null {
+    const candidates = [
+      process.env.PUBLIC_BASE_URL,
+      process.env.REPLIT_URL
+    ].filter(Boolean);
+    
+    for (const candidate of candidates) {
+      try {
+        const url = new URL(candidate as string);
+        
+        // Must be HTTPS for production reliability
+        if (url.protocol !== 'https:') {
+          console.log(`⚠️ Skipping non-HTTPS URL: ${candidate}`);
+          continue;
+        }
+        
+        // Skip localhost/127.0.0.1 for production deployment
+        if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+          console.log(`⚠️ Skipping localhost URL: ${candidate}`);
+          continue;
+        }
+        
+        // Valid URL found
+        console.log(`✅ Using validated base URL: ${candidate}`);
+        return candidate as string;
+        
+      } catch (error) {
+        console.log(`⚠️ Invalid URL candidate '${candidate}':`, error);
+        continue;
+      }
+    }
+    
+    console.log(`❌ No valid public base URL found in environment variables`);
+    return null;
+  }
+  
+  /**
+   * Convert relative image URLs to absolute URLs for Telegram API
+   * @param imageUrl The image URL (relative or absolute)
+   * @returns Absolute URL or null if conversion fails
+   */
+  private convertToAbsoluteUrl(imageUrl: string): string | null {
+    try {
+      // If already absolute URL, validate and return
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        try {
+          const url = new URL(imageUrl);
+          console.log(`🔗 Using absolute URL: ${imageUrl}`);
+          return imageUrl;
+        } catch (error) {
+          console.error(`❌ Invalid absolute URL '${imageUrl}':`, error);
+          return null;
+        }
+      }
+      
+      // Get validated base URL
+      const baseUrl = this.getPublicBaseUrl();
+      if (!baseUrl) {
+        console.log(`⚠️ Cannot convert relative URL '${imageUrl}' - no valid base URL available`);
+        return null;
+      }
+      
+      // Use URL constructor for safe URL construction
+      try {
+        const absoluteUrl = new URL(imageUrl, baseUrl).href;
+        console.log(`🔄 Converting relative URL '${imageUrl}' to absolute: ${absoluteUrl}`);
+        return absoluteUrl;
+      } catch (error) {
+        console.error(`❌ Failed to construct URL from base '${baseUrl}' and path '${imageUrl}':`, error);
+        return null;
+      }
+      
+    } catch (error) {
+      console.error(`❌ Failed to convert image URL '${imageUrl}' to absolute:`, error);
+      return null;
+    }
+  }
+  
+  /**
    * Trigger automation for a trade event
    * @param trade The trade that triggered the automation
    * @param trigger The type of trigger (trade_registered/trade_completed)
@@ -72,53 +154,130 @@ export class AutomationService {
         return;
       }
       
-      // Prepare message options - choose between photo or text message
-      let messageOptions: any;
+      // Prepare message options - determine if we should try photo or text first
+      let shouldTryPhoto = false;
+      let absoluteImageUrl: string | null = null;
+      let photoMessageOptions: any = null;
       
       if (template.imageUrl && template.imageUrl.trim()) {
-        // Send as photo message with caption
-        messageOptions = {
-          photo: template.imageUrl,
-          caption: messageText,
-          parse_mode: template.parseMode || 'HTML'
-        };
+        // Convert relative URLs to absolute URLs for Telegram API
+        absoluteImageUrl = this.convertToAbsoluteUrl(template.imageUrl.trim());
         
-        console.log(`📸 Sending photo message with image: ${template.imageUrl.substring(0, 50)}...`);
-      } else {
-        // Send as regular text message
-        messageOptions = {
-          text: messageText,
+        // Check caption length limit (1024 chars for Telegram)
+        const maxCaptionLength = 1024;
+        const isMessageTooLong = messageText.length > maxCaptionLength;
+        
+        if (absoluteImageUrl && !isMessageTooLong) {
+          shouldTryPhoto = true;
+          photoMessageOptions = {
+            photo: absoluteImageUrl,
+            caption: messageText,
+            parse_mode: template.parseMode || 'HTML'
+          };
+          
+          // Add inline keyboard if template has buttons
+          if (template.buttons && Array.isArray(template.buttons) && template.buttons.length > 0) {
+            photoMessageOptions.reply_markup = {
+              inline_keyboard: this.renderButtons(template.buttons, trade)
+            };
+          }
+          
+          console.log(`📸 Will attempt photo message with URL: ${absoluteImageUrl.substring(0, 60)}...`);
+        } else {
+          // Log why we can't send as photo
+          if (!absoluteImageUrl) {
+            console.log(`⚠️ Cannot send as photo - URL conversion failed for '${template.imageUrl}'`);
+          }
+          if (isMessageTooLong) {
+            console.log(`⚠️ Cannot send as photo - caption too long (${messageText.length}/${maxCaptionLength} chars)`);
+          }
+        }
+      }
+      
+      // Helper function to create text message with optional image link
+      const createTextMessage = (includeImageLink: boolean = false): any => {
+        let textContent = messageText;
+        
+        // Add image link if photo sending failed and we have a valid URL
+        if (includeImageLink && absoluteImageUrl) {
+          textContent += `\n\n📷 <a href="${absoluteImageUrl}">View Image</a>`;
+        }
+        
+        const textOptions: any = {
+          text: textContent,
           parse_mode: template.parseMode || 'HTML',
-          disable_web_page_preview: true
+          disable_web_page_preview: !includeImageLink // Enable preview if we include image link
         };
         
-        console.log(`📝 Sending text message`);
-      }
+        // Add inline keyboard if template has buttons
+        if (template.buttons && Array.isArray(template.buttons) && template.buttons.length > 0) {
+          textOptions.reply_markup = {
+            inline_keyboard: this.renderButtons(template.buttons, trade)
+          };
+        }
+        
+        return textOptions;
+      };
 
-      // Add inline keyboard if template has buttons
-      if (template.buttons && Array.isArray(template.buttons) && template.buttons.length > 0) {
-        messageOptions.reply_markup = {
-          inline_keyboard: this.renderButtons(template.buttons, trade)
-        };
-      }
-
-      // Send message to Telegram with exception handling
+      // Send message to Telegram with runtime fallback handling
+      let finalResult: any = null;
+      let messageType = 'text';
+      
       try {
-        const result = await telegramService.sendMessage(channel.channelId, messageOptions);
+        if (shouldTryPhoto && photoMessageOptions) {
+          // First attempt: Send as photo message
+          console.log(`📸 Attempting to send photo message to ${channel.name}`);
+          const photoResult = await telegramService.sendMessage(channel.channelId, photoMessageOptions);
+          
+          if (photoResult.success && photoResult.messageId) {
+            // Photo message succeeded
+            finalResult = photoResult;
+            messageType = 'photo';
+            console.log(`✅ Photo message sent successfully to ${channel.name} (Message ID: ${photoResult.messageId})`);
+            
+          } else {
+            // Photo message failed - immediate fallback to text with image link
+            console.log(`⚠️ Photo message failed (${photoResult.error}), falling back to text message with image link`);
+            
+            const textOptions = createTextMessage(true); // Include image link
+            const textResult = await telegramService.sendMessage(channel.channelId, textOptions);
+            
+            finalResult = textResult;
+            messageType = 'text_fallback';
+            
+            if (textResult.success && textResult.messageId) {
+              console.log(`✅ Fallback text message sent successfully to ${channel.name} (Message ID: ${textResult.messageId})`);
+            } else {
+              console.error(`❌ Both photo and text fallback failed for ${channel.name}: ${textResult.error}`);
+            }
+          }
+        } else {
+          // Send as regular text message (no photo attempted)
+          console.log(`📝 Sending text message to ${channel.name}`);
+          const textOptions = createTextMessage(false); // No image link needed
+          const textResult = await telegramService.sendMessage(channel.channelId, textOptions);
+          
+          finalResult = textResult;
+          messageType = 'text';
+          
+          if (textResult.success && textResult.messageId) {
+            console.log(`✅ Text message sent successfully to ${channel.name} (Message ID: ${textResult.messageId})`);
+          } else {
+            console.error(`❌ Text message failed for ${channel.name}: ${textResult.error}`);
+          }
+        }
         
-        // Record the result in database (both success and failure)
-        if (result.success && result.messageId) {
+        // Record the final result in database
+        if (finalResult && finalResult.success && finalResult.messageId) {
           await storage.logSentMessage({
             automationId: automation.id,
             tradeId: trade.id,
             channelId: channel.channelId,
-            telegramMessageId: result.messageId,
-            messageText: messageText,
+            telegramMessageId: finalResult.messageId,
+            messageText: messageText + (messageType === 'text_fallback' ? ' [sent with image link fallback]' : ''),
             status: 'sent',
             sentAt: new Date()
           });
-          
-          console.log(`✅ Message sent successfully to ${channel.name} (Message ID: ${result.messageId})`);
         } else {
           // Log failed messages to database for debugging
           await storage.logSentMessage({
@@ -127,12 +286,11 @@ export class AutomationService {
             channelId: channel.channelId,
             messageText: messageText,
             status: 'failed',
-            errorMessage: result.error || 'Unknown error',
+            errorMessage: finalResult?.error || 'Unknown error',
             sentAt: new Date()
           });
-          
-          console.error(`❌ Failed to send message to ${channel.name}: ${result.error}`);
         }
+        
       } catch (error) {
         // Handle thrown exceptions (network errors, 429 rate limits, etc.)
         await storage.logSentMessage({
