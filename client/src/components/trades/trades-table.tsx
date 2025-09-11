@@ -750,7 +750,7 @@ export default function TradesTable({
                 disabled={!safebookDialog.price || completeTradeBaseMutation.isPending}
                 data-testid="button-submit-safebook"
               >
-                {completeTradeBaseMutation.isPending ? 'Processing...' : 'Complete Trade'}
+                {completeTradeBaseMutation.isPending ? 'Processing...' : 'Safe Book'}
               </Button>
             </div>
           </div>
