@@ -210,8 +210,60 @@ export class DatabaseStorage implements IStorage {
       db.select({ count: sql<number>`count(*)` }).from(trades).where(whereClause)
     ]);
 
+    // Helper function to calculate gain/loss percentage
+    const calculateGainLoss = (trade: Trade): { percentage: number; isGain: boolean } => {
+      if (!trade.price || !trade.leverage || !trade.completionReason || trade.status !== 'completed') {
+        return { percentage: 0, isGain: true };
+      }
+
+      const entryPrice = Number(trade.price);
+      const leverage = Number(trade.leverage);
+      let exitPrice = entryPrice;
+
+      // Determine exit price based on completion reason
+      switch (trade.completionReason) {
+        case 'stop_loss_hit':
+          exitPrice = trade.stopLossTrigger ? Number(trade.stopLossTrigger) : entryPrice;
+          break;
+        case 'target_1_hit':
+          exitPrice = trade.takeProfitTrigger ? Number(trade.takeProfitTrigger) : entryPrice;
+          break;
+        case 'target_2_hit':
+          exitPrice = trade.takeProfit2 ? Number(trade.takeProfit2) : entryPrice;
+          break;
+        case 'target_3_hit':
+          exitPrice = trade.takeProfit3 ? Number(trade.takeProfit3) : entryPrice;
+          break;
+        default:
+          return { percentage: 0, isGain: true };
+      }
+
+      // Calculate percentage change
+      let percentageChange;
+      if (trade.type === 'buy') {
+        percentageChange = ((exitPrice - entryPrice) / entryPrice) * 100;
+      } else {
+        percentageChange = ((entryPrice - exitPrice) / entryPrice) * 100;
+      }
+
+      // Apply leverage
+      const leveragedPercentage = percentageChange * leverage;
+      const isGain = leveragedPercentage > 0;
+
+      return {
+        percentage: Math.abs(leveragedPercentage),
+        isGain
+      };
+    };
+
+    // Add gain/loss calculation to trades
+    const tradesWithGainLoss = tradesResult.map(trade => ({
+      ...trade,
+      gainLoss: calculateGainLoss(trade)
+    }));
+
     return {
-      trades: tradesResult,
+      trades: tradesWithGainLoss,
       total: totalResult[0]?.count || 0
     };
   }
