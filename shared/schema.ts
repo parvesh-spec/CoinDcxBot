@@ -106,6 +106,7 @@ export const sentMessages = pgTable("sent_messages", {
   automationId: varchar("automation_id").notNull().references(() => automations.id),
   tradeId: varchar("trade_id").notNull().references(() => trades.id),
   telegramMessageId: varchar("telegram_message_id"), // Telegram's message ID
+  replyToMessageId: varchar("reply_to_message_id"), // Reply to this telegram message ID
   channelId: varchar("channel_id").notNull(), // Telegram channel ID
   messageText: text("message_text"), // The actual message content sent
   status: varchar("status").notNull().default('pending'), // 'sent', 'failed', 'pending'
@@ -260,7 +261,15 @@ export const insertAutomationSchema = createInsertSchema(automations).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  triggerType: z.enum(['trade_registered', 'trade_completed'], {
+  triggerType: z.enum([
+    'trade_registered', 
+    'trade_completed',
+    'stop_loss_hit',
+    'safe_book_hit', 
+    'target_1_hit',
+    'target_2_hit',
+    'target_3_hit'
+  ], {
     required_error: "Please select trigger type",
   }),
 });
