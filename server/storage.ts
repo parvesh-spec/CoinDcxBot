@@ -299,6 +299,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTrade(id: string): Promise<boolean> {
+    // First delete related sent messages to avoid foreign key constraint violation
+    await db.delete(sentMessages).where(eq(sentMessages.tradeId, id));
+    
+    // Then delete the trade
     const result = await db.delete(trades).where(eq(trades.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
