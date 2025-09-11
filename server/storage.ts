@@ -14,6 +14,7 @@ import {
   type Trade,
   type InsertTrade,
   type CompleteTrade,
+  type UpdateTrade,
   type Automation,
   type InsertAutomation,
   type SentMessage,
@@ -53,7 +54,8 @@ export interface IStorage {
   getTrade(id: string): Promise<Trade | undefined>;
   getTradeByTradeId(tradeId: string): Promise<Trade | undefined>;
   createTrade(trade: InsertTrade): Promise<Trade>;
-  updateTrade(id: string, trade: Partial<InsertTrade>): Promise<Trade | undefined>;
+  updateTrade(id: string, trade: UpdateTrade): Promise<Trade | undefined>;
+  deleteTrade(id: string): Promise<boolean>;
   completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined>;
   updateTradeTargetStatus(id: string, targetType: 't1' | 't2', hit: boolean): Promise<Trade | undefined>;
   getTradeStats(): Promise<{
@@ -287,13 +289,18 @@ export class DatabaseStorage implements IStorage {
     return newTrade;
   }
 
-  async updateTrade(id: string, trade: Partial<InsertTrade>): Promise<Trade | undefined> {
+  async updateTrade(id: string, trade: UpdateTrade): Promise<Trade | undefined> {
     const [updatedTrade] = await db
       .update(trades)
       .set({ ...trade, updatedAt: new Date() })
       .where(eq(trades.id, id))
       .returning();
     return updatedTrade;
+  }
+
+  async deleteTrade(id: string): Promise<boolean> {
+    const result = await db.delete(trades).where(eq(trades.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 
   async getTradeStats(): Promise<{

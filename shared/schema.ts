@@ -222,6 +222,17 @@ export const completeTradeSchema = z.object({
   path: ['safebookPrice']
 });
 
+export const updateTradeSchema = createInsertSchema(trades).omit({
+  id: true,
+  tradeId: true,
+  safebookPrice: true,
+  targetStatus: true,
+  status: true,
+  completionReason: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial(); // Make all fields optional for partial updates
+
 export const insertAutomationSchema = createInsertSchema(automations).omit({
   id: true,
   createdAt: true,
@@ -251,6 +262,7 @@ export type InsertMessageTemplate = z.infer<typeof insertMessageTemplateSchema>;
 export type Trade = typeof trades.$inferSelect;
 export type InsertTrade = z.infer<typeof insertTradeSchema>;
 export type CompleteTrade = z.infer<typeof completeTradeSchema>;
+export type UpdateTrade = z.infer<typeof updateTradeSchema>;
 export type Automation = typeof automations.$inferSelect;
 export type InsertAutomation = z.infer<typeof insertAutomationSchema>;
 export type SentMessage = typeof sentMessages.$inferSelect;

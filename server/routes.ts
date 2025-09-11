@@ -5,7 +5,7 @@ import { setupAuth, isAuthenticated } from "./auth";
 import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, insertAutomationSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, insertAutomationSchema, updateTradeSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -144,6 +144,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating target status:", error);
       res.status(500).json({ message: "Failed to update target status" });
+    }
+  });
+
+  // Edit trade endpoint
+  app.put('/api/trades/:id', isAuthenticated, async (req, res) => {
+    try {
+      const tradeData = updateTradeSchema.parse(req.body);
+      
+      const trade = await storage.getTrade(req.params.id);
+      if (!trade) {
+        return res.status(404).json({ message: "Trade not found" });
+      }
+
+      const updatedTrade = await storage.updateTrade(req.params.id, tradeData);
+      if (!updatedTrade) {
+        return res.status(500).json({ message: "Failed to update trade" });
+      }
+      
+      res.json(updatedTrade);
+    } catch (error) {
+      console.error("Error updating trade:", error);
+      
+      // Handle Zod validation errors
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.issues 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to update trade" });
+    }
+  });
+
+  // Delete trade endpoint
+  app.delete('/api/trades/:id', isAuthenticated, async (req, res) => {
+    try {
+      const trade = await storage.getTrade(req.params.id);
+      if (!trade) {
+        return res.status(404).json({ message: "Trade not found" });
+      }
+
+      const success = await storage.deleteTrade(req.params.id);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete trade" });
+      }
+      
+      res.json({ message: "Trade deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting trade:", error);
+      res.status(500).json({ message: "Failed to delete trade" });
     }
   });
 
