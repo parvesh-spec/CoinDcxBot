@@ -154,13 +154,23 @@ export default function TradesTable({
       );
     }
 
+    // Parse target status for active trades
+    const targetStatus = trade.targetStatus || {};
+    
+    // Helper function to get button classes based on hit status
+    const getButtonClasses = (isHit: boolean, baseClasses: string) => {
+      return isHit 
+        ? `${baseClasses} bg-green-500 text-white hover:bg-green-600`
+        : `${baseClasses} bg-gray-300 text-gray-700 hover:bg-gray-400`;
+    };
+
     // Show clickable actions for active trades
     return (
       <div className="flex flex-wrap gap-1">
         <Button
           size="sm"
-          variant="destructive"
-          className="text-xs h-6 px-2"
+          variant="outline"
+          className={getButtonClasses(targetStatus.stop_loss, "text-xs h-6 px-2")}
           onClick={() => handleStopLoss(trade.id)}
           disabled={completeTradeBaseMutation.isPending}
           data-testid={`button-stop-loss-${trade.id}`}
@@ -169,8 +179,8 @@ export default function TradesTable({
         </Button>
         <Button
           size="sm"
-          variant="default"
-          className="text-xs h-6 px-2 bg-blue-500 hover:bg-blue-600"
+          variant="outline"
+          className={getButtonClasses(targetStatus.safebook, "text-xs h-6 px-2")}
           onClick={() => handleSafebookClick(trade.id)}
           disabled={completeTradeBaseMutation.isPending}
           data-testid={`button-safebook-${trade.id}`}
@@ -180,8 +190,8 @@ export default function TradesTable({
         {trade.takeProfitTrigger && (
           <Button
             size="sm"
-            variant="secondary"
-            className="text-xs h-6 px-2"
+            variant="outline"
+            className={getButtonClasses(targetStatus.t1, "text-xs h-6 px-2")}
             onClick={() => handleTargetHit(trade.id, 't1')}
             disabled={updateTargetStatusMutation.isPending}
             data-testid={`button-t1-${trade.id}`}
@@ -192,8 +202,8 @@ export default function TradesTable({
         {trade.takeProfit2 && (
           <Button
             size="sm"
-            variant="secondary"
-            className="text-xs h-6 px-2"
+            variant="outline"
+            className={getButtonClasses(targetStatus.t2, "text-xs h-6 px-2")}
             onClick={() => handleTargetHit(trade.id, 't2')}
             disabled={updateTargetStatusMutation.isPending}
             data-testid={`button-t2-${trade.id}`}
@@ -205,7 +215,7 @@ export default function TradesTable({
           <Button
             size="sm"
             variant="outline"
-            className="text-xs h-6 px-2"
+            className={getButtonClasses(targetStatus.t3, "text-xs h-6 px-2")}
             onClick={() => handleT3Hit(trade.id)}
             disabled={completeTradeBaseMutation.isPending}
             data-testid={`button-t3-${trade.id}`}
