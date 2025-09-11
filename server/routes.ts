@@ -5,10 +5,14 @@ import { setupAuth, isAuthenticated } from "./auth";
 import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
+import { automationService } from "./services/automationService";
 import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize time-based scheduler for simple automations
+  automationService.initializeScheduler();
+  
   // Auth middleware
   setupAuth(app);
 
@@ -359,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/templates/:id', isAuthenticated, async (req, res) => {
     try {
-      const templateData = insertMessageTemplateSchema.partial().parse(req.body);
+      const templateData = insertMessageTemplateSchema.omit({ id: true, createdAt: true, updatedAt: true }).partial().parse(req.body);
       const template = await storage.updateMessageTemplate(req.params.id, templateData);
       if (!template) {
         return res.status(404).json({ message: "Template not found" });
@@ -599,7 +603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/automations/:id', isAuthenticated, async (req, res) => {
     try {
-      const updates = insertAutomationSchema.partial().parse(req.body);
+      const updates = insertAutomationSchema.omit({ id: true, createdAt: true, updatedAt: true }).partial().parse(req.body);
       const automation = await storage.updateAutomation(req.params.id, updates);
       
       if (!automation) {

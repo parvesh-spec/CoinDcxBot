@@ -201,6 +201,19 @@ export const insertMessageTemplateSchema = createInsertSchema(messageTemplates).
     required_error: "Please select template type",
   }),
   includeFields: z.any().optional(), // Make includeFields optional since UI no longer sends it
+}).refine((data) => {
+  // For simple templates, check for variables and reject them
+  if (data.templateType === 'simple') {
+    const variablePattern = /{[a-zA-Z_][a-zA-Z0-9_]*}/g;
+    const variables = data.template.match(variablePattern);
+    if (variables && variables.length > 0) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Simple message templates cannot contain variables like {pair}, {price}, etc. Use static text only.",
+  path: ['template']
 });
 
 export const insertTradeSchema = createInsertSchema(trades).omit({

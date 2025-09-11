@@ -1,6 +1,7 @@
 import { storage } from '../storage';
 import { telegramService } from './telegram';
 import { Trade, Automation, TelegramChannel, MessageTemplate, InsertSentMessage } from '../../shared/schema';
+import * as cron from 'node-cron';
 
 export type AutomationTrigger = 
   | 'trade_registered' 
@@ -665,6 +666,179 @@ export class AutomationService {
       'safebookPrice': trade.safebookPrice ? `$${Number(trade.safebookPrice).toFixed(4)}` : '',
       'notes': htmlEscape(trade.notes || '')
     };
+  }
+
+  /**
+   * Initialize time-based scheduler for simple automations
+   */
+  initializeScheduler() {
+    // Run every minute to check for scheduled automations
+    cron.schedule('* * * * *', async () => {
+      try {
+        await this.executeScheduledAutomations();
+      } catch (error) {
+        console.error('❌ Error executing scheduled automations:', error);
+      }
+    }, {
+      timezone: 'Asia/Kolkata'
+    });
+    
+    console.log('🕒 Time-based scheduler initialized (Kolkata timezone)');
+  }
+
+  /**
+   * Execute scheduled simple message automations
+   */
+  private async executeScheduledAutomations() {
+    try {
+      // Get current time and day in Kolkata timezone
+      const now = new Date();
+      const kolkataTime = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(now);
+
+      const kolkataDay = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        weekday: 'long'
+      }).format(now).toLowerCase();
+
+      // Get all active simple automations that should trigger at this time
+      const automations = await storage.getAutomations();
+      const scheduledAutomations = automations.filter(automation => 
+        automation.isActive && 
+        automation.automationType === 'simple' &&
+        automation.triggerType === 'scheduled' &&
+        automation.scheduledTime === kolkataTime &&
+        automation.scheduledDays?.includes(kolkataDay)
+      );
+
+      if (scheduledAutomations.length > 0) {
+        console.log(`⏰ Found ${scheduledAutomations.length} scheduled automation(s) for ${kolkataTime} on ${kolkataDay}`);
+      }
+
+      // Execute each scheduled automation
+      for (const automation of scheduledAutomations) {
+        try {
+          await this.executeSimpleAutomation(automation);
+        } catch (error) {
+          console.error(`❌ Error executing automation ${automation.name}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error in executeScheduledAutomations:', error);
+    }
+  }
+
+  /**
+   * Execute a simple message automation (no trade data)
+   */
+  private async executeSimpleAutomation(automation: Automation) {
+    try {
+      console.log(`🤖 Executing simple automation: ${automation.name}`);
+
+      // Get the template and channel
+      const template = await storage.getMessageTemplate(automation.templateId);
+      const channel = await storage.getTelegramChannel(automation.channelId);
+
+      if (!template) {
+        console.error(`❌ Template not found for automation ${automation.name}`);
+        return;
+      }
+
+      if (!channel) {
+        console.error(`❌ Channel not found for automation ${automation.name}`);
+        return;
+      }
+
+      // For simple templates, no variable substitution needed - use template as-is
+      const messageText = template.template;
+
+      // Process inline buttons (no variable substitution for simple templates)
+      const processedButtons = this.processSimpleButtons((template.buttons as any[][]) || []);
+
+      // Convert image URL if present
+      const imageUrl = template.imageUrl ? this.convertToAbsoluteUrl(template.imageUrl || '') : undefined;
+
+      // Send message to Telegram
+      const telegramMessage = {
+        text: messageText,
+        parse_mode: template.parseMode as 'HTML' | 'Markdown',
+        reply_markup: processedButtons.length > 0 ? { inline_keyboard: processedButtons } : undefined
+      };
+      
+      const telegramResult = imageUrl 
+        ? await telegramService.sendMessage(channel.channelId, { ...telegramMessage, photo: imageUrl })
+        : await telegramService.sendMessage(channel.channelId, telegramMessage);
+
+      // Track sent message
+      const sentMessageData: InsertSentMessage = {
+        automationId: automation.id,
+        tradeId: null, // No trade for simple automations
+        telegramMessageId: telegramResult?.messageId?.toString(),
+        channelId: channel.channelId,
+        messageText: messageText,
+        status: 'sent',
+        sentAt: new Date(),
+      };
+
+      await storage.logSentMessage(sentMessageData);
+
+      console.log(`✅ Simple automation executed successfully: ${automation.name}`);
+    } catch (error) {
+      console.error(`❌ Error executing simple automation ${automation.name}:`, error);
+      
+      // Track failed message
+      try {
+        const sentMessageData: InsertSentMessage = {
+          automationId: automation.id,
+          tradeId: null,
+          telegramMessageId: null,
+          channelId: automation.channelId,
+          messageText: null,
+          status: 'failed',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          sentAt: new Date(),
+        };
+
+        await storage.logSentMessage(sentMessageData);
+      } catch (trackingError) {
+        console.error('❌ Error tracking failed simple automation:', trackingError);
+      }
+    }
+  }
+
+  /**
+   * Process inline buttons for simple templates (no variable substitution)
+   */
+  private processSimpleButtons(buttons: any[][]): any[][] {
+    if (!buttons || !Array.isArray(buttons) || buttons.length === 0) {
+      return [];
+    }
+
+    return buttons.map(row => {
+      if (!Array.isArray(row)) return [];
+      
+      return row.map(button => {
+        if (!button || typeof button !== 'object') return null;
+        
+        const buttonText = button.text || '';
+        const buttonUrl = button.url || '';
+        const callbackData = button.callback_data || '';
+        
+        const renderedButton: any = { text: buttonText };
+        
+        if (button.url) {
+          renderedButton.url = buttonUrl;
+        } else if (button.callback_data) {
+          renderedButton.callback_data = callbackData;
+        }
+        
+        return renderedButton;
+      }).filter(Boolean);
+    }).filter(row => row.length > 0);
   }
 }
 
