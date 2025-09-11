@@ -155,7 +155,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMessageTemplate(template: InsertMessageTemplate): Promise<MessageTemplate> {
-    const [newTemplate] = await db.insert(messageTemplates).values(template).returning();
+    // Set default includeFields if not provided (since UI no longer sends it)
+    const templateWithDefaults = {
+      ...template,
+      includeFields: template.includeFields || {} // Default empty object
+    };
+    
+    const [newTemplate] = await db.insert(messageTemplates).values(templateWithDefaults).returning();
     return newTemplate;
   }
 

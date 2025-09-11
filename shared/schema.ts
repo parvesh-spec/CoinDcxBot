@@ -190,6 +190,8 @@ export const insertMessageTemplateSchema = createInsertSchema(messageTemplates).
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  includeFields: z.any().optional(), // Make includeFields optional since UI no longer sends it
 });
 
 export const insertTradeSchema = createInsertSchema(trades).omit({
