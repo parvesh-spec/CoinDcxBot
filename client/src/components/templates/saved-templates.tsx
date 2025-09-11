@@ -58,7 +58,19 @@ export default function SavedTemplates({
     }
   };
 
-  const generatePreview = (template: string, includeFields: any) => {
+  const extractVariables = (template: string) => {
+    const variableRegex = /{(\w+)}/g;
+    const variables = new Set<string>();
+    let match;
+    
+    while ((match = variableRegex.exec(template)) !== null) {
+      variables.add(match[1]);
+    }
+    
+    return Array.from(variables).sort();
+  };
+
+  const generatePreview = (template: string) => {
     let preview = template;
 
     // Sample data for preview
@@ -76,13 +88,10 @@ export default function SavedTemplates({
       profit_loss: "+₹5,234",
     };
 
-    // Replace variables with sample data only if field is included
+    // Replace variables with sample data
     Object.entries(sampleData).forEach(([key, value]) => {
-      const fieldKey = key === "profit_loss" ? "profitLoss" : key;
-      if (includeFields && includeFields[fieldKey]) {
-        const regex = new RegExp(`{${key}}`, "g");
-        preview = preview.replace(regex, value);
-      }
+      const regex = new RegExp(`{${key}}`, "g");
+      preview = preview.replace(regex, value);
     });
 
     return preview;
@@ -119,7 +128,7 @@ export default function SavedTemplates({
         <div className="grid gap-4">
           {templates.map((template) => {
             const isExpanded = expandedCards.has(template.id);
-            const previewText = generatePreview(template.template, template.includeFields);
+            const previewText = generatePreview(template.template);
             const truncatedPreview = previewText.length > 150 
               ? previewText.substring(0, 150) + "..." 
               : previewText;
@@ -267,22 +276,22 @@ export default function SavedTemplates({
                         </div>
                       </div>
 
-                      {/* Included Fields */}
-                      {template.includeFields && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-2">Included Fields</p>
-                          <div className="flex flex-wrap gap-1">
-                            {Object.entries(template.includeFields)
-                              .filter(([_, included]) => included)
-                              .map(([field, _]) => (
-                                <Badge key={field} variant="outline" className="text-xs">
-                                  {field}
+                      {/* Variables Used */}
+                      {(() => {
+                        const variables = extractVariables(template.template);
+                        return variables.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Variables Used</p>
+                            <div className="flex flex-wrap gap-1">
+                              {variables.map((variable) => (
+                                <Badge key={variable} variant="outline" className="text-xs font-mono">
+                                  {`{${variable}}`}
                                 </Badge>
-                              ))
-                            }
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Quick Actions */}
                       <div className="flex gap-2 pt-2 border-t">
