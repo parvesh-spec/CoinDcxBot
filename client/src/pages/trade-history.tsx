@@ -24,7 +24,7 @@ export default function TradeHistoryPage() {
   const [dateFilter, setDateFilter] = useState("");
   
   const { data, isLoading } = useQuery<TradeHistoryResponse>({
-    queryKey: ["/api/public/trades/completed", dateFilter],
+    queryKey: ["/api/public/trades/completed"],
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
@@ -51,32 +51,33 @@ export default function TradeHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-blue-950 dark:via-purple-950 dark:to-pink-950">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="container mx-auto px-6 py-6">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-2">
             Trade History
           </h1>
-          <p className="text-muted-foreground text-lg">
-            Complete record of all finished trades ({total} total)
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {filteredTrades.length} completed trades
           </p>
           
           {/* Date Filter */}
-          <div className="flex items-center justify-center gap-4 mt-6">
-            <Calendar className="w-5 h-5 text-muted-foreground" />
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <Calendar className="w-4 h-4 text-slate-400" />
             <Input
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="w-48 text-center"
+              className="w-36 h-8 text-xs border-slate-200 dark:border-slate-700"
               placeholder="Filter by date"
               data-testid="input-date-filter"
             />
             {dateFilter && (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setDateFilter("")}
+                className="h-8 px-3 text-xs"
                 data-testid="button-clear-filter"
               >
                 Clear
@@ -95,10 +96,10 @@ export default function TradeHistoryPage() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredTrades.map((trade) => (
-            <Card key={trade.id} className="overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-0 shadow-xl" data-testid={`trade-card-${trade.id}`}>
-              <div className="absolute top-3 right-3 text-xs text-muted-foreground bg-white/80 dark:bg-gray-800/80 px-2 py-1 rounded-full" data-testid={`text-time-${trade.id}`}>
+            <Card key={trade.id} className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm hover:shadow-md hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all duration-200 rounded-lg overflow-hidden" data-testid={`trade-card-${trade.id}`}>
+              <div className="absolute top-2 right-2 text-[10px] text-slate-400 dark:text-slate-500" data-testid={`text-time-${trade.id}`}>
                 {trade.updatedAt 
                   ? formatDistanceToNow(new Date(trade.updatedAt), { addSuffix: true })
                   : trade.createdAt 
@@ -107,56 +108,60 @@ export default function TradeHistoryPage() {
                 }
               </div>
 
-              <CardHeader className="pb-3 bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-400/10 dark:to-purple-400/10">
-                <div className="flex items-center justify-between pr-20">
-                  <CardTitle className="text-xl font-bold text-gray-800 dark:text-white">
-                    {trade.pair}
-                  </CardTitle>
-                  <Badge 
-                    className={`px-3 py-1 text-sm font-semibold ${
-                      trade.type === 'buy' 
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
-                        : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
-                    }`}
-                    data-testid={`badge-type-${trade.type}`}
-                  >
-                    {trade.type.toUpperCase()}
-                  </Badge>
-                </div>
-                
-                {/* Gain/Loss Display */}
-                {trade.gainLoss && (
-                  <div className="flex items-center gap-2 mt-2">
-                    {trade.gainLoss.isGain ? (
-                      <TrendingUp className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <TrendingDown className="w-5 h-5 text-red-500" />
-                    )}
-                    <span className={`text-lg font-bold ${
-                      trade.gainLoss.isGain ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                    }`}>
-                      {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(2)}%
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {trade.gainLoss.isGain ? 'Gain' : 'Loss'}
-                    </span>
+              <CardHeader className="pb-2 pt-3 px-3">
+                <div className="flex items-start justify-between pr-6">
+                  <div>
+                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                      {trade.pair}
+                    </CardTitle>
+                    <Badge 
+                      className={`mt-1 px-2 py-0.5 text-[10px] font-medium ${
+                        trade.type === 'buy' 
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' 
+                          : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                      }`}
+                      data-testid={`badge-type-${trade.type}`}
+                    >
+                      {trade.type.toUpperCase()}
+                    </Badge>
                   </div>
-                )}
+                  
+                  {/* Gain/Loss Display */}
+                  {trade.gainLoss && (
+                    <div className="text-right">
+                      <div className="flex items-center gap-1">
+                        {trade.gainLoss.isGain ? (
+                          <TrendingUp className="w-3 h-3 text-emerald-500" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3 text-red-500" />
+                        )}
+                        <span className={`text-sm font-semibold ${
+                          trade.gainLoss.isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(1)}%
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">
+                        {trade.gainLoss.isGain ? 'Gain' : 'Loss'}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
 
-              <CardContent className="space-y-4 pt-0">
+              <CardContent className="space-y-3 pt-0 px-3 pb-3">
                 {/* Price & Leverage */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 p-3 rounded-lg">
-                    <p className="text-xs text-blue-600 dark:text-blue-300 font-medium">Entry Price</p>
-                    <p className="font-bold text-lg text-blue-800 dark:text-blue-100" data-testid={`text-price-${trade.id}`}>
+                <div className="flex gap-2">
+                  <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Price</p>
+                    <p className="font-semibold text-xs text-slate-700 dark:text-slate-300" data-testid={`text-price-${trade.id}`}>
                       ₹{trade.price ? Number(trade.price).toLocaleString('en-IN') : 'N/A'}
                     </p>
                   </div>
                   {trade.leverage && (
-                    <div className="bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 p-3 rounded-lg">
-                      <p className="text-xs text-purple-600 dark:text-purple-300 font-medium">Leverage</p>
-                      <p className="font-bold text-lg text-purple-800 dark:text-purple-100" data-testid={`text-leverage-${trade.id}`}>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Lev</p>
+                      <p className="font-semibold text-xs text-slate-700 dark:text-slate-300" data-testid={`text-leverage-${trade.id}`}>
                         {trade.leverage}x
                       </p>
                     </div>
@@ -165,80 +170,77 @@ export default function TradeHistoryPage() {
 
                 {/* Stop Loss with completion mark */}
                 {trade.stopLossTrigger && (
-                  <div className={`p-3 rounded-lg border-2 transition-all ${
+                  <div className={`p-2 rounded border transition-all ${
                     trade.completionReason === 'stop_loss_hit' 
-                      ? 'bg-gradient-to-br from-red-100 to-red-200 border-red-300 dark:from-red-900 dark:to-red-800 dark:border-red-600' 
-                      : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600'
+                      ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800/50' 
+                      : 'bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700/50'
                   }`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Stop Loss</span>
+                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Stop Loss</span>
                       {trade.completionReason === 'stop_loss_hit' && (
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-red-500 fill-red-500" />
-                          <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full font-bold">HIT</span>
-                        </div>
+                        <Star className="w-3 h-3 text-red-500 fill-red-500" />
                       )}
                     </div>
-                    <p className="font-bold text-lg text-red-600 dark:text-red-400 mt-1" data-testid={`text-stop-loss-${trade.id}`}>
+                    <p className="font-semibold text-xs text-red-600 dark:text-red-400 mt-0.5" data-testid={`text-stop-loss-${trade.id}`}>
                       ₹{Number(trade.stopLossTrigger).toLocaleString('en-IN')}
                     </p>
                   </div>
                 )}
 
-                {/* Take Profits in colorful boxes */}
+                {/* Take Profits in compact boxes */}
                 {(trade.takeProfitTrigger || trade.takeProfit2 || trade.takeProfit3) && (
                   <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Take Profits</p>
-                    <div className="grid grid-cols-3 gap-2">
+                    <p className="text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Targets</p>
+                    <div className="flex gap-1">
                       {trade.takeProfitTrigger && (
-                        <div className={`p-2 rounded-lg border-2 transition-all ${
+                        <div className={`flex-1 p-1.5 rounded border transition-all ${
                           trade.completionReason === 'target_1_hit' 
-                            ? 'bg-gradient-to-br from-green-100 to-green-200 border-green-300 dark:from-green-900 dark:to-green-800 dark:border-green-600' 
-                            : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600'
+                            ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
+                            : 'bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700/50'
                         }`}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-bold text-green-600 dark:text-green-400">T1</span>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">T1</span>
                             {trade.completionReason === 'target_1_hit' && (
-                              <Star className="w-3 h-3 text-green-500 fill-green-500" />
+                              <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
                             )}
                           </div>
-                          <p className="text-xs font-semibold text-green-700 dark:text-green-300" data-testid={`text-take-profit1-${trade.id}`}>
+                          <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit1-${trade.id}`}>
                             ₹{Number(trade.takeProfitTrigger).toLocaleString('en-IN')}
                           </p>
                         </div>
                       )}
                       
                       {trade.takeProfit2 && (
-                        <div className={`p-2 rounded-lg border-2 transition-all ${
+                        <div className={`flex-1 p-1.5 rounded border transition-all ${
                           trade.completionReason === 'target_2_hit' 
-                            ? 'bg-gradient-to-br from-green-100 to-green-200 border-green-300 dark:from-green-900 dark:to-green-800 dark:border-green-600' 
-                            : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600'
+                            ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
+                            : 'bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700/50'
                         }`}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-bold text-green-600 dark:text-green-400">T2</span>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">T2</span>
                             {trade.completionReason === 'target_2_hit' && (
-                              <Star className="w-3 h-3 text-green-500 fill-green-500" />
+                              <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
                             )}
                           </div>
-                          <p className="text-xs font-semibold text-green-700 dark:text-green-300" data-testid={`text-take-profit2-${trade.id}`}>
+                          <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit2-${trade.id}`}>
                             ₹{Number(trade.takeProfit2).toLocaleString('en-IN')}
                           </p>
                         </div>
                       )}
                       
                       {trade.takeProfit3 && (
-                        <div className={`p-2 rounded-lg border-2 transition-all ${
+                        <div className={`flex-1 p-1.5 rounded border transition-all ${
                           trade.completionReason === 'target_3_hit' 
-                            ? 'bg-gradient-to-br from-green-100 to-green-200 border-green-300 dark:from-green-900 dark:to-green-800 dark:border-green-600' 
-                            : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600'
+                            ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
+                            : 'bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700/50'
                         }`}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-bold text-green-600 dark:text-green-400">T3</span>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">T3</span>
                             {trade.completionReason === 'target_3_hit' && (
-                              <Star className="w-3 h-3 text-green-500 fill-green-500" />
+                              <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
                             )}
                           </div>
-                          <p className="text-xs font-semibold text-green-700 dark:text-green-300" data-testid={`text-take-profit3-${trade.id}`}>
+                          <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit3-${trade.id}`}>
                             ₹{Number(trade.takeProfit3).toLocaleString('en-IN')}
                           </p>
                         </div>
@@ -249,9 +251,9 @@ export default function TradeHistoryPage() {
 
                 {/* Notes */}
                 {trade.notes && (
-                  <div className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900 dark:to-orange-900 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700">
-                    <p className="text-xs font-medium text-yellow-700 dark:text-yellow-300 mb-1">Notes</p>
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200 break-words" data-testid={`text-notes-${trade.id}`}>
+                  <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800/50">
+                    <p className="text-[10px] font-medium text-amber-700 dark:text-amber-400 mb-0.5">Notes</p>
+                    <p className="text-[10px] text-amber-800 dark:text-amber-300 break-words leading-3" data-testid={`text-notes-${trade.id}`}>
                       {trade.notes}
                     </p>
                   </div>
