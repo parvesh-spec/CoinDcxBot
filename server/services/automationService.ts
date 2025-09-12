@@ -711,8 +711,8 @@ export class AutomationService {
     try {
       // Get current time and day in Kolkata timezone
       const now = new Date();
-      // Use server local time directly (matches user input format)
-      const kolkataTime = now.toTimeString().slice(0, 5); // Direct HH:MM format
+      // Convert current UTC time to match database format (UTC)
+      const kolkataTime = now.toTimeString().slice(0, 5); // UTC HH:MM format
       const kolkataDay = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Asia/Kolkata',
         weekday: 'long'

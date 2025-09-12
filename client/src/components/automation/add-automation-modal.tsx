@@ -106,7 +106,28 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
   });
 
   const onSubmit = (data: FormData) => {
-    createMutation.mutate(data);
+    // Convert IST time to UTC for database storage
+    const processedData = { ...data };
+    
+    if (data.automationType === 'simple' && data.scheduledTime) {
+      // Convert IST (UTC+5:30) to UTC
+      // User enters 9:00 AM IST, we store 3:30 AM UTC
+      const [hours, minutes] = data.scheduledTime.split(':').map(Number);
+      const istDate = new Date();
+      istDate.setHours(hours, minutes, 0, 0);
+      
+      // Subtract 5.5 hours to convert IST to UTC
+      const utcDate = new Date(istDate.getTime() - (5.5 * 60 * 60 * 1000));
+      
+      // Format back to HH:MM
+      const utcHours = utcDate.getHours().toString().padStart(2, '0');
+      const utcMinutes = utcDate.getMinutes().toString().padStart(2, '0');
+      processedData.scheduledTime = `${utcHours}:${utcMinutes}`;
+      
+      console.log(`Time conversion: ${data.scheduledTime} IST → ${processedData.scheduledTime} UTC`);
+    }
+    
+    createMutation.mutate(processedData);
   };
 
   const handleClose = () => {
