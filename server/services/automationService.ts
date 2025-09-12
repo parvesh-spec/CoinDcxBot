@@ -12,6 +12,7 @@ export type AutomationTrigger =
   | 'target_3_hit';
 
 export class AutomationService {
+  private cronTask?: any; // Store cron task for management
   
   /**
    * Get validated public base URL for image hosting
@@ -672,24 +673,41 @@ export class AutomationService {
    * Initialize time-based scheduler for simple automations
    */
   initializeScheduler() {
-    // Run every minute to check for scheduled automations
-    cron.schedule('* * * * *', async () => {
-      try {
-        await this.executeScheduledAutomations();
-      } catch (error) {
-        console.error('❌ Error executing scheduled automations:', error);
+    try {
+      // Stop existing task if any
+      if (this.cronTask) {
+        this.cronTask.stop();
+        console.log('🔄 Stopping existing cron task');
       }
-    }, {
-      timezone: 'Asia/Kolkata'
-    });
-    
-    console.log('🕒 Time-based scheduler initialized (Kolkata timezone)');
+
+      // Run every minute to check for scheduled automations
+      this.cronTask = cron.schedule('* * * * *', async () => {
+        const kolkataTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
+        console.log(`⏰ Cron tick at ${kolkataTime} - checking scheduled automations`);
+        
+        try {
+          await this.executeScheduledAutomations();
+        } catch (error) {
+          console.error('❌ Error executing scheduled automations:', error);
+        }
+      }, {
+        timezone: 'Asia/Kolkata'
+      });
+
+      // Explicitly start the task
+      this.cronTask.start();
+      
+      console.log('🕒 Time-based scheduler initialized and started (Kolkata timezone)');
+    } catch (error) {
+      console.error('❌ Error initializing scheduler:', error);
+    }
   }
 
   /**
    * Execute scheduled simple message automations
    */
   private async executeScheduledAutomations() {
+    console.log('▶ executeScheduledAutomations() starting');
     try {
       // Get current time and day in Kolkata timezone
       const now = new Date();
