@@ -711,13 +711,8 @@ export class AutomationService {
     try {
       // Get current time and day in Kolkata timezone
       const now = new Date();
-      const kolkataTime = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Kolkata',
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(now);
-
+      // Use server local time directly (matches user input format)
+      const kolkataTime = now.toTimeString().slice(0, 5); // Direct HH:MM format
       const kolkataDay = new Intl.DateTimeFormat('en-US', {
         timeZone: 'Asia/Kolkata',
         weekday: 'long'
@@ -725,13 +720,17 @@ export class AutomationService {
 
       // Get all active simple automations that should trigger at this time
       const automations = await storage.getAutomations();
-      const scheduledAutomations = automations.filter(automation => 
-        automation.isActive && 
-        automation.automationType === 'simple' &&
-        automation.triggerType === 'scheduled' &&
-        automation.scheduledTime === kolkataTime &&
-        automation.scheduledDays?.includes(kolkataDay)
-      );
+      
+      const scheduledAutomations = automations.filter(automation => {
+        const isMatch = automation.isActive && 
+          automation.automationType === 'simple' &&
+          automation.triggerType === 'scheduled' &&
+          automation.scheduledTime === kolkataTime &&
+          automation.scheduledDays?.includes(kolkataDay);
+          
+        
+        return isMatch;
+      });
 
       if (scheduledAutomations.length > 0) {
         console.log(`⏰ Found ${scheduledAutomations.length} scheduled automation(s) for ${kolkataTime} on ${kolkataDay}`);
