@@ -83,6 +83,21 @@ export class TradeMonitorService {
     }
   }
 
+  /**
+   * Trigger automation for safebook status updates (keeps trade active like T1/T2)
+   */
+  async triggerSafebook(tradeId: string, price: string): Promise<void> {
+    try {
+      const trade = await storage.getTrade(tradeId);
+      if (trade && trade.status === 'active') {
+        console.log(`📗 Triggering safebook automation for trade ${trade.tradeId} at price ${price}`);
+        await automationService.triggerAutomations(trade, 'safe_book_hit' as any);
+      }
+    } catch (error) {
+      console.error(`Error triggering safebook automation for ${tradeId}:`, error);
+    }
+  }
+
   // No longer needed - trades stay 'active' until manually completed
 
   // Manual sync method - no automatic cron jobs

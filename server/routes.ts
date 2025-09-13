@@ -6,7 +6,7 @@ import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -154,6 +154,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating target status:", error);
       res.status(500).json({ message: "Failed to update target status" });
+    }
+  });
+
+  // Endpoint to update safebook status without completing the trade
+  app.patch('/api/trades/:id/safebook', isAuthenticated, async (req, res) => {
+    try {
+      // Parse and validate request body
+      const safebookData = updateSafebookSchema.parse(req.body);
+      
+      const trade = await storage.getTrade(req.params.id);
+      if (!trade) {
+        return res.status(404).json({ message: "Trade not found" });
+      }
+
+      if (trade.status !== 'active') {
+        return res.status(400).json({ message: "Only active trades can have safebook updated" });
+      }
+
+      const updatedTrade = await storage.updateTradeSafebook(trade.id, safebookData);
+      if (!updatedTrade) {
+        return res.status(500).json({ message: "Failed to update safebook" });
+      }
+      
+      // Trigger automation for safebook hit
+      await tradeMonitor.triggerSafebook(updatedTrade.id, safebookData.price);
+      
+      res.json(updatedTrade);
+    } catch (error) {
+      console.error("Error updating safebook:", error);
+      
+      // Handle Zod validation errors
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.issues 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to update safebook" });
     }
   });
 
