@@ -147,6 +147,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // while trade is still active, then complete the trade
       const autoCompletingTargets = ['stop_loss', 'target_3'];
       
+      console.log(`🔍 Debug: targetType=${targetType}, hit=${hit}, isAutoCompleting=${autoCompletingTargets.includes(targetType)}`);
+      
       if (hit && autoCompletingTargets.includes(targetType)) {
         console.log(`🚀 Pre-completion automation trigger for ${targetType}`);
         // Trigger automation FIRST while trade is still active
