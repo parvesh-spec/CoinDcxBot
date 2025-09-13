@@ -152,7 +152,12 @@ export class CoinDCXService {
 
   transformTradeData(coindcxTrade: CoinDCXTrade) {
     // Handle futures positions data format
-    const pair = coindcxTrade.pair || coindcxTrade.market || 'UNKNOWN';
+    let pair = coindcxTrade.pair || coindcxTrade.market || 'UNKNOWN';
+    
+    // Remove B- prefix if it exists
+    if (pair.startsWith('B-')) {
+      pair = pair.substring(2);
+    }
     const price = coindcxTrade.avg_price?.toString() || coindcxTrade.price || '0';
     const leverage = coindcxTrade.leverage || 1;
     const side = (coindcxTrade.active_pos || 0) > 0 ? 'buy' : ((coindcxTrade.active_pos || 0) < 0 ? 'sell' : coindcxTrade.side || 'unknown');
