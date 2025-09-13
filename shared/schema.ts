@@ -231,6 +231,68 @@ export const completeTradeSchema = z.object({
   notes: z.string().optional(),
 });
 
+// Target Status Types - 5-field system
+export type TargetStatusV2 = {
+  stop_loss: boolean;
+  safebook: boolean;
+  target_1: boolean;
+  target_2: boolean; 
+  target_3: boolean;
+};
+
+// Legacy target status type for backward compatibility
+export type TargetStatusLegacy = {
+  stop_loss?: boolean;
+  safebook?: boolean;
+  t1?: boolean; // Legacy field
+  t2?: boolean; // Legacy field  
+  t3?: boolean; // Legacy field
+  target_1?: boolean;
+  target_2?: boolean;
+  target_3?: boolean;
+};
+
+// Helper function to safely convert various boolean representations
+function safeBooleanConvert(value: any): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value.toLowerCase() === 'true';
+  if (typeof value === 'number') return value !== 0;
+  return Boolean(value);
+}
+
+// Zod schema for TargetStatusV2 validation
+export const targetStatusV2Schema = z.object({
+  stop_loss: z.boolean().default(false),
+  safebook: z.boolean().default(false),
+  target_1: z.boolean().default(false),
+  target_2: z.boolean().default(false),
+  target_3: z.boolean().default(false),
+});
+
+// Normalize legacy target status to new V2 format
+export function normalizeTargetStatus(ts: any): TargetStatusV2 {
+  const status = ts || {};
+  return {
+    stop_loss: safeBooleanConvert(status.stop_loss),
+    safebook: safeBooleanConvert(status.safebook),
+    target_1: safeBooleanConvert(status.target_1 || status.t1), // Map legacy t1 to target_1
+    target_2: safeBooleanConvert(status.target_2 || status.t2), // Map legacy t2 to target_2  
+    target_3: safeBooleanConvert(status.target_3 || status.t3), // Map legacy t3 to target_3
+  };
+}
+
+// Target type enum for API validation (includes safebook)
+export const targetTypeEnum = z.enum(['stop_loss', 'safebook', 'target_1', 'target_2', 'target_3']);
+export type TargetType = z.infer<typeof targetTypeEnum>;
+
+// Update target status schema
+export const updateTargetStatusSchema = z.object({
+  targetType: targetTypeEnum,
+  hit: z.boolean().default(true),
+});
+
+export type UpdateTargetStatus = z.infer<typeof updateTargetStatusSchema>;
+
 export const updateSafebookSchema = z.object({
   price: z.string()
     .min(1, "Safebook price is required")
