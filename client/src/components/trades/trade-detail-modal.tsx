@@ -47,7 +47,7 @@ export default function TradeDetailModal({
 
   const completeMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", `/api/trades/${trade.id}/complete`, {
+      await apiRequest("PATCH", `/api/trades/${trade.id}/complete`, {
         // completionReason auto-derived from targetStatus in backend
       });
     },
@@ -107,8 +107,8 @@ export default function TradeDetailModal({
         return "Target 2 Hit";
       case "target_3_hit":
         return "Target 3 Hit";
-      case "safe_book":
-        return "Safe Book";
+      case "safebook_hit":
+        return "Safebook Hit";
       default:
         return reason;
     }

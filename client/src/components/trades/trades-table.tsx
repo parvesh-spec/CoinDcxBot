@@ -20,11 +20,11 @@ const editTradeSchema = z.object({
   price: z.string().min(1, "Price is required"),
   leverage: z.coerce.number().min(1, "Leverage must be at least 1").max(100, "Leverage cannot exceed 100"),
   notes: z.string().optional(),
-  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book']).optional(),
+  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safebook_hit']).optional(),
   safebookPrice: z.string().optional(),
 }).refine((data) => {
-  // Require safebook price when completion reason is safe_book
-  if (data.completionReason === 'safe_book') {
+  // Require safebook price when completion reason is safebook_hit
+  if (data.completionReason === 'safebook_hit') {
     if (!data.safebookPrice || data.safebookPrice.trim() === '') {
       return false;
     }
@@ -35,7 +35,7 @@ const editTradeSchema = z.object({
   }
   return true;
 }, {
-  message: "Safe book price is required and must be greater than 0 when completion reason is safe book",
+  message: "Safebook price is required and must be greater than 0 when completion reason is safebook hit",
   path: ['safebookPrice']
 });
 
@@ -112,9 +112,9 @@ export default function TradesTable({
     tradePair: null,
   });
 
-  // Mutation for updating target status (T1, T2)
+  // Mutation for updating target status (V2: target_1, target_2, target_3)
   const updateTargetStatusMutation = useMutation({
-    mutationFn: async ({ tradeId, targetType }: { tradeId: string; targetType: 't1' | 't2' }) => {
+    mutationFn: async ({ tradeId, targetType }: { tradeId: string; targetType: 'target_1' | 'target_2' | 'target_3' }) => {
       return apiRequest('PATCH', `/api/trades/${tradeId}/target-status`, {
         targetType, 
         hit: true
@@ -245,7 +245,7 @@ export default function TradesTable({
       }, 100);
       
       // Show different message based on completion reason
-      const message = variables.completionReason === 'safe_book' 
+      const message = variables.completionReason === 'safebook_hit' 
         ? "Safebook updated" 
         : "Trade completed successfully";
       
@@ -372,7 +372,7 @@ export default function TradesTable({
   });
 
   // Handler functions
-  const handleTargetHit = (tradeId: string, targetType: 't1' | 't2') => {
+  const handleTargetHit = (tradeId: string, targetType: 'target_1' | 'target_2' | 'target_3') => {
     updateTargetStatusMutation.mutate({ tradeId, targetType });
   };
 
@@ -380,9 +380,6 @@ export default function TradesTable({
     completeTradeBaseMutation.mutate({ tradeId, completionReason: 'stop_loss_hit' });
   };
 
-  const handleT3Hit = (tradeId: string) => {
-    completeTradeBaseMutation.mutate({ tradeId, completionReason: 'target_3_hit' });
-  };
 
   const handleSafebookClick = (tradeId: string) => {
     setSafebookDialog({ isOpen: true, tradeId, price: '' });
@@ -416,7 +413,7 @@ export default function TradesTable({
         'target_1_hit': 'Target 1 Hit',
         'target_2_hit': 'Target 2 Hit', 
         'target_3_hit': 'Target 3 Hit',
-        'safe_book': 'Safe Book',
+        'safebook_hit': 'Safebook Hit',
       };
       return (
         <Badge variant="outline" className="text-xs">
@@ -462,10 +459,10 @@ export default function TradesTable({
           <Button
             size="sm"
             variant="outline"
-            className={getButtonClasses(targetStatus.t1, "text-xs h-6 px-2")}
-            onClick={() => handleTargetHit(trade.id, 't1')}
+            className={getButtonClasses(targetStatus.target_1, "text-xs h-6 px-2")}
+            onClick={() => handleTargetHit(trade.id, 'target_1')}
             disabled={updateTargetStatusMutation.isPending}
-            data-testid={`button-t1-${trade.id}`}
+            data-testid={`button-target-1-${trade.id}`}
           >
             T1
           </Button>
@@ -474,10 +471,10 @@ export default function TradesTable({
           <Button
             size="sm"
             variant="outline"
-            className={getButtonClasses(targetStatus.t2, "text-xs h-6 px-2")}
-            onClick={() => handleTargetHit(trade.id, 't2')}
+            className={getButtonClasses(targetStatus.target_2, "text-xs h-6 px-2")}
+            onClick={() => handleTargetHit(trade.id, 'target_2')}
             disabled={updateTargetStatusMutation.isPending}
-            data-testid={`button-t2-${trade.id}`}
+            data-testid={`button-target-2-${trade.id}`}
           >
             T2
           </Button>
@@ -486,10 +483,10 @@ export default function TradesTable({
           <Button
             size="sm"
             variant="outline"
-            className={getButtonClasses(targetStatus.t3, "text-xs h-6 px-2")}
-            onClick={() => handleT3Hit(trade.id)}
-            disabled={completeTradeBaseMutation.isPending}
-            data-testid={`button-t3-${trade.id}`}
+            className={getButtonClasses(targetStatus.target_3, "text-xs h-6 px-2")}
+            onClick={() => handleTargetHit(trade.id, 'target_3')}
+            disabled={updateTargetStatusMutation.isPending}
+            data-testid={`button-target-3-${trade.id}`}
           >
             T3
           </Button>
@@ -905,7 +902,7 @@ function EditTradeModal({ isOpen, trade, onClose, onSubmit, isLoading }: EditTra
   });
 
   const watchedCompletionReason = form.watch("completionReason");
-  const showSafebookPrice = watchedCompletionReason === "safe_book";
+  const showSafebookPrice = watchedCompletionReason === "safebook_hit";
 
   // Reset form when trade changes
   useEffect(() => {
@@ -929,7 +926,7 @@ function EditTradeModal({ isOpen, trade, onClose, onSubmit, isLoading }: EditTra
     { value: 'target_2_hit', label: 'Target 2 Hit' },
     { value: 'target_3_hit', label: 'Target 3 Hit' },
     { value: 'stop_loss_hit', label: 'Stop Loss Hit' },
-    { value: 'safe_book', label: 'Safe Book' },
+    { value: 'safebook_hit', label: 'Safebook Hit' },
   ];
 
   return (
