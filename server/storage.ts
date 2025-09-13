@@ -342,9 +342,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined> {
+    console.log(`🔄 Attempting to complete trade: ${id} with data:`, completion);
+    
     // Get current trade to access targetStatus
     const currentTrade = await this.getTrade(id);
-    if (!currentTrade) return undefined;
+    if (!currentTrade) {
+      console.log(`❌ Trade not found: ${id}`);
+      return undefined;
+    }
+
+    console.log(`📋 Current trade status: ${currentTrade.status}, targetStatus:`, currentTrade.targetStatus);
 
     // Parse current target status or initialize if empty
     let targetStatus: Record<string, boolean> = {};
@@ -370,21 +377,33 @@ export class DatabaseStorage implements IStorage {
 
     console.log(`🎯 Auto-derived completion reason: ${autoCompletionReason} from targetStatus:`, targetStatus);
 
-    // Manual completion via "Mark as Complete" always completes the trade
-    // and uses the highest priority hit target as completion reason
-    const [updatedTrade] = await db
-      .update(trades)
-      .set({ 
-        status: 'completed', // Always complete for manual completion
-        completionReason: autoCompletionReason, // Use auto-derived reason
-        safebookPrice: completion.safebookPrice ? completion.safebookPrice : null,
-        notes: completion.notes,
-        targetStatus: targetStatus, // Keep existing target status
-        updatedAt: new Date() 
-      })
-      .where(eq(trades.id, id))
-      .returning();
-    return updatedTrade;
+    try {
+      // Manual completion via "Mark as Complete" always completes the trade
+      // and uses the highest priority hit target as completion reason
+      const [updatedTrade] = await db
+        .update(trades)
+        .set({ 
+          status: 'completed', // Always complete for manual completion
+          completionReason: autoCompletionReason, // Use auto-derived reason
+          safebookPrice: completion.safebookPrice ? completion.safebookPrice : null,
+          notes: completion.notes,
+          targetStatus: targetStatus, // Keep existing target status
+          updatedAt: new Date() 
+        })
+        .where(eq(trades.id, id))
+        .returning();
+      
+      if (updatedTrade) {
+        console.log(`✅ Trade completed successfully: ${updatedTrade.id}, status: ${updatedTrade.status}, reason: ${updatedTrade.completionReason}`);
+      } else {
+        console.log(`❌ Failed to update trade: ${id} - no rows returned`);
+      }
+      
+      return updatedTrade;
+    } catch (error) {
+      console.error(`💥 Database error completing trade ${id}:`, error);
+      throw error;
+    }
   }
 
   async updateTradeTargetStatus(id: string, targetType: 't1' | 't2', hit: boolean): Promise<Trade | undefined> {
