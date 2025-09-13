@@ -231,6 +231,17 @@ export const completeTradeSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const updateSafebookSchema = z.object({
+  price: z.string()
+    .min(1, "Safebook price is required")
+    .refine((price) => {
+      const num = parseFloat(price.trim());
+      return !isNaN(num) && num > 0;
+    }, "Price must be a valid number greater than 0")
+});
+
+export type UpdateSafebook = z.infer<typeof updateSafebookSchema>;
+
 export const updateTradeSchema = createInsertSchema(trades).omit({
   id: true,
   tradeId: true,
