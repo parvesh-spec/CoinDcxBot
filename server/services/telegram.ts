@@ -197,6 +197,25 @@ export class TelegramService {
     }
   }
 
+  // Helper function to format crypto prices (remove trailing zeros)
+  private formatCryptoPriceForTelegram(price: string | number): string {
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    
+    if (isNaN(numPrice)) {
+      return '₹0';
+    }
+    
+    // Convert to string and remove trailing zeros
+    let priceStr = numPrice.toString();
+    
+    // If it has decimal places, remove trailing zeros
+    if (priceStr.includes('.')) {
+      priceStr = priceStr.replace(/0+$/, '').replace(/\.$/, '');
+    }
+    
+    return `₹${priceStr}`;
+  }
+
   generateTradeMessage(trade: any, template: string, includeFields: any): string {
     let message = template;
 
@@ -206,11 +225,7 @@ export class TelegramService {
     }
     
     if (includeFields.price) {
-      const formattedPrice = new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        minimumFractionDigits: 2,
-      }).format(parseFloat(trade.price));
+      const formattedPrice = this.formatCryptoPriceForTelegram(trade.price);
       message = message.replace(/{price}/g, formattedPrice);
     }
     
@@ -224,11 +239,7 @@ export class TelegramService {
     
     if (includeFields.stopLoss) {
       if (trade.stopLossTrigger) {
-        const formattedStopLoss = new Intl.NumberFormat('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-          minimumFractionDigits: 2,
-        }).format(parseFloat(trade.stopLossTrigger));
+        const formattedStopLoss = this.formatCryptoPriceForTelegram(trade.stopLossTrigger);
         message = message.replace(/{stopLoss}/g, formattedStopLoss);
       } else {
         message = message.replace(/{stopLoss}/g, 'Not Set');
@@ -237,11 +248,7 @@ export class TelegramService {
     
     if (includeFields.takeProfit1) {
       if (trade.takeProfitTrigger) {
-        const formattedTP1 = new Intl.NumberFormat('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-          minimumFractionDigits: 2,
-        }).format(parseFloat(trade.takeProfitTrigger));
+        const formattedTP1 = this.formatCryptoPriceForTelegram(trade.takeProfitTrigger);
         message = message.replace(/{takeProfit1}/g, formattedTP1);
       } else {
         message = message.replace(/{takeProfit1}/g, 'Not Set');
@@ -250,11 +257,7 @@ export class TelegramService {
     
     if (includeFields.takeProfit2) {
       if (trade.takeProfit2) {
-        const formattedTP2 = new Intl.NumberFormat('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-          minimumFractionDigits: 2,
-        }).format(parseFloat(trade.takeProfit2));
+        const formattedTP2 = this.formatCryptoPriceForTelegram(trade.takeProfit2);
         message = message.replace(/{takeProfit2}/g, formattedTP2);
       } else {
         message = message.replace(/{takeProfit2}/g, 'Not Set');
@@ -263,11 +266,7 @@ export class TelegramService {
     
     if (includeFields.takeProfit3) {
       if (trade.takeProfit3) {
-        const formattedTP3 = new Intl.NumberFormat('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-          minimumFractionDigits: 2,
-        }).format(parseFloat(trade.takeProfit3));
+        const formattedTP3 = this.formatCryptoPriceForTelegram(trade.takeProfit3);
         message = message.replace(/{takeProfit3}/g, formattedTP3);
       } else {
         message = message.replace(/{takeProfit3}/g, 'Not Set');

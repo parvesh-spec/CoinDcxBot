@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatCryptoPrice } from "@/lib/utils";
 import { useState } from "react";
 
 interface Trade {
@@ -127,12 +128,7 @@ export default function TradeDetailModal({
   };
 
   const formatPrice = (price: string) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 8,
-    }).format(parseFloat(price));
+    return formatCryptoPrice(price, 'INR');
   };
 
   const formatTime = (timestamp: string) => {

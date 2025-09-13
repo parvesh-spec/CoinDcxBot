@@ -12,6 +12,7 @@ import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatCryptoPrice } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
 // Edit form schema
@@ -460,12 +461,7 @@ export default function TradesTable({
   };
 
   const formatPrice = (price: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(parseFloat(price));
+    return formatCryptoPrice(price, 'USD');
   };
 
   const formatTime = (timestamp: string) => {
