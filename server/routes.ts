@@ -117,14 +117,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Endpoint to update target status (for T1, T2) without completing the trade
+  // Endpoint to update target status (for all 5 target types) - V2 with 5-field support
   app.patch('/api/trades/:id/target-status', isAuthenticated, async (req, res) => {
     try {
       const { targetType, hit } = req.body;
       
-      // Validate input
-      if (!['t1', 't2'].includes(targetType)) {
-        return res.status(400).json({ message: "Invalid target type. Must be t1 or t2" });
+      // Validate input - supports 4 target types (safebook has dedicated route with price)
+      const validTargets = ['stop_loss', 'target_1', 'target_2', 'target_3'];
+      if (!validTargets.includes(targetType)) {
+        return res.status(400).json({ 
+          message: `Invalid target type. Must be one of: ${validTargets.join(', ')}. Use /safebook endpoint for safebook updates.` 
+        });
       }
       
       if (typeof hit !== 'boolean') {
@@ -140,17 +143,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Only active trades can have target status updated" });
       }
 
-      const updatedTrade = await storage.updateTradeTargetStatus(trade.id, targetType, hit);
-      if (!updatedTrade) {
+      // Use V2 method which handles business logic and auto-completion
+      const result = await storage.updateTradeTargetStatusV2(trade.id, { targetType, hit });
+      
+      if (!result || !result.trade) {
         return res.status(500).json({ message: "Failed to update target status" });
       }
+
+      const { trade: updatedTrade, autoCompleted } = result;
       
-      // Trigger automation for target hit if hit is true
+      // Trigger appropriate automation based on target type and completion status
       if (hit) {
-        await tradeMonitor.triggerTargetHit(updatedTrade.id, targetType);
+        if (autoCompleted) {
+          // Trade was auto-completed (stop_loss or target_3)
+          await tradeMonitor.triggerTradeCompleted(updatedTrade.id);
+        } else {
+          // Target hit but trade still active (safebook, target_1, target_2)
+          await tradeMonitor.triggerTargetHit(updatedTrade.id, targetType);
+        }
       }
       
-      res.json(updatedTrade);
+      // Return both trade and auto-completion status for frontend
+      res.json({ 
+        trade: updatedTrade,
+        autoCompleted 
+      });
     } catch (error) {
       console.error("Error updating target status:", error);
       res.status(500).json({ message: "Failed to update target status" });
