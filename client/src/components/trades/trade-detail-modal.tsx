@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// Select component no longer needed - completion reason auto-derived from target status
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -48,14 +48,14 @@ export default function TradeDetailModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showCompleteForm, setShowCompleteForm] = useState(false);
-  const [completionReason, setCompletionReason] = useState<string>("");
+  // Completion reason is now auto-derived from target status - no manual selection needed
   const [safebookPrice, setSafebookPrice] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
 
   const completeMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", `/api/trades/${trade.id}/complete`, {
-        completionReason,
+        // completionReason auto-derived from targetStatus in backend
         safebookPrice: safebookPrice.trim() || undefined,
         notes: notes.trim() || undefined,
       });
@@ -75,7 +75,7 @@ export default function TradeDetailModal({
         description: "Trade marked as completed",
       });
       setShowCompleteForm(false);
-      setCompletionReason("");
+      // No completion reason needed - auto-derived from targets
       setSafebookPrice("");
       setNotes("");
       onClose();
@@ -230,38 +230,22 @@ export default function TradeDetailModal({
           {showCompleteForm && (
             <div className="space-y-4 border-t pt-4">
               <h3 className="text-lg font-medium">Complete Trade</h3>
+              <p className="text-sm text-muted-foreground">
+                This trade will be marked as completed. The completion reason will be automatically determined from the target status that was hit.
+              </p>
               
               <div className="space-y-2">
-                <Label htmlFor="completion-reason">Completion Reason *</Label>
-                <Select value={completionReason} onValueChange={setCompletionReason}>
-                  <SelectTrigger data-testid="select-completion-reason">
-                    <SelectValue placeholder="Select completion reason" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="stop_loss_hit">Stop Loss Hit</SelectItem>
-                    <SelectItem value="target_1_hit">Target 1 Hit</SelectItem>
-                    <SelectItem value="target_2_hit">Target 2 Hit</SelectItem>
-                    <SelectItem value="target_3_hit">Target 3 Hit</SelectItem>
-                    <SelectItem value="safe_book">Safe Book</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="safebook-price">Safe Book Price (Optional)</Label>
+                <Input
+                  id="safebook-price"
+                  type="number"
+                  step="any"
+                  value={safebookPrice}
+                  onChange={(e) => setSafebookPrice(e.target.value)}
+                  placeholder="Enter safebook price if applicable"
+                  data-testid="input-safebook-price"
+                />
               </div>
-
-              {/* Show safebook price input only when safe_book is selected */}
-              {completionReason === "safe_book" && (
-                <div className="space-y-2">
-                  <Label htmlFor="safebook-price">Safe Book Price *</Label>
-                  <Input
-                    id="safebook-price"
-                    type="number"
-                    step="0.00000001"
-                    value={safebookPrice}
-                    onChange={(e) => setSafebookPrice(e.target.value)}
-                    placeholder="Enter the price at which you safe booked"
-                    data-testid="input-safebook-price"
-                  />
-                </div>
-              )}
 
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes (Optional)</Label>
@@ -286,7 +270,7 @@ export default function TradeDetailModal({
               </Button>
               <Button
                 onClick={() => completeMutation.mutate()}
-                disabled={!completionReason || (completionReason === "safe_book" && !safebookPrice) || completeMutation.isPending}
+                disabled={completeMutation.isPending}
                 data-testid="button-confirm-complete"
               >
                 {completeMutation.isPending ? (

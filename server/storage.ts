@@ -350,36 +350,34 @@ export class DatabaseStorage implements IStorage {
       targetStatus = { ...currentTrade.targetStatus as Record<string, boolean> };
     }
 
-    // Update target status based on completion reason
-    switch (completion.completionReason) {
-      case 'safe_book':
-        targetStatus.safebook = true;
-        break;
-      case 'target_1_hit':
-        targetStatus.t1 = true;
-        break;
-      case 'target_2_hit':
-        targetStatus.t2 = true;
-        break;
-      case 'target_3_hit':
-        targetStatus.t3 = true;
-        break;
-      case 'stop_loss_hit':
-        targetStatus.stop_loss = true;
-        break;
+    // Auto-derive completion reason from existing hit targets
+    // Priority order: T3 > T2 > T1 > SafeBook > StopLoss (highest to lowest)
+    let autoCompletionReason = 'target_1_hit'; // default fallback
+    
+    if (targetStatus.t3) {
+      autoCompletionReason = 'target_3_hit';
+    } else if (targetStatus.t2) {
+      autoCompletionReason = 'target_2_hit';
+    } else if (targetStatus.t1) {
+      autoCompletionReason = 'target_1_hit';
+    } else if (targetStatus.safebook) {
+      autoCompletionReason = 'safe_book';
+    } else if (targetStatus.stop_loss) {
+      autoCompletionReason = 'stop_loss_hit';
     }
 
-    // Manual completion via "Mark as Complete" should always complete the trade
-    // regardless of completion reason (this is different from automatic target status updates)
-    
+    console.log(`🎯 Auto-derived completion reason: ${autoCompletionReason} from targetStatus:`, targetStatus);
+
+    // Manual completion via "Mark as Complete" always completes the trade
+    // and uses the highest priority hit target as completion reason
     const [updatedTrade] = await db
       .update(trades)
       .set({ 
         status: 'completed', // Always complete for manual completion
-        completionReason: completion.completionReason,
+        completionReason: autoCompletionReason, // Use auto-derived reason
         safebookPrice: completion.safebookPrice ? completion.safebookPrice : null,
         notes: completion.notes,
-        targetStatus: targetStatus,
+        targetStatus: targetStatus, // Keep existing target status
         updatedAt: new Date() 
       })
       .where(eq(trades.id, id))
