@@ -36,104 +36,72 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left side - Auth forms */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            <div className="flex justify-center mb-4">
-              <i className="fas fa-robot text-4xl text-primary" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-8">
+      <div className="w-full max-w-md">
+        <div className="text-center space-y-8 mb-8">
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <i className="fas fa-graduation-cap text-2xl text-white" />
             </div>
-            <h1 className="text-3xl font-bold">CoinDCX Telegram Bot</h1>
-            <p className="text-muted-foreground">
-              Admin Dashboard for Trading Notifications
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">Campus For Wisdom</h1>
+            <p className="text-blue-200 text-lg">
+              Admin Access
             </p>
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Login</CardTitle>
-              <CardDescription>
-                Enter your credentials to access the dashboard
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    value={loginData.username}
-                    onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
-                    required
-                    data-testid="input-login-username"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={loginData.password}
-                    onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                    required
-                    data-testid="input-login-password"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loginMutation.isPending}
-                  data-testid="button-login"
-                >
-                  {loginMutation.isPending ? (
-                    <>
-                      <i className="fas fa-spinner fa-spin mr-2" />
-                      Logging in...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-sign-in-alt mr-2" />
-                      Login
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
         </div>
-      </div>
 
-      {/* Right side - Hero section */}
-      <div className="hidden lg:flex flex-1 bg-muted items-center justify-center p-8">
-        <div className="max-w-md text-center space-y-6">
-          <i className="fas fa-chart-line text-6xl text-primary" />
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold">Automate Your Trading Alerts</h2>
-            <p className="text-muted-foreground">
-              Connect your CoinDCX trading account with Telegram channels for instant trade notifications.
-            </p>
-          </div>
-          <div className="space-y-4 text-left">
-            <div className="flex items-center space-x-3">
-              <i className="fas fa-check-circle text-primary" />
-              <span>Real-time trade monitoring</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <i className="fas fa-check-circle text-primary" />
-              <span>Custom message templates</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <i className="fas fa-check-circle text-primary" />
-              <span>Multiple channel support</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <i className="fas fa-check-circle text-primary" />
-              <span>Secure API integration</span>
-            </div>
-          </div>
-        </div>
+        <Card className="backdrop-blur-sm bg-white/10 border border-white/20 shadow-2xl">
+          <CardContent className="pt-6">
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-white font-medium">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={loginData.username}
+                  onChange={(e) => setLoginData(prev => ({ ...prev, username: e.target.value }))}
+                  required
+                  className="bg-white/10 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400"
+                  placeholder="Enter your username"
+                  data-testid="input-login-username"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-white font-medium">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={loginData.password}
+                  onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                  className="bg-white/10 border-white/30 text-white placeholder:text-gray-300 focus:border-blue-400 focus:ring-blue-400"
+                  placeholder="Enter your password"
+                  data-testid="input-login-password"
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105"
+                disabled={loginMutation.isPending}
+                data-testid="button-login"
+              >
+                {loginMutation.isPending ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin mr-2" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-key mr-2" />
+                    Access Dashboard
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
