@@ -68,13 +68,22 @@ export class TradeMonitorService {
   }
 
   /**
-   * Trigger automation for target hits (T1, T2 status updates)
+   * Trigger automation for all 5 target types (stop_loss, safebook, target_1, target_2, target_3)
    */
-  async triggerTargetHit(tradeId: string, targetType: 't1' | 't2'): Promise<void> {
+  async triggerTargetHit(tradeId: string, targetType: 'stop_loss' | 'safebook' | 'target_1' | 'target_2' | 'target_3'): Promise<void> {
     try {
       const trade = await storage.getTrade(tradeId);
       if (trade && trade.status === 'active') {
-        const triggerType = targetType === 't1' ? 'target_1_hit' : 'target_2_hit';
+        // Map target type to automation trigger
+        const triggerMap = {
+          'stop_loss': 'stop_loss_hit',
+          'safebook': 'safebook_hit',
+          'target_1': 'target_1_hit', 
+          'target_2': 'target_2_hit',
+          'target_3': 'target_3_hit'
+        };
+        
+        const triggerType = triggerMap[targetType];
         console.log(`🎯 Triggering target hit automation: ${triggerType} for trade ${trade.tradeId}`);
         await automationService.triggerAutomations(trade, triggerType as any);
       }
@@ -91,7 +100,7 @@ export class TradeMonitorService {
       const trade = await storage.getTrade(tradeId);
       if (trade && trade.status === 'active') {
         console.log(`📗 Triggering safebook automation for trade ${trade.tradeId} at price ${price}`);
-        await automationService.triggerAutomations(trade, 'safe_book_hit' as any);
+        await automationService.triggerAutomations(trade, 'safebook_hit' as any);
       }
     } catch (error) {
       console.error(`Error triggering safebook automation for ${tradeId}:`, error);

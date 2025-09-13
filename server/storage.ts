@@ -382,10 +382,12 @@ export class DatabaseStorage implements IStorage {
     const normalizedStatus = normalizeTargetStatus(currentTrade.targetStatus);
 
     // Auto-derive completion reason from existing hit targets
-    // Priority order: T3 > T2 > T1 > SafeBook > StopLoss (highest to lowest)
+    // Priority order: StopLoss > T3 > T2 > T1 > SafeBook (auto-completion triggers first)
     let autoCompletionReason = 'target_1_hit'; // default fallback
     
-    if (normalizedStatus.target_3) {
+    if (normalizedStatus.stop_loss) {
+      autoCompletionReason = 'stop_loss_hit';
+    } else if (normalizedStatus.target_3) {
       autoCompletionReason = 'target_3_hit';
     } else if (normalizedStatus.target_2) {
       autoCompletionReason = 'target_2_hit';
@@ -393,8 +395,6 @@ export class DatabaseStorage implements IStorage {
       autoCompletionReason = 'target_1_hit';
     } else if (normalizedStatus.safebook) {
       autoCompletionReason = 'safe_book';
-    } else if (normalizedStatus.stop_loss) {
-      autoCompletionReason = 'stop_loss_hit';
     }
 
     console.log(`🎯 Auto-derived completion reason: ${autoCompletionReason} from normalized targetStatus:`, normalizedStatus);

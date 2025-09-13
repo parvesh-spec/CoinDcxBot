@@ -98,8 +98,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to complete trade" });
       }
       
-      // Trigger automation for trade completion
-      await tradeMonitor.triggerTradeCompleted(updatedTrade.id);
+      // Manual completion should NOT trigger automations
+      // Only target status updates should trigger automations
       
       res.json(updatedTrade);
     } catch (error) {
@@ -152,15 +152,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { trade: updatedTrade, autoCompleted } = result;
       
-      // Trigger appropriate automation based on target type and completion status
+      // Trigger automation only for target status updates (all 5 target types)
       if (hit) {
-        if (autoCompleted) {
-          // Trade was auto-completed (stop_loss or target_3)
-          await tradeMonitor.triggerTradeCompleted(updatedTrade.id);
-        } else {
-          // Target hit but trade still active (safebook, target_1, target_2)
-          await tradeMonitor.triggerTargetHit(updatedTrade.id, targetType);
-        }
+        // Trigger automation for any target hit (regardless of auto-completion)
+        await tradeMonitor.triggerTargetHit(updatedTrade.id, targetType);
       }
       
       // Return both trade and auto-completion status for frontend
