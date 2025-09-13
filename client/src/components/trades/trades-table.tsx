@@ -266,6 +266,68 @@ export default function TradesTable({
     },
   });
 
+  // Mutation for updating safebook (keeps trade active)
+  const updateSafebookMutation = useMutation({
+    mutationFn: async ({ tradeId, price }: { tradeId: string; price: string }) => {
+      return apiRequest('PATCH', `/api/trades/${tradeId}/safebook`, {
+        price
+      });
+    },
+    onMutate: async ({ tradeId, price }) => {
+      // Cancel any outgoing refetches for all trades queries
+      await queryClient.cancelQueries({ predicate: (query) => query.queryKey[0] === "trades" });
+      
+      // Snapshot previous values for all trades queries
+      const previousQueries: Array<[any, any]> = [];
+      queryClient.getQueryCache().findAll({ predicate: (query) => query.queryKey[0] === "trades" }).forEach((query) => {
+        previousQueries.push([query.queryKey, queryClient.getQueryData(query.queryKey)]);
+      });
+      
+      // Optimistically update all trades queries
+      queryClient.setQueriesData(
+        { predicate: (query) => query.queryKey[0] === "trades" },
+        (oldData: any) => {
+          if (!oldData?.trades) return oldData;
+          return {
+            ...oldData,
+            trades: oldData.trades.map((trade: any) => 
+              trade.id === tradeId 
+                ? { ...trade, targetStatus: { ...(trade.targetStatus || {}), safebook: true } }
+                : trade
+            )
+          };
+        }
+      );
+      
+      return { previousQueries };
+    },
+    onSuccess: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades" });
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades/stats" || (Array.isArray(query.queryKey) && query.queryKey.includes("/api/trades/stats")) });
+      }, 100);
+      
+      toast({
+        title: "Success",
+        description: "SafeBook updated successfully - trade remains active",
+      });
+    },
+    onError: (error: any, variables, context) => {
+      // Roll back optimistic updates for all trades queries
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(([queryKey, data]: [any, any]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update safebook",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutation for editing trade
   const editTradeMutation = useMutation({
     mutationFn: async ({ tradeId, tradeData }: { tradeId: string; tradeData: any }) => {
@@ -329,10 +391,9 @@ export default function TradesTable({
   const handleSafebookSubmit = () => {
     if (!safebookDialog.tradeId || !safebookDialog.price) return;
     
-    completeTradeBaseMutation.mutate({ 
+    updateSafebookMutation.mutate({ 
       tradeId: safebookDialog.tradeId, 
-      completionReason: 'safe_book',
-      safebookPrice: safebookDialog.price
+      price: safebookDialog.price
     });
     
     setSafebookDialog({ isOpen: false, tradeId: null, price: '' });
@@ -392,7 +453,7 @@ export default function TradesTable({
           variant="outline"
           className={getButtonClasses(targetStatus.safebook, "text-xs h-6 px-2")}
           onClick={() => handleSafebookClick(trade.id)}
-          disabled={completeTradeBaseMutation.isPending}
+          disabled={updateSafebookMutation.isPending}
           data-testid={`button-safebook-${trade.id}`}
         >
           SB
@@ -753,10 +814,10 @@ export default function TradesTable({
               </Button>
               <Button 
                 onClick={handleSafebookSubmit}
-                disabled={!safebookDialog.price || completeTradeBaseMutation.isPending}
+                disabled={!safebookDialog.price || updateSafebookMutation.isPending}
                 data-testid="button-submit-safebook"
               >
-                {completeTradeBaseMutation.isPending ? 'Processing...' : 'Safe Book'}
+                {updateSafebookMutation.isPending ? 'Processing...' : 'Safe Book'}
               </Button>
             </div>
           </div>
