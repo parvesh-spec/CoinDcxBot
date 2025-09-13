@@ -143,6 +143,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Only active trades can have target status updated" });
       }
 
+      // For targets that auto-complete (stop_loss, target_3), trigger automation FIRST
+      // while trade is still active, then complete the trade
+      const autoCompletingTargets = ['stop_loss', 'target_3'];
+      
+      if (hit && autoCompletingTargets.includes(targetType)) {
+        console.log(`🚀 Pre-completion automation trigger for ${targetType}`);
+        // Trigger automation FIRST while trade is still active
+        await tradeMonitor.triggerTargetHit(trade.id, targetType);
+      }
+
       // Use V2 method which handles business logic and auto-completion
       const result = await storage.updateTradeTargetStatusV2(trade.id, { targetType, hit });
       
@@ -152,9 +162,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { trade: updatedTrade, autoCompleted } = result;
       
-      // Trigger automation only for target status updates (all 5 target types)
-      if (hit) {
-        // Trigger automation for any target hit (regardless of auto-completion)
+      // For non-auto-completing targets (safebook, target_1, target_2), trigger automation AFTER update
+      if (hit && !autoCompletingTargets.includes(targetType)) {
+        console.log(`🎯 Post-update automation trigger for ${targetType}`);
         await tradeMonitor.triggerTargetHit(updatedTrade.id, targetType);
       }
       
