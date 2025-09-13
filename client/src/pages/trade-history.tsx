@@ -239,27 +239,27 @@ export default function TradeHistoryPage() {
               </SelectContent>
             </Select>
             
-            {/* Custom Date Range Inputs */}
+            {/* Custom Date Range Inputs - Responsive */}
             {filterType === 'custom' && (
-              <>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                 <Input
                   type="date"
                   value={customDateRange.start}
                   onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  className="w-28 h-8 text-xs border-slate-200 dark:border-slate-700"
+                  className="w-full sm:w-28 h-8 text-xs border-slate-200 dark:border-slate-700"
                   placeholder="Start date"
                   data-testid="input-start-date"
                 />
-                <span className="text-slate-400 text-xs">to</span>
+                <span className="text-slate-400 text-xs text-center sm:text-left">to</span>
                 <Input
                   type="date"
                   value={customDateRange.end}
                   onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  className="w-28 h-8 text-xs border-slate-200 dark:border-slate-700"
+                  className="w-full sm:w-28 h-8 text-xs border-slate-200 dark:border-slate-700"
                   placeholder="End date"
                   data-testid="input-end-date"
                 />
-              </>
+              </div>
             )}
             
             {filterType !== 'all' && (
