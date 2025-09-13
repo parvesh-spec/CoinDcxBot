@@ -16,10 +16,14 @@ import {
   type CompleteTrade,
   type UpdateTrade,
   type UpdateSafebook,
+  type UpdateTargetStatus,
+  type TargetType,
+  type TargetStatusV2,
   type Automation,
   type InsertAutomation,
   type SentMessage,
   type InsertSentMessage,
+  normalizeTargetStatus,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, ilike } from "drizzle-orm";
@@ -58,13 +62,16 @@ export interface IStorage {
   updateTrade(id: string, trade: UpdateTrade): Promise<Trade | undefined>;
   deleteTrade(id: string): Promise<boolean>;
   completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined>;
-  updateTradeTargetStatus(id: string, targetType: 't1' | 't2', hit: boolean): Promise<Trade | undefined>;
+  // New V2 target status method supporting all 5 target types with business logic
+  updateTradeTargetStatusV2(id: string, targetUpdate: UpdateTargetStatus): Promise<{trade: Trade | undefined, autoCompleted: boolean}>;
   updateTradeSafebook(id: string, safebook: UpdateSafebook): Promise<Trade | undefined>;
   getTradeStats(): Promise<{
     total: number;
     active: number;
     completed: number;
   }>;
+  // Legacy method - deprecated but kept for backward compatibility
+  updateTradeTargetStatus(id: string, targetType: 't1' | 't2', hit: boolean): Promise<Trade | undefined>;
 
   // Automation operations
   getAutomations(): Promise<any[]>; // Returns automations with channel and template names
@@ -270,9 +277,10 @@ export class DatabaseStorage implements IStorage {
       };
     };
 
-    // Add gain/loss calculation to trades
+    // Add gain/loss calculation to trades and normalize target status
     const tradesWithGainLoss = tradesResult.map(trade => ({
       ...trade,
+      targetStatus: normalizeTargetStatus(trade.targetStatus), // Always normalize for backward compatibility
       gainLoss: calculateGainLoss(trade)
     }));
 
@@ -284,12 +292,24 @@ export class DatabaseStorage implements IStorage {
 
   async getTrade(id: string): Promise<Trade | undefined> {
     const [trade] = await db.select().from(trades).where(eq(trades.id, id));
-    return trade;
+    if (!trade) return undefined;
+    
+    // Always normalize target status to V2 format for backward compatibility
+    return {
+      ...trade,
+      targetStatus: normalizeTargetStatus(trade.targetStatus)
+    };
   }
 
   async getTradeByTradeId(tradeId: string): Promise<Trade | undefined> {
     const [trade] = await db.select().from(trades).where(eq(trades.tradeId, tradeId));
-    return trade;
+    if (!trade) return undefined;
+    
+    // Always normalize target status to V2 format for backward compatibility
+    return {
+      ...trade,
+      targetStatus: normalizeTargetStatus(trade.targetStatus)
+    };
   }
 
   async createTrade(trade: InsertTrade): Promise<Trade> {
@@ -351,31 +371,33 @@ export class DatabaseStorage implements IStorage {
       return undefined;
     }
 
+    if (currentTrade.status === 'completed') {
+      console.log(`⚠️ Trade already completed: ${id}`);
+      return currentTrade;
+    }
+
     console.log(`📋 Current trade status: ${currentTrade.status}, targetStatus:`, currentTrade.targetStatus);
 
-    // Parse current target status or initialize if empty
-    let targetStatus: Record<string, boolean> = {};
-    if (currentTrade.targetStatus && typeof currentTrade.targetStatus === 'object') {
-      targetStatus = { ...currentTrade.targetStatus as Record<string, boolean> };
-    }
+    // Use normalized target status instead of raw parsing
+    const normalizedStatus = normalizeTargetStatus(currentTrade.targetStatus);
 
     // Auto-derive completion reason from existing hit targets
     // Priority order: T3 > T2 > T1 > SafeBook > StopLoss (highest to lowest)
     let autoCompletionReason = 'target_1_hit'; // default fallback
     
-    if (targetStatus.t3) {
+    if (normalizedStatus.target_3) {
       autoCompletionReason = 'target_3_hit';
-    } else if (targetStatus.t2) {
+    } else if (normalizedStatus.target_2) {
       autoCompletionReason = 'target_2_hit';
-    } else if (targetStatus.t1) {
+    } else if (normalizedStatus.target_1) {
       autoCompletionReason = 'target_1_hit';
-    } else if (targetStatus.safebook) {
+    } else if (normalizedStatus.safebook) {
       autoCompletionReason = 'safe_book';
-    } else if (targetStatus.stop_loss) {
+    } else if (normalizedStatus.stop_loss) {
       autoCompletionReason = 'stop_loss_hit';
     }
 
-    console.log(`🎯 Auto-derived completion reason: ${autoCompletionReason} from targetStatus:`, targetStatus);
+    console.log(`🎯 Auto-derived completion reason: ${autoCompletionReason} from normalized targetStatus:`, normalizedStatus);
 
     try {
       // Manual completion via "Mark as Complete" always completes the trade
@@ -385,9 +407,9 @@ export class DatabaseStorage implements IStorage {
         .set({ 
           status: 'completed', // Always complete for manual completion
           completionReason: autoCompletionReason, // Use auto-derived reason
-          safebookPrice: completion.safebookPrice ? completion.safebookPrice : null,
-          notes: completion.notes,
-          targetStatus: targetStatus, // Keep existing target status
+          safebookPrice: completion.safebookPrice || null,
+          notes: completion.notes || null,
+          targetStatus: normalizedStatus, // Keep normalized target status in V2 format
           updatedAt: new Date() 
         })
         .where(eq(trades.id, id))
@@ -406,54 +428,166 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateTradeTargetStatus(id: string, targetType: 't1' | 't2', hit: boolean): Promise<Trade | undefined> {
+  // New V2 method with 5-field business logic
+  async updateTradeTargetStatusV2(id: string, targetUpdate: UpdateTargetStatus): Promise<{trade: Trade | undefined, autoCompleted: boolean}> {
+    console.log(`🎯 Updating target status for trade ${id}:`, targetUpdate);
+
     // Get current trade
     const currentTrade = await this.getTrade(id);
-    if (!currentTrade) return undefined;
-
-    // Parse current target status or initialize if empty
-    let targetStatus: Record<string, boolean> = {};
-    if (currentTrade.targetStatus && typeof currentTrade.targetStatus === 'object') {
-      targetStatus = { ...currentTrade.targetStatus as Record<string, boolean> };
+    if (!currentTrade) {
+      return { trade: undefined, autoCompleted: false };
     }
 
-    // Update the specific target status
-    targetStatus[targetType] = hit;
+    if (currentTrade.status === 'completed') {
+      console.log(`⚠️ Cannot update completed trade: ${id}`);
+      return { trade: currentTrade, autoCompleted: false };
+    }
+
+    // Normalize current target status using schema helper
+    let targetStatus: TargetStatusV2 = normalizeTargetStatus(currentTrade.targetStatus);
+    const { targetType, hit } = targetUpdate;
+
+    console.log(`📋 Current normalized target status:`, targetStatus);
+
+    // Business rules validation
+    if (targetType === 'stop_loss') {
+      // Stop loss can't be hit if safebook, T1, T2, or T3 are already hit
+      if (targetStatus.safebook || targetStatus.target_1 || targetStatus.target_2 || targetStatus.target_3) {
+        console.log(`❌ Stop loss blocked - higher targets already hit`);
+        return { trade: currentTrade, autoCompleted: false };
+      }
+    }
+
+    // Apply cascade rules based on target type
+    if (hit) {
+      switch (targetType) {
+        case 'stop_loss':
+          targetStatus.stop_loss = true;
+          break;
+
+        case 'safebook':
+          // Safebook can't be set if any target (T1, T2, T3) is already hit
+          if (targetStatus.target_1 || targetStatus.target_2 || targetStatus.target_3) {
+            console.log(`❌ Safebook blocked - targets already hit:`, {t1: targetStatus.target_1, t2: targetStatus.target_2, t3: targetStatus.target_3});
+            return { trade: currentTrade, autoCompleted: false };
+          }
+          targetStatus.safebook = true;
+          // Safebook doesn't clear anything, just blocks stop loss
+          break;
+
+        case 'target_1':
+          targetStatus.target_1 = true;
+          // T1 invalidates safebook and blocks stop loss
+          targetStatus.safebook = false;
+          targetStatus.stop_loss = false;
+          break;
+
+        case 'target_2':
+          targetStatus.target_2 = true;
+          // T2 auto-enables T1, invalidates safebook, blocks stop loss  
+          targetStatus.target_1 = true;
+          targetStatus.safebook = false;
+          targetStatus.stop_loss = false;
+          break;
+
+        case 'target_3':
+          targetStatus.target_3 = true;
+          // T3 doesn't change other targets - will auto-complete
+          break;
+      }
+    } else {
+      // If unsetting a target, just update that field
+      targetStatus[targetType] = false;
+    }
+
+    console.log(`🔄 Updated target status:`, targetStatus);
+
+    // Check if trade should auto-complete
+    const shouldAutoComplete = hit && (targetType === 'stop_loss' || targetType === 'target_3');
+    let completionReason: string | undefined;
+
+    if (shouldAutoComplete) {
+      completionReason = targetType === 'stop_loss' ? 'stop_loss_hit' : 'target_3_hit';
+      console.log(`⚡ Auto-completing trade with reason: ${completionReason}`);
+    }
+
+    // Update the database
+    const updateData: any = {
+      targetStatus: targetStatus,
+      updatedAt: new Date()
+    };
+
+    if (shouldAutoComplete) {
+      updateData.status = 'completed';
+      updateData.completionReason = completionReason;
+    }
 
     const [updatedTrade] = await db
       .update(trades)
-      .set({ 
-        targetStatus: targetStatus,
-        updatedAt: new Date() 
-      })
+      .set(updateData)
       .where(eq(trades.id, id))
       .returning();
-    return updatedTrade;
+
+    console.log(`✅ Trade updated successfully. Auto-completed: ${shouldAutoComplete}`);
+
+    return { trade: updatedTrade, autoCompleted: shouldAutoComplete };
+  }
+
+  // Legacy method - deprecated but kept for backward compatibility
+  async updateTradeTargetStatus(id: string, targetType: 't1' | 't2', hit: boolean): Promise<Trade | undefined> {
+    console.log(`⚠️ Using deprecated updateTradeTargetStatus, migrating to V2...`);
+    
+    // Map legacy types to new types
+    const newTargetType: TargetType = targetType === 't1' ? 'target_1' : 'target_2';
+    
+    // Use the new V2 method
+    const result = await this.updateTradeTargetStatusV2(id, { targetType: newTargetType, hit });
+    return result.trade;
   }
 
   async updateTradeSafebook(id: string, safebook: UpdateSafebook): Promise<Trade | undefined> {
+    console.log(`💰 Updating safebook for trade ${id} with price:`, safebook.price);
+
     // Get current trade
     const currentTrade = await this.getTrade(id);
-    if (!currentTrade) return undefined;
-
-    // Parse current target status or initialize if empty
-    let targetStatus: Record<string, boolean> = {};
-    if (currentTrade.targetStatus && typeof currentTrade.targetStatus === 'object') {
-      targetStatus = { ...currentTrade.targetStatus as Record<string, boolean> };
+    if (!currentTrade) {
+      console.log(`❌ Trade not found: ${id}`);
+      return undefined;
     }
 
-    // Mark safebook as hit
-    targetStatus.safebook = true;
+    if (currentTrade.status === 'completed') {
+      console.log(`⚠️ Cannot update safebook for completed trade: ${id}`);
+      return currentTrade;
+    }
+
+    // Use normalized target status instead of raw parsing
+    const normalizedStatus = normalizeTargetStatus(currentTrade.targetStatus);
+
+    // Safebook can't be set if any target (T1, T2, T3) is already hit
+    if (normalizedStatus.target_1 || normalizedStatus.target_2 || normalizedStatus.target_3) {
+      console.log(`❌ Safebook blocked - targets already hit:`, {t1: normalizedStatus.target_1, t2: normalizedStatus.target_2, t3: normalizedStatus.target_3});
+      return currentTrade;
+    }
+
+    // Mark safebook as hit - this blocks stop loss but doesn't clear anything else
+    normalizedStatus.safebook = true;
+
+    console.log(`📋 Updated safebook status:`, normalizedStatus);
 
     const [updatedTrade] = await db
       .update(trades)
       .set({ 
-        targetStatus: targetStatus,
+        targetStatus: normalizedStatus, // Use normalized V2 format
         safebookPrice: safebook.price, // Set the safebook price
         updatedAt: new Date() 
       })
       .where(eq(trades.id, id))
       .returning();
+    
+    if (updatedTrade) {
+      console.log(`✅ Safebook updated successfully for trade: ${updatedTrade.id}`);
+    }
+
     return updatedTrade;
   }
 
