@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatDistanceToNow, format, isToday, isYesterday, parseISO } from "date-fns";
-import { Calendar, Star, TrendingUp, TrendingDown } from "lucide-react";
+import { formatDistanceToNow, format, isToday, isYesterday, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isWithinInterval } from "date-fns";
+import { Calendar, Star, TrendingUp, TrendingDown, Filter } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trade } from "@shared/schema";
 
 type TradeWithGainLoss = Trade & {
@@ -20,8 +21,11 @@ interface TradeHistoryResponse {
   total: number;
 }
 
+type FilterType = 'all' | 'today' | 'yesterday' | 'this_week' | 'this_month' | 'custom';
+
 export default function TradeHistoryPage() {
-  const [dateFilter, setDateFilter] = useState("");
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
   
   const { data, isLoading } = useQuery<TradeHistoryResponse>({
     queryKey: ["/api/public/trades/completed"],
@@ -30,14 +34,72 @@ export default function TradeHistoryPage() {
 
   const { trades = [], total = 0 } = data || {};
   
-  // Filter trades by date if filter is applied
-  const filteredTrades = dateFilter 
-    ? trades.filter(trade => {
-        if (!trade.createdAt) return false;
-        const tradeDate = format(new Date(trade.createdAt), 'yyyy-MM-dd');
-        return tradeDate === dateFilter;
-      })
-    : trades;
+  // Enhanced filtering logic based on filter type
+  const getFilteredTrades = () => {
+    const now = new Date();
+    
+    switch (filterType) {
+      case 'today':
+        return trades.filter(trade => {
+          if (!trade.createdAt) return false;
+          const tradeDate = new Date(trade.createdAt);
+          return isWithinInterval(tradeDate, {
+            start: startOfDay(now),
+            end: endOfDay(now)
+          });
+        });
+        
+      case 'yesterday':
+        return trades.filter(trade => {
+          if (!trade.createdAt) return false;
+          const tradeDate = new Date(trade.createdAt);
+          const yesterday = subDays(now, 1);
+          return isWithinInterval(tradeDate, {
+            start: startOfDay(yesterday),
+            end: endOfDay(yesterday)
+          });
+        });
+        
+      case 'this_week':
+        return trades.filter(trade => {
+          if (!trade.createdAt) return false;
+          const tradeDate = new Date(trade.createdAt);
+          return isWithinInterval(tradeDate, {
+            start: startOfWeek(now, { weekStartsOn: 1 }), // Monday start
+            end: endOfWeek(now, { weekStartsOn: 1 })
+          });
+        });
+        
+      case 'this_month':
+        return trades.filter(trade => {
+          if (!trade.createdAt) return false;
+          const tradeDate = new Date(trade.createdAt);
+          return isWithinInterval(tradeDate, {
+            start: startOfMonth(now),
+            end: endOfMonth(now)
+          });
+        });
+        
+      case 'custom':
+        if (!customDateRange.start || !customDateRange.end) return trades;
+        return trades.filter(trade => {
+          if (!trade.createdAt) return false;
+          const tradeDate = new Date(trade.createdAt);
+          const startDate = startOfDay(new Date(customDateRange.start));
+          const endDate = endOfDay(new Date(customDateRange.end));
+          
+          // Prevent crash if end date is before start date
+          if (endDate < startDate) return false;
+          
+          return isWithinInterval(tradeDate, { start: startDate, end: endDate });
+        });
+        
+      default: // 'all'
+        return trades;
+    }
+  };
+  
+  const filteredTrades = getFilteredTrades();
 
   // Group trades by date
   const groupedTrades = filteredTrades.reduce((groups, trade) => {
@@ -64,30 +126,39 @@ export default function TradeHistoryPage() {
     return format(date, 'MMM d, yyyy');
   };
   
-  // Calculate statistics
-  const totalTrades = trades.length;
-  const currentMonth = format(new Date(), 'yyyy-MM');
-  const thisMonthTrades = trades.filter(trade => {
-    if (!trade.createdAt) return false; // Skip trades without createdAt
-    const tradeDate = new Date(trade.createdAt);
-    return format(tradeDate, 'yyyy-MM') === currentMonth;
-  });
+  // Calculate statistics based on filtered trades
+  const calculateStats = (trades: TradeWithGainLoss[]) => {
+    const totalTrades = trades.length;
+    const tradesWithGainLoss = trades.filter(trade => trade.gainLoss);
+    const gainTrades = tradesWithGainLoss.filter(trade => trade.gainLoss?.isGain);
+    const accuracy = tradesWithGainLoss.length > 0 ? Math.round((gainTrades.length / tradesWithGainLoss.length) * 100) : 0;
+    
+    const totalGain = tradesWithGainLoss.length > 0 
+      ? tradesWithGainLoss.reduce((sum, trade) => {
+          if (trade.gainLoss!.isGain) {
+            return sum + trade.gainLoss!.percentage;
+          } else {
+            return sum - trade.gainLoss!.percentage;
+          }
+        }, 0)
+      : 0;
+      
+    return { totalTrades, accuracy, totalGain };
+  };
   
-  // Only count trades that have gainLoss data for accurate calculations
-  const thisMonthWithGainLoss = thisMonthTrades.filter(trade => trade.gainLoss);
-  const gainTrades = thisMonthWithGainLoss.filter(trade => trade.gainLoss?.isGain);
-  const accuracy = thisMonthWithGainLoss.length > 0 ? Math.round((gainTrades.length / thisMonthWithGainLoss.length) * 100) : 0;
+  const stats = calculateStats(filteredTrades);
   
-  // Calculate total cumulative gain % this month (only from trades with gainLoss data)
-  const totalGain = thisMonthWithGainLoss.length > 0 
-    ? thisMonthWithGainLoss.reduce((sum, trade) => {
-        if (trade.gainLoss!.isGain) {
-          return sum + trade.gainLoss!.percentage;
-        } else {
-          return sum - trade.gainLoss!.percentage;
-        }
-      }, 0)
-    : 0;
+  // Get filter label for display
+  const getFilterLabel = () => {
+    switch (filterType) {
+      case 'today': return 'Today';
+      case 'yesterday': return 'Yesterday';
+      case 'this_week': return 'This Week';
+      case 'this_month': return 'This Month';
+      case 'custom': return 'Custom Range';
+      default: return 'All Time';
+    }
+  };
 
   if (isLoading) {
     return (
@@ -116,20 +187,30 @@ export default function TradeHistoryPage() {
             {/* Statistics */}
             <div className="flex items-center justify-center gap-6 text-xs">
               <div className="text-center">
-                <p className="font-semibold text-slate-700 dark:text-slate-300">{totalTrades}</p>
+                <p className="font-semibold text-slate-700 dark:text-slate-300">{stats.totalTrades}</p>
                 <p className="text-slate-500 dark:text-slate-400">Total Trades</p>
               </div>
               <div className="text-center">
-                <p className="font-semibold text-slate-700 dark:text-slate-300">{accuracy}%</p>
+                <p className="font-semibold text-slate-700 dark:text-slate-300">{stats.accuracy}%</p>
                 <p className="text-slate-500 dark:text-slate-400">Accuracy</p>
               </div>
               <div className="text-center">
-                <p className={`font-semibold ${totalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {totalGain >= 0 ? '+' : ''}{totalGain.toFixed(1)}%
+                <p className={`font-semibold ${stats.totalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {stats.totalGain >= 0 ? '+' : ''}{stats.totalGain.toFixed(1)}%
                 </p>
-                <p className="text-slate-500 dark:text-slate-400">This Month</p>
+                <p className="text-slate-500 dark:text-slate-400">Profit/Loss%</p>
               </div>
             </div>
+            
+            {/* Current Filter Display */}
+            {filterType !== 'all' && (
+              <div className="mt-2">
+                <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs">
+                  <Filter className="w-3 h-3" />
+                  <span>Showing: {getFilterLabel()}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
@@ -141,22 +222,54 @@ export default function TradeHistoryPage() {
             </h2>
           </div>
           
-          {/* Date Filter */}
+          {/* Enhanced Filter */}
           <div className="flex items-center gap-3">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <Input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="w-36 h-8 text-xs border-slate-200 dark:border-slate-700"
-              placeholder="Filter by date"
-              data-testid="input-date-filter"
-            />
-            {dateFilter && (
+            <Filter className="w-4 h-4 text-slate-400" />
+            <Select value={filterType} onValueChange={(value: FilterType) => setFilterType(value)}>
+              <SelectTrigger className="w-32 h-8 text-xs border-slate-200 dark:border-slate-700">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
+                <SelectItem value="this_week">This Week</SelectItem>
+                <SelectItem value="this_month">This Month</SelectItem>
+                <SelectItem value="custom">Date Range</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* Custom Date Range Inputs */}
+            {filterType === 'custom' && (
+              <>
+                <Input
+                  type="date"
+                  value={customDateRange.start}
+                  onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  className="w-28 h-8 text-xs border-slate-200 dark:border-slate-700"
+                  placeholder="Start date"
+                  data-testid="input-start-date"
+                />
+                <span className="text-slate-400 text-xs">to</span>
+                <Input
+                  type="date"
+                  value={customDateRange.end}
+                  onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                  className="w-28 h-8 text-xs border-slate-200 dark:border-slate-700"
+                  placeholder="End date"
+                  data-testid="input-end-date"
+                />
+              </>
+            )}
+            
+            {filterType !== 'all' && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setDateFilter("")}
+                onClick={() => {
+                  setFilterType('all');
+                  setCustomDateRange({ start: '', end: '' });
+                }}
                 className="h-8 px-3 text-xs"
                 data-testid="button-clear-filter"
               >
@@ -191,7 +304,7 @@ export default function TradeHistoryPage() {
               {/* Trades for this date */}
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {groupedTrades[dateKey].map((trade) => (
-                  <Card key={trade.id} className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm hover:shadow-md hover:bg-white/80 dark:hover:bg-slate-800/80 transition-all duration-200 rounded-lg overflow-hidden" data-testid={`trade-card-${trade.id}`}>
+                  <Card key={trade.id} className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-200 rounded-lg overflow-hidden" data-testid={`trade-card-${trade.id}`}>
 
               <CardHeader className="pb-2 pt-3 px-3">
                 <div className="flex items-start justify-between pr-6">
