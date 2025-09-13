@@ -73,7 +73,8 @@ export class TradeMonitorService {
   async triggerTargetHit(tradeId: string, targetType: 'stop_loss' | 'safebook' | 'target_1' | 'target_2' | 'target_3'): Promise<void> {
     try {
       const trade = await storage.getTrade(tradeId);
-      if (trade && trade.status === 'active') {
+      if (trade) {
+        // Trigger automation for any target hit (active OR auto-completed trades)
         // Map target type to automation trigger
         const triggerMap = {
           'stop_loss': 'stop_loss_hit',
