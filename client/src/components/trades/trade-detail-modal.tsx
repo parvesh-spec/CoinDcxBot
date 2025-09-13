@@ -6,15 +6,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 // Select component no longer needed - completion reason auto-derived from target status
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCryptoPrice } from "@/lib/utils";
-import { useState } from "react";
 
 interface Trade {
   id: string;
@@ -47,17 +43,12 @@ export default function TradeDetailModal({
 }: TradeDetailModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showCompleteForm, setShowCompleteForm] = useState(false);
   // Completion reason is now auto-derived from target status - no manual selection needed
-  const [safebookPrice, setSafebookPrice] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
 
   const completeMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", `/api/trades/${trade.id}/complete`, {
         // completionReason auto-derived from targetStatus in backend
-        safebookPrice: safebookPrice.trim() || undefined,
-        notes: notes.trim() || undefined,
       });
     },
     onSuccess: () => {
@@ -74,10 +65,6 @@ export default function TradeDetailModal({
         title: "Success",
         description: "Trade marked as completed",
       });
-      setShowCompleteForm(false);
-      // No completion reason needed - auto-derived from targets
-      setSafebookPrice("");
-      setNotes("");
       onClose();
     },
     onError: (error) => {
@@ -227,80 +214,30 @@ export default function TradeDetailModal({
             </div>
           )}
 
-          {showCompleteForm && (
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="text-lg font-medium">Complete Trade</h3>
-              <p className="text-sm text-muted-foreground">
-                This trade will be marked as completed. The completion reason will be automatically determined from the target status that was hit.
-              </p>
-              
-              <div className="space-y-2">
-                <Label htmlFor="safebook-price">Safe Book Price (Optional)</Label>
-                <Input
-                  id="safebook-price"
-                  type="number"
-                  step="any"
-                  value={safebookPrice}
-                  onChange={(e) => setSafebookPrice(e.target.value)}
-                  placeholder="Enter safebook price if applicable"
-                  data-testid="input-safebook-price"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add any additional notes about this trade completion..."
-                  rows={3}
-                  data-testid="textarea-completion-notes"
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">
-          {showCompleteForm ? (
-            <>
-              <Button variant="outline" onClick={() => setShowCompleteForm(false)} data-testid="button-cancel-complete">
-                Cancel
-              </Button>
-              <Button
-                onClick={() => completeMutation.mutate()}
-                disabled={completeMutation.isPending}
-                data-testid="button-confirm-complete"
-              >
-                {completeMutation.isPending ? (
-                  <>
-                    <i className="fas fa-spinner fa-spin mr-2" />
-                    Completing...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-check mr-2" />
-                    Complete Trade
-                  </>
-                )}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" onClick={onClose} data-testid="button-close-modal">
-                Close
-              </Button>
-              {trade.status === "active" && (
-                <Button
-                  onClick={() => setShowCompleteForm(true)}
-                  data-testid="button-mark-complete"
-                >
+          <Button variant="outline" onClick={onClose} data-testid="button-close-modal">
+            Close
+          </Button>
+          {trade.status === "active" && (
+            <Button
+              onClick={() => completeMutation.mutate()}
+              disabled={completeMutation.isPending}
+              data-testid="button-mark-complete"
+            >
+              {completeMutation.isPending ? (
+                <>
+                  <i className="fas fa-spinner fa-spin mr-2" />
+                  Completing...
+                </>
+              ) : (
+                <>
                   <i className="fas fa-check mr-2" />
                   Mark as Complete
-                </Button>
+                </>
               )}
-            </>
+            </Button>
           )}
         </div>
       </DialogContent>
