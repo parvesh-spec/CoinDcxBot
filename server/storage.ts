@@ -15,6 +15,7 @@ import {
   type InsertTrade,
   type CompleteTrade,
   type UpdateTrade,
+  type UpdateSafebook,
   type Automation,
   type InsertAutomation,
   type SentMessage,
@@ -58,6 +59,7 @@ export interface IStorage {
   deleteTrade(id: string): Promise<boolean>;
   completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined>;
   updateTradeTargetStatus(id: string, targetType: 't1' | 't2', hit: boolean): Promise<Trade | undefined>;
+  updateTradeSafebook(id: string, safebook: UpdateSafebook): Promise<Trade | undefined>;
   getTradeStats(): Promise<{
     total: number;
     active: number;
@@ -403,6 +405,32 @@ export class DatabaseStorage implements IStorage {
       .update(trades)
       .set({ 
         targetStatus: targetStatus,
+        updatedAt: new Date() 
+      })
+      .where(eq(trades.id, id))
+      .returning();
+    return updatedTrade;
+  }
+
+  async updateTradeSafebook(id: string, safebook: UpdateSafebook): Promise<Trade | undefined> {
+    // Get current trade
+    const currentTrade = await this.getTrade(id);
+    if (!currentTrade) return undefined;
+
+    // Parse current target status or initialize if empty
+    let targetStatus: Record<string, boolean> = {};
+    if (currentTrade.targetStatus && typeof currentTrade.targetStatus === 'object') {
+      targetStatus = { ...currentTrade.targetStatus as Record<string, boolean> };
+    }
+
+    // Mark safebook as hit
+    targetStatus.safebook = true;
+
+    const [updatedTrade] = await db
+      .update(trades)
+      .set({ 
+        targetStatus: targetStatus,
+        safebookPrice: safebook.price, // Set the safebook price
         updatedAt: new Date() 
       })
       .where(eq(trades.id, id))
