@@ -85,11 +85,16 @@ export default function TradeHistoryPage() {
         return trades.filter(trade => {
           if (!trade.createdAt) return false;
           const tradeDate = new Date(trade.createdAt);
+          const now = new Date();
           const startDate = startOfDay(new Date(customDateRange.start));
-          const endDate = endOfDay(new Date(customDateRange.end));
+          const requestedEndDate = endOfDay(new Date(customDateRange.end));
+          const todayEnd = endOfDay(now);
           
-          // Prevent crash if end date is before start date
-          if (endDate < startDate) return false;
+          // Clamp end date to today if it's in the future
+          const endDate = requestedEndDate > todayEnd ? todayEnd : requestedEndDate;
+          
+          // Prevent crash if end date is before start date or if start date is in future
+          if (endDate < startDate || startDate > todayEnd) return false;
           
           return isWithinInterval(tradeDate, { start: startDate, end: endDate });
         });
@@ -215,7 +220,7 @@ export default function TradeHistoryPage() {
         </div>
         
         {/* Header and Filter */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Trade History
@@ -223,7 +228,7 @@ export default function TradeHistoryPage() {
           </div>
           
           {/* Enhanced Filter */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <Filter className="w-4 h-4 text-slate-400" />
             <Select value={filterType} onValueChange={(value: FilterType) => setFilterType(value)}>
               <SelectTrigger className="w-32 h-8 text-xs border-slate-200 dark:border-slate-700">
@@ -241,11 +246,16 @@ export default function TradeHistoryPage() {
             
             {/* Custom Date Range Inputs - Responsive */}
             {filterType === 'custom' && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full">
                 <Input
                   type="date"
                   value={customDateRange.start}
-                  onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  max={format(new Date(), 'yyyy-MM-dd')}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const today = format(new Date(), 'yyyy-MM-dd');
+                    setCustomDateRange(prev => ({ ...prev, start: value > today ? today : value }));
+                  }}
                   className="w-full sm:w-28 h-8 text-xs border-slate-200 dark:border-slate-700"
                   placeholder="Start date"
                   data-testid="input-start-date"
@@ -254,7 +264,12 @@ export default function TradeHistoryPage() {
                 <Input
                   type="date"
                   value={customDateRange.end}
-                  onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                  max={format(new Date(), 'yyyy-MM-dd')}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const today = format(new Date(), 'yyyy-MM-dd');
+                    setCustomDateRange(prev => ({ ...prev, end: value > today ? today : value }));
+                  }}
                   className="w-full sm:w-28 h-8 text-xs border-slate-200 dark:border-slate-700"
                   placeholder="End date"
                   data-testid="input-end-date"
@@ -270,7 +285,7 @@ export default function TradeHistoryPage() {
                   setFilterType('all');
                   setCustomDateRange({ start: '', end: '' });
                 }}
-                className="h-8 px-3 text-xs"
+                className="h-8 px-3 text-xs shrink-0 sm:w-auto w-full"
                 data-testid="button-clear-filter"
               >
                 Clear
