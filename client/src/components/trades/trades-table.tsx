@@ -892,7 +892,7 @@ function EditTradeModal({ isOpen, trade, onClose, onSubmit, isLoading }: EditTra
                   <FormControl>
                     <Input
                       type="number"
-                      step="0.01"
+                      step="any"
                       min="0"
                       placeholder="Enter price"
                       data-testid="input-edit-price"
@@ -980,7 +980,7 @@ function EditTradeModal({ isOpen, trade, onClose, onSubmit, isLoading }: EditTra
                     <FormControl>
                       <Input
                         type="number"
-                        step="0.01"
+                        step="any"
                         min="0"
                         placeholder="Enter safe book price"
                         data-testid="input-edit-safebook-price"
