@@ -369,14 +369,13 @@ export class DatabaseStorage implements IStorage {
         break;
     }
 
-    // Only mark trade as completed for stop_loss_hit and target_3_hit
-    // Keep trade active for safe_book, target_1_hit, target_2_hit
-    const shouldComplete = completion.completionReason === 'stop_loss_hit' || completion.completionReason === 'target_3_hit';
+    // Manual completion via "Mark as Complete" should always complete the trade
+    // regardless of completion reason (this is different from automatic target status updates)
     
     const [updatedTrade] = await db
       .update(trades)
       .set({ 
-        status: shouldComplete ? 'completed' : 'active',
+        status: 'completed', // Always complete for manual completion
         completionReason: completion.completionReason,
         safebookPrice: completion.safebookPrice ? completion.safebookPrice : null,
         notes: completion.notes,
