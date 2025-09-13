@@ -214,9 +214,9 @@ export default function TradesTable({
             ...old,
             trades: old.trades.map((trade: any) => {
               if (trade.id === tradeId) {
-                // Match backend logic: only stop_loss_hit and target_3_hit complete the trade
-                const shouldComplete = completionReason === 'stop_loss_hit' || completionReason === 'target_3_hit';
-                const newStatus = shouldComplete ? 'completed' : 'active';
+                // Manual completion via "Mark as Complete" always completes the trade
+                // (this is different from automatic target status updates)
+                const newStatus = 'completed';
                 
                 console.log('✅ Updating trade status:', completionReason, '→', newStatus);
                 return {
