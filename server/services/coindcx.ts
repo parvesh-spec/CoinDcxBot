@@ -184,7 +184,7 @@ export class CoinDCXService {
     return {
       tradeId: coindcxTrade.id,
       pair: pair as string,
-      type: side,
+      type: side === 'buy' ? 'BUY' : side === 'sell' ? 'SELL' : side,
       price: price,
       leverage: leverage,
       total: (parseFloat(price) * positionSize).toString(),
