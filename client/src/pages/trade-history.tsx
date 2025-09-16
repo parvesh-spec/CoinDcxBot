@@ -188,7 +188,7 @@ export default function TradeHistoryPage() {
               <img 
                 src={campusLogo} 
                 alt="Campus For Wisdom" 
-                className="h-10 w-auto object-contain"
+                className="h-20 w-auto object-contain"
                 data-testid="campus-logo"
               />
               <div className="hidden sm:block">
