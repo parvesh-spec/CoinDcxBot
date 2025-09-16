@@ -353,11 +353,12 @@ export default function TradeHistoryPage() {
               
               {/* Trades for this date - Mobile: NEW COMPACT RECTANGULAR DESIGN */}
               <div 
-                className="md:hidden -mx-6 px-6 overflow-x-auto snap-x snap-mandatory scroll-px-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [overscroll-behavior-x:contain]" 
+                className="md:hidden -mx-6 px-6 overflow-x-auto snap-x snap-mandatory scroll-px-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [overscroll-behavior-x:contain] overflow-y-visible" 
                 aria-label={`Trades for ${getDateLabel(dateKey)}`}
                 data-testid={`scroll-day-${dateKey}`}
+                style={{ overflowY: 'visible' }}
               >
-                <div className="flex gap-3 pb-2">
+                <div className="flex gap-3 pb-2" style={{ overflowY: 'visible' }}>
                   {groupedTrades[dateKey].map((trade) => {
                     // Helper function to format decimal numbers removing trailing zeros
                     const formatDecimal = (value: string | number | null) => {
@@ -391,8 +392,8 @@ export default function TradeHistoryPage() {
                         <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-lg h-[160px] relative" style={{ overflow: 'visible' }}>
                           
                           {/* Buy/Sell Type on Card Boundary - Corner Position, Half Outside */}
-                          <div className="absolute top-0 right-2 z-20 -translate-y-1/2" style={{ transform: 'translateY(-50%)' }}>
-                            <div className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 shadow-lg overflow-visible ${
+                          <div className="absolute -top-3 right-2 z-20">
+                            <div className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 shadow-lg ${
                               trade.type.toLowerCase() === 'buy' 
                                 ? 'bg-green-500 text-white border-green-400' 
                                 : 'bg-red-500 text-white border-red-400'
