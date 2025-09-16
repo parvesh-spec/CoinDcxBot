@@ -329,7 +329,7 @@ export default function TradeHistoryPage() {
                     </CardTitle>
                     <Badge 
                       className={`mt-1 px-2 py-0.5 text-[10px] font-medium ${
-                        trade.type === 'buy' 
+                        trade.type.toLowerCase() === 'buy' 
                           ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' 
                           : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
                       }`}

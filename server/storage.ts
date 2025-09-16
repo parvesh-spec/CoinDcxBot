@@ -261,7 +261,7 @@ export class DatabaseStorage implements IStorage {
 
       // Calculate percentage change
       let percentageChange;
-      if (trade.type === 'buy') {
+      if (trade.type.toLowerCase() === 'buy') {
         percentageChange = ((exitPrice - entryPrice) / entryPrice) * 100;
       } else {
         percentageChange = ((entryPrice - exitPrice) / entryPrice) * 100;
@@ -705,7 +705,7 @@ export class DatabaseStorage implements IStorage {
 
       // Calculate percentage change
       let percentageChange;
-      if (trade.type === 'buy') {
+      if (trade.type.toLowerCase() === 'buy') {
         percentageChange = ((exitPrice - entryPrice) / entryPrice) * 100;
       } else {
         percentageChange = ((entryPrice - exitPrice) / entryPrice) * 100;
