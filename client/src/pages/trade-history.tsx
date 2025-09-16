@@ -407,26 +407,70 @@ export default function TradeHistoryPage() {
                             
                             {/* LEFT SECTION (50%) - Result Circle + Profit/Loss */}
                             <div className="w-1/2 p-3 flex flex-col items-center justify-center">
-                              {/* Result Circle - BIGGER with HIT text on separate line */}
-                              <div className={`w-20 h-20 rounded-full flex items-center justify-center border-2 ${
-                                result.color === 'green' 
-                                  ? 'border-green-400 bg-green-500/20' 
-                                  : result.color === 'red' 
-                                    ? 'border-red-400 bg-red-500/20' 
-                                    : 'border-gray-400 bg-gray-500/20'
-                              }`} data-testid={`circle-result-${trade.id}`}>
-                                <div className="text-center">
-                                  <div className={`text-[10px] font-bold leading-tight ${
-                                    result.color === 'green' 
-                                      ? 'text-green-300' 
-                                      : result.color === 'red' 
-                                        ? 'text-red-300' 
-                                        : 'text-gray-300'
-                                  }`}>
-                                    {result.type.replace(' HIT', '')}
-                                    {result.type !== 'PENDING' && (
-                                      <div className="text-[9px] mt-0.5 opacity-90">HIT</div>
-                                    )}
+                              {/* Result Circle - BIGGER with HIT text and TWINKLING STARS */}
+                              <div className="relative">
+                                {/* Twinkling Stars Animation */}
+                                {result.type !== 'PENDING' && (
+                                  <>
+                                    <div className={`absolute -top-1 -right-1 w-1 h-1 rounded-full ${
+                                      result.color === 'green' ? 'bg-green-400' : 'bg-red-400'
+                                    } animate-pulse`} style={{ 
+                                      animation: 'twinkle 1.5s ease-in-out infinite',
+                                      animationDelay: '0s' 
+                                    }}></div>
+                                    <div className={`absolute -top-2 left-2 w-0.5 h-0.5 rounded-full ${
+                                      result.color === 'green' ? 'bg-green-300' : 'bg-red-300'
+                                    }`} style={{ 
+                                      animation: 'twinkle 2s ease-in-out infinite',
+                                      animationDelay: '0.3s' 
+                                    }}></div>
+                                    <div className={`absolute top-1 -left-2 w-1 h-1 rounded-full ${
+                                      result.color === 'green' ? 'bg-green-500' : 'bg-red-500'
+                                    }`} style={{ 
+                                      animation: 'twinkle 1.8s ease-in-out infinite',
+                                      animationDelay: '0.6s' 
+                                    }}></div>
+                                    <div className={`absolute -bottom-1 -left-1 w-0.5 h-0.5 rounded-full ${
+                                      result.color === 'green' ? 'bg-green-400' : 'bg-red-400'
+                                    }`} style={{ 
+                                      animation: 'twinkle 1.2s ease-in-out infinite',
+                                      animationDelay: '0.9s' 
+                                    }}></div>
+                                    <div className={`absolute -bottom-2 right-3 w-1 h-1 rounded-full ${
+                                      result.color === 'green' ? 'bg-green-300' : 'bg-red-300'
+                                    }`} style={{ 
+                                      animation: 'twinkle 2.2s ease-in-out infinite',
+                                      animationDelay: '1.2s' 
+                                    }}></div>
+                                    <div className={`absolute top-3 -right-3 w-0.5 h-0.5 rounded-full ${
+                                      result.color === 'green' ? 'bg-green-500' : 'bg-red-500'
+                                    }`} style={{ 
+                                      animation: 'twinkle 1.7s ease-in-out infinite',
+                                      animationDelay: '1.5s' 
+                                    }}></div>
+                                  </>
+                                )}
+                                
+                                <div className={`w-20 h-20 rounded-full flex items-center justify-center border-2 ${
+                                  result.color === 'green' 
+                                    ? 'border-green-400 bg-green-500/20' 
+                                    : result.color === 'red' 
+                                      ? 'border-red-400 bg-red-500/20' 
+                                      : 'border-gray-400 bg-gray-500/20'
+                                }`} data-testid={`circle-result-${trade.id}`}>
+                                  <div className="text-center">
+                                    <div className={`text-[10px] font-bold leading-tight ${
+                                      result.color === 'green' 
+                                        ? 'text-green-300' 
+                                        : result.color === 'red' 
+                                          ? 'text-red-300' 
+                                          : 'text-gray-300'
+                                    }`}>
+                                      {result.type.replace(' HIT', '')}
+                                      {result.type !== 'PENDING' && (
+                                        <div className="text-[9px] mt-0.5 opacity-90">HIT</div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
