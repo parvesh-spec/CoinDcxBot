@@ -351,50 +351,195 @@ export default function TradeHistoryPage() {
                 </div>
               </div>
               
-              {/* Trades for this date */}
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {/* Trades for this date - Mobile: Horizontal Scroll */}
+              <div 
+                className="md:hidden -mx-6 px-6 overflow-x-auto snap-x snap-mandatory scroll-px-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [overscroll-behavior-x:contain]" 
+                aria-label={`Trades for ${getDateLabel(dateKey)}`}
+                data-testid={`scroll-day-${dateKey}`}
+              >
+                <div className="flex gap-3 pb-2">
+                  {groupedTrades[dateKey].map((trade) => (
+                    <Card key={trade.id} className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-200 rounded-lg overflow-hidden min-w-[280px] snap-start shrink-0" data-testid={`trade-card-${trade.id}`}>
+
+                      <CardHeader className="pb-2 pt-3 px-3">
+                        <div className="flex items-start justify-between pr-6">
+                          <div>
+                            <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                              {trade.pair}
+                            </CardTitle>
+                            <Badge 
+                              className={`mt-1 px-2 py-0.5 text-[10px] font-medium ${
+                                trade.type.toLowerCase() === 'buy' 
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' 
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                              }`}
+                              data-testid={`badge-type-${trade.type}`}
+                            >
+                              {trade.type.toUpperCase()}
+                            </Badge>
+                          </div>
+                          
+                          {/* Gain/Loss Display - Better positioned */}
+                          {trade.gainLoss && (
+                            <div className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded px-2 py-1 border border-slate-200/50 dark:border-slate-700/50">
+                              <div className="flex items-center gap-1">
+                                {trade.gainLoss.isGain ? (
+                                  <TrendingUp className="w-3 h-3 text-emerald-500" />
+                                ) : (
+                                  <TrendingDown className="w-3 h-3 text-slate-500" />
+                                )}
+                                <span className={`text-xs font-semibold ${
+                                  trade.gainLoss.isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'
+                                }`}>
+                                  {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(1)}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="space-y-3 pt-0 px-3 pb-6 pr-6">
+                        {/* Price & Leverage */}
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">Price</p>
+                            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">${trade.price}</p>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">Lev</p>
+                            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{trade.leverage}x</p>
+                          </div>
+                        </div>
+
+                        {/* Stop Loss */}
+                        <div className="bg-slate-50 dark:bg-slate-700/30 rounded p-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">Stop Loss</p>
+                            {trade.targetStatus?.stop_loss && (
+                              <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                                <span className="text-[8px] text-white">✓</span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-xs font-medium text-red-600 dark:text-red-400">${trade.stopLoss}</p>
+                        </div>
+
+                        {/* Targets */}
+                        <div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Targets</p>
+                          <div className="grid grid-cols-3 gap-1">
+                            <div className="bg-slate-50 dark:bg-slate-700/30 rounded p-1.5 text-center">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[9px] text-slate-500 dark:text-slate-400">T1</span>
+                                {trade.targetStatus?.target_1 && (
+                                  <div className="w-2 h-2 bg-emerald-500 rounded-full flex items-center justify-center">
+                                    <span className="text-[6px] text-white">✓</span>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">${trade.target1}</p>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-700/30 rounded p-1.5 text-center">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[9px] text-slate-500 dark:text-slate-400">T2</span>
+                                {trade.targetStatus?.target_2 && (
+                                  <div className="w-2 h-2 bg-emerald-500 rounded-full flex items-center justify-center">
+                                    <span className="text-[6px] text-white">✓</span>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">${trade.target2}</p>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-700/30 rounded p-1.5 text-center">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span className="text-[9px] text-slate-500 dark:text-slate-400">T3</span>
+                                {trade.targetStatus?.target_3 && (
+                                  <div className="w-2 h-2 bg-emerald-500 rounded-full flex items-center justify-center">
+                                    <span className="text-[6px] text-white">✓</span>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">${trade.target3}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Status & Time */}
+                        <div className="flex items-center justify-between pt-1">
+                          <Badge 
+                            className={`px-2 py-0.5 text-[9px] ${
+                              trade.status === 'completed' 
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                            }`}
+                            data-testid={`badge-status-${trade.status}`}
+                          >
+                            {trade.status.toUpperCase()}
+                          </Badge>
+                          <span className="text-[9px] text-slate-400">
+                            {formatDistanceToNow(parseISO(trade.timestamp), { addSuffix: true })}
+                          </span>
+                        </div>
+
+                        {/* Completion Reason (if completed) */}
+                        {trade.status === 'completed' && trade.completionReason && (
+                          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                            <p className="text-[9px] text-blue-600 dark:text-blue-400 font-medium">
+                              Completed: {trade.completionReason.replace(/_/g, ' ').toUpperCase()}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Trades for this date - Desktop: Grid Layout */}
+              <div className="hidden md:grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {groupedTrades[dateKey].map((trade) => (
                   <Card key={trade.id} className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-200 rounded-lg overflow-hidden" data-testid={`trade-card-${trade.id}`}>
 
-              <CardHeader className="pb-2 pt-3 px-3">
-                <div className="flex items-start justify-between pr-6">
-                  <div>
-                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                      {trade.pair}
-                    </CardTitle>
-                    <Badge 
-                      className={`mt-1 px-2 py-0.5 text-[10px] font-medium ${
-                        trade.type.toLowerCase() === 'buy' 
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' 
-                          : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                      }`}
-                      data-testid={`badge-type-${trade.type}`}
-                    >
-                      {trade.type.toUpperCase()}
-                    </Badge>
-                  </div>
-                  
-                  {/* Gain/Loss Display - Better positioned */}
-                  {trade.gainLoss && (
-                    <div className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded px-2 py-1 border border-slate-200/50 dark:border-slate-700/50">
-                      <div className="flex items-center gap-1">
-                        {trade.gainLoss.isGain ? (
-                          <TrendingUp className="w-3 h-3 text-emerald-500" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3 text-slate-500" />
+                    <CardHeader className="pb-2 pt-3 px-3">
+                      <div className="flex items-start justify-between pr-6">
+                        <div>
+                          <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                            {trade.pair}
+                          </CardTitle>
+                          <Badge 
+                            className={`mt-1 px-2 py-0.5 text-[10px] font-medium ${
+                              trade.type.toLowerCase() === 'buy' 
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' 
+                                : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                            }`}
+                            data-testid={`badge-type-${trade.type}`}
+                          >
+                            {trade.type.toUpperCase()}
+                          </Badge>
+                        </div>
+                        
+                        {/* Gain/Loss Display - Better positioned */}
+                        {trade.gainLoss && (
+                          <div className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded px-2 py-1 border border-slate-200/50 dark:border-slate-700/50">
+                            <div className="flex items-center gap-1">
+                              {trade.gainLoss.isGain ? (
+                                <TrendingUp className="w-3 h-3 text-emerald-500" />
+                              ) : (
+                                <TrendingDown className="w-3 h-3 text-slate-500" />
+                              )}
+                              <span className={`text-xs font-semibold ${
+                                trade.gainLoss.isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'
+                              }`}>
+                                {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
                         )}
-                        <span className={`text-xs font-semibold ${
-                          trade.gainLoss.isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'
-                        }`}>
-                          {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(1)}%
-                        </span>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
+                    </CardHeader>
 
-              <CardContent className="space-y-3 pt-0 px-3 pb-6 pr-6">
+                    <CardContent className="space-y-3 pt-0 px-3 pb-6 pr-6">
                 {/* Price & Leverage */}
                 <div className="flex gap-2">
                   <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
