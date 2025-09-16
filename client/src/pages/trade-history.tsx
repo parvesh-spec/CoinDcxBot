@@ -188,12 +188,12 @@ export default function TradeHistoryPage() {
               <img 
                 src={campusLogo} 
                 alt="Campus For Wisdom" 
-                className="h-20 w-auto object-contain"
+                className="h-20 w-20 object-cover rounded-full"
                 data-testid="campus-logo"
               />
               <div className="hidden sm:block">
                 <h1 className="text-xl font-bold text-slate-800 dark:text-slate-200">
-                  Trade Analytics
+                  Campus For Wisdom
                 </h1>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Real-time trading performance insights
