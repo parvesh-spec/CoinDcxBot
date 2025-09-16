@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDistanceToNow, format, isToday, isYesterday, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isWithinInterval } from "date-fns";
-import { Calendar, Star, TrendingUp, TrendingDown, Filter } from "lucide-react";
+import { Calendar, Star, TrendingUp, TrendingDown, Filter, ExternalLink } from "lucide-react";
+import campusLogo from "@assets/6208450096694152058_1758021301213.jpg";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trade } from "@shared/schema";
 
@@ -178,29 +179,63 @@ export default function TradeHistoryPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      {/* Professional Header */}
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo Section */}
+            <div className="flex items-center space-x-4">
+              <img 
+                src={campusLogo} 
+                alt="Campus For Wisdom" 
+                className="h-10 w-auto object-contain"
+                data-testid="campus-logo"
+              />
+              <div className="hidden sm:block">
+                <h1 className="text-xl font-bold text-slate-800 dark:text-slate-200">
+                  Trade Analytics
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Real-time trading performance insights
+                </p>
+              </div>
+            </div>
+            
+            {/* CTA Button */}
+            <a
+              href="https://telegram.me/campusforwisdom"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition-all duration-200 transform hover:scale-105"
+              data-testid="cta-join-community"
+            >
+              <span className="text-sm">Join Free Community</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-6 py-6">
-        {/* Branding and Quote */}
-        <div className="text-center mb-6">
-          <div className="mb-4">
-            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">
-              📚 Campus For Wisdom
-            </h1>
-            <p className="text-xs italic text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-3">
+        {/* Statistics and Filter Display */}
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 mb-6 shadow-sm">
+          <div className="text-center mb-4">
+            <p className="text-xs italic text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-4">
               "Consistency in trading beats perfection. Profit and loss are just part of the journey, discipline is the destination."
             </p>
             
             {/* Statistics */}
-            <div className="flex items-center justify-center gap-6 text-xs">
+            <div className="flex items-center justify-center gap-8 text-sm">
               <div className="text-center">
-                <p className="font-semibold text-slate-700 dark:text-slate-300">{stats.totalTrades}</p>
+                <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">{stats.totalTrades}</p>
                 <p className="text-slate-500 dark:text-slate-400">Total Trades</p>
               </div>
               <div className="text-center">
-                <p className="font-semibold text-slate-700 dark:text-slate-300">{stats.accuracy}%</p>
+                <p className="text-2xl font-bold text-slate-700 dark:text-slate-300">{stats.accuracy}%</p>
                 <p className="text-slate-500 dark:text-slate-400">Accuracy</p>
               </div>
               <div className="text-center">
-                <p className={`font-semibold ${stats.totalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                <p className={`text-2xl font-bold ${stats.totalGain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                   {stats.totalGain >= 0 ? '+' : ''}{stats.totalGain.toFixed(1)}%
                 </p>
                 <p className="text-slate-500 dark:text-slate-400">Profit/Loss%</p>
@@ -209,9 +244,9 @@ export default function TradeHistoryPage() {
             
             {/* Current Filter Display */}
             {filterType !== 'all' && (
-              <div className="mt-2">
-                <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs">
-                  <Filter className="w-3 h-3" />
+              <div className="mt-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm">
+                  <Filter className="w-4 h-4" />
                   <span>Showing: {getFilterLabel()}</span>
                 </div>
               </div>

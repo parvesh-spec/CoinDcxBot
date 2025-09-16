@@ -377,7 +377,7 @@ export default function TradesTable({
   };
 
   const handleStopLoss = (tradeId: string) => {
-    updateTargetStatusMutation.mutate({ tradeId, targetType: 'stop_loss' });
+    completeTradeBaseMutation.mutate({ tradeId, completionReason: 'stop_loss_hit' });
   };
 
 
