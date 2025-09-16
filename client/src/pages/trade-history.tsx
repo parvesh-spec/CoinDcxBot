@@ -730,13 +730,13 @@ export default function TradeHistoryPage() {
                             )}
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <span className="text-xs text-gray-400">T2:</span>
-                              <span className="text-xs text-green-400 font-medium" data-testid={`t2-${trade.id}`}>
+                              <span className="text-xs text-white font-medium" data-testid={`t2-${trade.id}`}>
                                 {formatCurrency(trade.takeProfit2)}
                               </span>
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <span className="text-xs text-gray-400">T3:</span>
-                              <span className="text-xs text-green-400 font-medium" data-testid={`t3-${trade.id}`}>
+                              <span className="text-xs text-white font-medium" data-testid={`t3-${trade.id}`}>
                                 {formatCurrency(trade.takeProfit3)}
                               </span>
                             </div>
