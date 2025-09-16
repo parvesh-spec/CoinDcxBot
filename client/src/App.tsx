@@ -8,6 +8,7 @@ import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import TradeHistoryPage from "@/pages/trade-history";
 import NotFound from "@/pages/not-found";
+import { useEffect } from "react";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -34,6 +35,11 @@ function Router() {
 }
 
 function App() {
+  // Enable dark theme by default for better card design
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
