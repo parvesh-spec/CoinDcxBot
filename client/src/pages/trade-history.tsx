@@ -390,10 +390,12 @@ export default function TradeHistoryPage() {
                         {/* NEW COMPACT RECTANGULAR CARD - INCREASED HEIGHT */}
                         <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-lg h-[160px] relative">
                           
-                          {/* Buy/Sell Type in Corner */}
-                          <div className="absolute top-2 right-2 z-10">
-                            <div className={`px-2 py-1 rounded text-xs font-medium ${
-                              trade.type.toLowerCase() === 'buy' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                          {/* Buy/Sell Type on Card Boundary - Half Outside, Half Inside */}
+                          <div className="absolute top-0 right-4 z-10 -translate-y-1/2">
+                            <div className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 shadow-lg ${
+                              trade.type.toLowerCase() === 'buy' 
+                                ? 'bg-green-500 text-white border-green-400' 
+                                : 'bg-red-500 text-white border-red-400'
                             }`} data-testid={`type-${trade.id}`}>
                               {trade.type.toUpperCase()}
                             </div>
@@ -404,8 +406,8 @@ export default function TradeHistoryPage() {
                             
                             {/* LEFT SECTION (50%) - Result Circle + Profit/Loss */}
                             <div className="w-1/2 p-3 flex flex-col items-center justify-center">
-                              {/* Result Circle */}
-                              <div className={`w-16 h-16 rounded-full flex items-center justify-center border-2 ${
+                              {/* Result Circle - BIGGER with HIT text */}
+                              <div className={`w-20 h-20 rounded-full flex items-center justify-center border-2 ${
                                 result.color === 'green' 
                                   ? 'border-green-400 bg-green-500/20' 
                                   : result.color === 'red' 
@@ -413,14 +415,14 @@ export default function TradeHistoryPage() {
                                     : 'border-gray-400 bg-gray-500/20'
                               }`} data-testid={`circle-result-${trade.id}`}>
                                 <div className="text-center">
-                                  <div className={`text-xs font-bold ${
+                                  <div className={`text-[10px] font-bold leading-tight ${
                                     result.color === 'green' 
                                       ? 'text-green-300' 
                                       : result.color === 'red' 
                                         ? 'text-red-300' 
                                         : 'text-gray-300'
                                   }`}>
-                                    {result.type}
+                                    {result.type !== 'PENDING' ? `${result.type} HIT` : result.type}
                                   </div>
                                 </div>
                               </div>
@@ -443,20 +445,20 @@ export default function TradeHistoryPage() {
                                 <p className="text-white font-bold text-sm" data-testid={`pair-${trade.id}`}>{trade.pair}</p>
                               </div>
                               
-                              {/* Entry, SL, Leverage in ACTUAL single horizontal row */}
-                              <div className="flex gap-x-3 text-xs">
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-gray-400 mb-1">Entry</div>
-                                  <div className="text-white font-semibold truncate" data-testid={`entry-${trade.id}`}>{formatCurrency(trade.price)}</div>
+                              {/* Entry, SL, Leverage - VERTICAL STACKED as requested */}
+                              <div className="space-y-1">
+                                <div>
+                                  <p className="text-xs text-gray-400">Entry</p>
+                                  <p className="text-white text-xs font-semibold" data-testid={`entry-${trade.id}`}>{formatCurrency(trade.price)}</p>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-gray-400 mb-1">SL</div>
-                                  <div className="text-white font-semibold truncate" data-testid={`sl-${trade.id}`}>{formatCurrency(trade.stopLossTrigger)}</div>
+                                <div>
+                                  <p className="text-xs text-gray-400">SL</p>
+                                  <p className="text-white text-xs font-semibold" data-testid={`sl-${trade.id}`}>{formatCurrency(trade.stopLossTrigger)}</p>
                                 </div>
                                 {trade.leverage && (
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-gray-400 mb-1">Lev</div>
-                                    <div className="text-white font-semibold truncate" data-testid={`leverage-${trade.id}`}>{trade.leverage}x</div>
+                                  <div>
+                                    <p className="text-xs text-gray-400">Lev</p>
+                                    <p className="text-white text-xs font-semibold" data-testid={`leverage-${trade.id}`}>{trade.leverage}x</p>
                                   </div>
                                 )}
                               </div>
