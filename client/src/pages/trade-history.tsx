@@ -388,11 +388,11 @@ export default function TradeHistoryPage() {
                     return (
                       <div key={trade.id} className="min-w-[280px] max-w-[280px] snap-start shrink-0" data-testid={`mobile-trade-card-${trade.id}`}>
                         {/* NEW COMPACT RECTANGULAR CARD - INCREASED HEIGHT */}
-                        <div className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-lg h-[160px] relative">
+                        <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-lg h-[160px] relative" style={{ overflow: 'visible' }}>
                           
-                          {/* Buy/Sell Type on Card Boundary - Half Outside, Half Inside */}
-                          <div className="absolute top-0 right-4 z-10 -translate-y-1/2">
-                            <div className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 shadow-lg ${
+                          {/* Buy/Sell Type on Card Boundary - Corner Position, Half Outside */}
+                          <div className="absolute top-0 right-2 z-20 -translate-y-1/2" style={{ transform: 'translateY(-50%)' }}>
+                            <div className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 shadow-lg overflow-visible ${
                               trade.type.toLowerCase() === 'buy' 
                                 ? 'bg-green-500 text-white border-green-400' 
                                 : 'bg-red-500 text-white border-red-400'
@@ -406,7 +406,7 @@ export default function TradeHistoryPage() {
                             
                             {/* LEFT SECTION (50%) - Result Circle + Profit/Loss */}
                             <div className="w-1/2 p-3 flex flex-col items-center justify-center">
-                              {/* Result Circle - BIGGER with HIT text */}
+                              {/* Result Circle - BIGGER with HIT text on separate line */}
                               <div className={`w-20 h-20 rounded-full flex items-center justify-center border-2 ${
                                 result.color === 'green' 
                                   ? 'border-green-400 bg-green-500/20' 
@@ -422,7 +422,10 @@ export default function TradeHistoryPage() {
                                         ? 'text-red-300' 
                                         : 'text-gray-300'
                                   }`}>
-                                    {result.type !== 'PENDING' ? `${result.type} HIT` : result.type}
+                                    {result.type.replace(' HIT', '')}
+                                    {result.type !== 'PENDING' && (
+                                      <div className="text-[9px] mt-0.5 opacity-90">HIT</div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -445,20 +448,20 @@ export default function TradeHistoryPage() {
                                 <p className="text-white font-bold text-sm" data-testid={`pair-${trade.id}`}>{trade.pair}</p>
                               </div>
                               
-                              {/* Entry, SL, Leverage - VERTICAL STACKED as requested */}
+                              {/* Entry, SL, Leverage - INLINE (label and value same line) */}
                               <div className="space-y-1">
-                                <div>
-                                  <p className="text-xs text-gray-400">Entry</p>
-                                  <p className="text-white text-xs font-semibold" data-testid={`entry-${trade.id}`}>{formatCurrency(trade.price)}</p>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-gray-400">Entry</span>
+                                  <span className="text-white text-xs font-semibold" data-testid={`entry-${trade.id}`}>{formatCurrency(trade.price)}</span>
                                 </div>
-                                <div>
-                                  <p className="text-xs text-gray-400">SL</p>
-                                  <p className="text-white text-xs font-semibold" data-testid={`sl-${trade.id}`}>{formatCurrency(trade.stopLossTrigger)}</p>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-gray-400">SL</span>
+                                  <span className="text-white text-xs font-semibold" data-testid={`sl-${trade.id}`}>{formatCurrency(trade.stopLossTrigger)}</span>
                                 </div>
                                 {trade.leverage && (
-                                  <div>
-                                    <p className="text-xs text-gray-400">Lev</p>
-                                    <p className="text-white text-xs font-semibold" data-testid={`leverage-${trade.id}`}>{trade.leverage}x</p>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-400">Lev</span>
+                                    <span className="text-white text-xs font-semibold" data-testid={`leverage-${trade.id}`}>{trade.leverage}x</span>
                                   </div>
                                 )}
                               </div>
