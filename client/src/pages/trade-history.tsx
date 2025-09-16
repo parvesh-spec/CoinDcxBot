@@ -8,7 +8,7 @@ import { formatDistanceToNow, format, isToday, isYesterday, parseISO, startOfDay
 import { Calendar, Star, TrendingUp, TrendingDown, Filter, ExternalLink } from "lucide-react";
 import campusLogo from "@assets/6208450096694152058_1758021301213.jpg";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trade } from "@shared/schema";
+import { Trade, TargetStatusV2 } from "@shared/schema";
 
 type TradeWithGainLoss = Trade & {
   gainLoss?: {
@@ -416,13 +416,13 @@ export default function TradeHistoryPage() {
                         <div className="bg-slate-50 dark:bg-slate-700/30 rounded p-2">
                           <div className="flex items-center justify-between">
                             <p className="text-[10px] text-slate-500 dark:text-slate-400">Stop Loss</p>
-                            {trade.targetStatus?.stop_loss && (
+                            {((trade.targetStatus as Partial<TargetStatusV2>) || {}).stop_loss && (
                               <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
                                 <span className="text-[8px] text-white">✓</span>
                               </div>
                             )}
                           </div>
-                          <p className="text-xs font-medium text-red-600 dark:text-red-400">${trade.stopLoss}</p>
+                          <p className="text-xs font-medium text-red-600 dark:text-red-400">${trade.stopLossTrigger}</p>
                         </div>
 
                         {/* Targets */}
@@ -432,35 +432,35 @@ export default function TradeHistoryPage() {
                             <div className="bg-slate-50 dark:bg-slate-700/30 rounded p-1.5 text-center">
                               <div className="flex items-center justify-between mb-0.5">
                                 <span className="text-[9px] text-slate-500 dark:text-slate-400">T1</span>
-                                {trade.targetStatus?.target_1 && (
+                                {((trade.targetStatus as Partial<TargetStatusV2>) || {}).target_1 && (
                                   <div className="w-2 h-2 bg-emerald-500 rounded-full flex items-center justify-center">
                                     <span className="text-[6px] text-white">✓</span>
                                   </div>
                                 )}
                               </div>
-                              <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">${trade.target1}</p>
+                              <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">${trade.takeProfitTrigger}</p>
                             </div>
                             <div className="bg-slate-50 dark:bg-slate-700/30 rounded p-1.5 text-center">
                               <div className="flex items-center justify-between mb-0.5">
                                 <span className="text-[9px] text-slate-500 dark:text-slate-400">T2</span>
-                                {trade.targetStatus?.target_2 && (
+                                {((trade.targetStatus as Partial<TargetStatusV2>) || {}).target_2 && (
                                   <div className="w-2 h-2 bg-emerald-500 rounded-full flex items-center justify-center">
                                     <span className="text-[6px] text-white">✓</span>
                                   </div>
                                 )}
                               </div>
-                              <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">${trade.target2}</p>
+                              <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">${trade.takeProfit2}</p>
                             </div>
                             <div className="bg-slate-50 dark:bg-slate-700/30 rounded p-1.5 text-center">
                               <div className="flex items-center justify-between mb-0.5">
                                 <span className="text-[9px] text-slate-500 dark:text-slate-400">T3</span>
-                                {trade.targetStatus?.target_3 && (
+                                {((trade.targetStatus as Partial<TargetStatusV2>) || {}).target_3 && (
                                   <div className="w-2 h-2 bg-emerald-500 rounded-full flex items-center justify-center">
                                     <span className="text-[6px] text-white">✓</span>
                                   </div>
                                 )}
                               </div>
-                              <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">${trade.target3}</p>
+                              <p className="text-[10px] font-medium text-slate-700 dark:text-slate-300">${trade.takeProfit3}</p>
                             </div>
                           </div>
                         </div>
@@ -478,7 +478,7 @@ export default function TradeHistoryPage() {
                             {trade.status.toUpperCase()}
                           </Badge>
                           <span className="text-[9px] text-slate-400">
-                            {formatDistanceToNow(parseISO(trade.timestamp), { addSuffix: true })}
+                            {formatDistanceToNow(parseISO(typeof trade.createdAt === 'string' ? trade.createdAt : new Date().toISOString()), { addSuffix: true })}
                           </span>
                         </div>
 
@@ -486,7 +486,7 @@ export default function TradeHistoryPage() {
                         {trade.status === 'completed' && trade.completionReason && (
                           <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                             <p className="text-[9px] text-blue-600 dark:text-blue-400 font-medium">
-                              Completed: {trade.completionReason.replace(/_/g, ' ').toUpperCase()}
+                              Completed: {(trade.completionReason || 'manual').replace(/_/g, ' ').toUpperCase()}
                             </p>
                           </div>
                         )}
