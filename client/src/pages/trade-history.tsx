@@ -373,7 +373,7 @@ export default function TradeHistoryPage() {
                                   ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-emerald-500/20' 
                                   : 'bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-red-500/20'
                               }`}
-                              data-testid={`badge-type-${trade.type}`}
+                              data-testid={`badge-type-${trade.type}-${trade.id}`}
                             >
                               {trade.type.toUpperCase()}
                             </Badge>
@@ -475,13 +475,13 @@ export default function TradeHistoryPage() {
                                 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-blue-500/20'
                                 : 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-amber-500/20'
                             }`}
-                            data-testid={`badge-status-${trade.status}`}
+                            data-testid={`badge-status-${trade.status}-${trade.id}`}
                           >
                             {trade.status.toUpperCase()}
                           </Badge>
                           <div className="text-right">
                             <span className="text-xs text-slate-300 font-medium">
-                              {formatDistanceToNow(parseISO(typeof trade.createdAt === 'string' ? trade.createdAt : new Date().toISOString()), { addSuffix: true })}
+                              {formatDistanceToNow(typeof trade.createdAt === 'string' ? new Date(trade.createdAt) : new Date(trade.createdAt || new Date().toISOString()), { addSuffix: true })}
                             </span>
                           </div>
                         </div>
