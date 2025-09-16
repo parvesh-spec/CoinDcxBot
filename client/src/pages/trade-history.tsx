@@ -387,7 +387,7 @@ export default function TradeHistoryPage() {
                     const result = getCompletionResult();
                     
                     return (
-                      <div key={trade.id} className="min-w-[280px] max-w-[280px] snap-start shrink-0" data-testid={`mobile-trade-card-${trade.id}`} style={{ overflow: 'visible' }}>
+                      <div key={trade.id} className="min-w-[280px] max-w-[320px] w-auto snap-start shrink-0" data-testid={`mobile-trade-card-${trade.id}`} style={{ overflow: 'visible' }}>
                         {/* NEW COMPACT RECTANGULAR CARD - INCREASED HEIGHT */}
                         <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-lg h-[160px] relative" style={{ overflow: 'visible' }}>
                           
@@ -466,8 +466,8 @@ export default function TradeHistoryPage() {
                                           ? 'text-red-300' 
                                           : 'text-gray-300'
                                     }`}>
-                                      {result.type.replace(' HIT', '')}
-                                      {result.type !== 'PENDING' && (
+                                      {result.type === 'SAFEBOOK' ? 'SAFEBOOK' : result.type.replace(' HIT', '')}
+                                      {result.type !== 'PENDING' && result.type !== 'SAFEBOOK' && (
                                         <div className="text-[9px] mt-0.5 opacity-90">HIT</div>
                                       )}
                                     </div>
@@ -493,42 +493,52 @@ export default function TradeHistoryPage() {
                                 <p className="text-white font-bold text-sm" data-testid={`pair-${trade.id}`}>{trade.pair}</p>
                               </div>
                               
-                              {/* Entry, SL, Leverage - INLINE (label and value same line) */}
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-gray-400">Entry</span>
-                                  <span className="text-white text-xs font-semibold" data-testid={`entry-${trade.id}`}>{formatCurrency(trade.price)}</span>
+                              {/* Entry, SL, Leverage - INLINE with proper wrapping */}
+                              <div className="space-y-1 flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs text-gray-400 flex-shrink-0">Entry</span>
+                                  <span className="text-white text-xs font-semibold text-right break-all" data-testid={`entry-${trade.id}`}>{formatCurrency(trade.price)}</span>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-gray-400">SL</span>
-                                  <span className="text-white text-xs font-semibold" data-testid={`sl-${trade.id}`}>{formatCurrency(trade.stopLossTrigger)}</span>
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs text-gray-400 flex-shrink-0">SL</span>
+                                  <span className="text-white text-xs font-semibold text-right break-all" data-testid={`sl-${trade.id}`}>{formatCurrency(trade.stopLossTrigger)}</span>
                                 </div>
                                 {trade.leverage && (
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-400">Lev</span>
-                                    <span className="text-white text-xs font-semibold" data-testid={`leverage-${trade.id}`}>{trade.leverage}x</span>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-xs text-gray-400 flex-shrink-0">Lev</span>
+                                    <span className="text-white text-xs font-semibold text-right" data-testid={`leverage-${trade.id}`}>{trade.leverage}x</span>
                                   </div>
                                 )}
                               </div>
                             </div>
                           </div>
 
-                          {/* BOTTOM SECTION (20% height) - Targets with transparent blur - NO TICK MARKS */}
+                          {/* BOTTOM SECTION (20% height) - Targets with Safebook logic */}
                           <div className="h-[32px] bg-slate-800/80 backdrop-blur-sm border-t border-slate-700/50">
-                            <div className="flex h-full items-center px-3 gap-4">
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs text-gray-400">T1:</span>
-                                <span className="text-xs text-green-400 font-medium" data-testid={`t1-${trade.id}`}>
-                                  {formatCurrency(trade.takeProfitTrigger)}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1">
+                            <div className="flex h-full items-center px-3 gap-3 overflow-x-auto">
+                              {/* Show Safebook instead of T1 when safebook is completed */}
+                              {trade.completionReason === 'safe_book' && trade.safebookPrice ? (
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <span className="text-xs text-gray-400">Safe Book:</span>
+                                  <span className="text-xs text-green-400 font-medium" data-testid={`safebook-${trade.id}`}>
+                                    {formatCurrency(trade.safebookPrice)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <span className="text-xs text-gray-400">T1:</span>
+                                  <span className="text-xs text-green-400 font-medium" data-testid={`t1-${trade.id}`}>
+                                    {formatCurrency(trade.takeProfitTrigger)}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1 flex-shrink-0">
                                 <span className="text-xs text-gray-400">T2:</span>
                                 <span className="text-xs text-green-400 font-medium" data-testid={`t2-${trade.id}`}>
                                   {formatCurrency(trade.takeProfit2)}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 flex-shrink-0">
                                 <span className="text-xs text-gray-400">T3:</span>
                                 <span className="text-xs text-green-400 font-medium" data-testid={`t3-${trade.id}`}>
                                   {formatCurrency(trade.takeProfit3)}
