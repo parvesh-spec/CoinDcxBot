@@ -553,203 +553,199 @@ export default function TradeHistoryPage() {
                 </div>
               </div>
 
-              {/* Trades for this date - Desktop: Grid Layout */}
-              <div className="hidden md:grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {groupedTrades[dateKey].map((trade) => (
-                  <Card key={trade.id} className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-200 rounded-lg overflow-hidden" data-testid={`trade-card-${trade.id}`}>
+              {/* Trades for this date - Desktop: SAME AS MOBILE CARDS */}
+              <div className="hidden md:grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pt-4">
+                {groupedTrades[dateKey].map((trade) => {
+                  // Helper function to format decimal numbers removing trailing zeros
+                  const formatDecimal = (value: string | number | null) => {
+                    if (value === null || value === undefined) return 'N/A';
+                    const num = Number(value);
+                    if (Number.isNaN(num)) return 'N/A';
+                    return num.toString(); // This automatically removes trailing zeros
+                  };
 
-                    <CardHeader className="pb-2 pt-3 px-3">
-                      <div className="flex items-start justify-between pr-6">
-                        <div>
-                          <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                            {trade.pair}
-                          </CardTitle>
-                          <Badge 
-                            className={`mt-1 px-2 py-0.5 text-[10px] font-medium ${
-                              trade.type.toLowerCase() === 'buy' 
-                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' 
-                                : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                            }`}
-                            data-testid={`badge-type-${trade.type}`}
-                          >
+                  // Helper to format currency values
+                  const formatCurrency = (value: string | number | null) => {
+                    const formatted = formatDecimal(value);
+                    return formatted === 'N/A' ? formatted : `$${formatted}`;
+                  };
+
+                  // Determine completion result for circle
+                  const getCompletionResult = () => {
+                    if (trade.completionReason === 'stop_loss_hit') return { type: 'STOP LOSS', color: 'red' };
+                    if (trade.completionReason === 'safe_book') return { type: 'SAFEBOOK', color: 'green' };
+                    if (trade.completionReason === 'target_1_hit') return { type: 'TARGET 1', color: 'green' };
+                    if (trade.completionReason === 'target_2_hit') return { type: 'TARGET 2', color: 'green' };
+                    if (trade.completionReason === 'target_3_hit') return { type: 'TARGET 3', color: 'green' };
+                    return { type: 'PENDING', color: 'gray' };
+                  };
+
+                  const result = getCompletionResult();
+                  
+                  return (
+                    <div key={trade.id} className="min-w-[280px] max-w-[320px] w-auto" data-testid={`desktop-trade-card-${trade.id}`} style={{ overflow: 'visible' }}>
+                      {/* SAME COMPACT RECTANGULAR CARD AS MOBILE */}
+                      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-lg h-[160px] relative" style={{ overflow: 'visible' }}>
+
+                        {/* Buy/Sell Type on Card Boundary - Corner Position, Half Outside */}
+                        <div className="absolute top-0 right-1 z-20 -translate-y-1/2">
+                          <div className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 shadow-lg ${
+                            trade.type.toLowerCase() === 'buy' 
+                              ? 'bg-green-500 text-white border-green-400' 
+                              : 'bg-red-500 text-white border-red-400'
+                          }`} data-testid={`type-${trade.id}`}>
                             {trade.type.toUpperCase()}
-                          </Badge>
+                          </div>
                         </div>
-                        
-                        {/* Gain/Loss Display - Better positioned */}
-                        {trade.gainLoss && (
-                          <div className="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded px-2 py-1 border border-slate-200/50 dark:border-slate-700/50">
-                            <div className="flex items-center gap-1">
-                              {trade.gainLoss.isGain ? (
-                                <TrendingUp className="w-3 h-3 text-emerald-500" />
-                              ) : (
-                                <TrendingDown className="w-3 h-3 text-slate-500" />
+
+                        {/* TOP SECTION (80% height) - Split 1:1 left/right */}
+                        <div className="flex h-[128px]">
+                          
+                          {/* LEFT SECTION (50%) - Result Circle + Profit/Loss */}
+                          <div className="w-1/2 p-3 flex flex-col items-center justify-center">
+                            {/* Result Circle - BIGGER with HIT text and TWINKLING STARS */}
+                            <div className="relative">
+                              {/* Twinkling Stars Animation */}
+                              {result.type !== 'PENDING' && (
+                                <>
+                                  <div className={`absolute -top-1 -right-1 w-1 h-1 rounded-full ${
+                                    result.color === 'green' ? 'bg-green-400' : 'bg-red-400'
+                                  } animate-pulse`} style={{ 
+                                    animation: 'twinkle 1.5s ease-in-out infinite',
+                                    animationDelay: '0s' 
+                                  }}></div>
+                                  <div className={`absolute -top-2 left-2 w-0.5 h-0.5 rounded-full ${
+                                    result.color === 'green' ? 'bg-green-300' : 'bg-red-300'
+                                  }`} style={{ 
+                                    animation: 'twinkle 2s ease-in-out infinite',
+                                    animationDelay: '0.3s' 
+                                  }}></div>
+                                  <div className={`absolute top-1 -left-2 w-1 h-1 rounded-full ${
+                                    result.color === 'green' ? 'bg-green-500' : 'bg-red-500'
+                                  }`} style={{ 
+                                    animation: 'twinkle 1.8s ease-in-out infinite',
+                                    animationDelay: '0.6s' 
+                                  }}></div>
+                                  <div className={`absolute -bottom-1 -left-1 w-0.5 h-0.5 rounded-full ${
+                                    result.color === 'green' ? 'bg-green-400' : 'bg-red-400'
+                                  }`} style={{ 
+                                    animation: 'twinkle 1.2s ease-in-out infinite',
+                                    animationDelay: '0.9s' 
+                                  }}></div>
+                                  <div className={`absolute -bottom-2 right-3 w-1 h-1 rounded-full ${
+                                    result.color === 'green' ? 'bg-green-300' : 'bg-red-300'
+                                  }`} style={{ 
+                                    animation: 'twinkle 2.2s ease-in-out infinite',
+                                    animationDelay: '1.2s' 
+                                  }}></div>
+                                  <div className={`absolute top-3 -right-3 w-0.5 h-0.5 rounded-full ${
+                                    result.color === 'green' ? 'bg-green-500' : 'bg-red-500'
+                                  }`} style={{ 
+                                    animation: 'twinkle 1.7s ease-in-out infinite',
+                                    animationDelay: '1.5s' 
+                                  }}></div>
+                                </>
                               )}
-                              <span className={`text-xs font-semibold ${
-                                trade.gainLoss.isGain ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'
-                              }`}>
-                                {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(1)}%
+                              
+                              <div className={`w-20 h-20 rounded-full flex items-center justify-center border-2 ${
+                                result.color === 'green' 
+                                  ? 'border-green-400 bg-green-500/20' 
+                                  : result.color === 'red' 
+                                    ? 'border-red-400 bg-red-500/20' 
+                                    : 'border-gray-400 bg-gray-500/20'
+                              }`} data-testid={`circle-result-${trade.id}`}>
+                                <div className="text-center">
+                                  <div className={`text-[10px] font-bold leading-tight ${
+                                    result.color === 'green' 
+                                      ? 'text-green-300' 
+                                      : result.color === 'red' 
+                                        ? 'text-red-300' 
+                                        : 'text-gray-300'
+                                  }`}>
+                                    {result.type === 'SAFEBOOK' ? 'SAFEBOOK' : result.type.replace(' HIT', '')}
+                                    {result.type !== 'PENDING' && result.type !== 'SAFEBOOK' && (
+                                      <div className="text-[9px] mt-0.5 opacity-90">HIT</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Profit/Loss Percentage */}
+                            {trade.gainLoss && (
+                              <div className="mt-2 text-center">
+                                <span className={`text-sm font-bold ${
+                                  trade.gainLoss.isGain ? 'text-green-400' : 'text-red-400'
+                                }`} data-testid={`profit-loss-${trade.id}`}>
+                                  {trade.gainLoss.isGain ? '+' : ''}{trade.gainLoss.percentage.toFixed(1)}%
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* RIGHT SECTION (50%) - Trade Information - INLINE with proper wrapping */}
+                          <div className="w-1/2 p-3 pr-2">
+                            <div className="mb-2">
+                              <p className="text-white font-bold text-sm" data-testid={`pair-${trade.id}`}>{trade.pair}</p>
+                            </div>
+                            
+                            {/* Entry, SL, Leverage - INLINE (label and value same line) */}
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs text-gray-400 flex-shrink-0">Entry</span>
+                                <span className="text-white text-xs font-semibold text-right break-all" data-testid={`entry-${trade.id}`}>{formatCurrency(trade.price)}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs text-gray-400 flex-shrink-0">SL</span>
+                                <span className="text-white text-xs font-semibold text-right break-all" data-testid={`sl-${trade.id}`}>{formatCurrency(trade.stopLossTrigger)}</span>
+                              </div>
+                              {trade.leverage && (
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs text-gray-400 flex-shrink-0">Lev</span>
+                                  <span className="text-white text-xs font-semibold text-right" data-testid={`leverage-${trade.id}`}>{trade.leverage}x</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* BOTTOM SECTION (20% height) - Targets with Safebook logic */}
+                        <div className="h-[32px] bg-slate-800/80 backdrop-blur-sm border-t border-slate-700/50">
+                          <div className="flex h-full items-center px-3 gap-3 overflow-x-auto">
+                            {/* Show Safebook instead of T1 when safebook is completed */}
+                            {trade.completionReason === 'safe_book' && trade.safebookPrice ? (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <span className="text-xs text-gray-400">Safe Book:</span>
+                                <span className="text-xs text-green-400 font-medium" data-testid={`safebook-${trade.id}`}>
+                                  {formatCurrency(trade.safebookPrice)}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <span className="text-xs text-gray-400">T1:</span>
+                                <span className="text-xs text-green-400 font-medium" data-testid={`t1-${trade.id}`}>
+                                  {formatCurrency(trade.takeProfitTrigger)}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <span className="text-xs text-gray-400">T2:</span>
+                              <span className="text-xs text-green-400 font-medium" data-testid={`t2-${trade.id}`}>
+                                {formatCurrency(trade.takeProfit2)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <span className="text-xs text-gray-400">T3:</span>
+                              <span className="text-xs text-green-400 font-medium" data-testid={`t3-${trade.id}`}>
+                                {formatCurrency(trade.takeProfit3)}
                               </span>
                             </div>
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </CardHeader>
-
-                    <CardContent className="space-y-3 pt-0 px-3 pb-6 pr-6">
-                {/* Price & Leverage */}
-                <div className="flex gap-2">
-                  <div className="flex-1 bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Price</p>
-                    <p className="font-semibold text-xs text-slate-700 dark:text-slate-300" data-testid={`text-price-${trade.id}`}>
-                      ${trade.price ? Number(trade.price).toLocaleString('en-IN') : 'N/A'}
-                    </p>
-                  </div>
-                  {trade.leverage && (
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded">
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Lev</p>
-                      <p className="font-semibold text-xs text-slate-700 dark:text-slate-300" data-testid={`text-leverage-${trade.id}`}>
-                        {trade.leverage}x
-                      </p>
                     </div>
-                  )}
-                </div>
-
-                {/* Stop Loss with completion mark */}
-                {trade.stopLossTrigger && (
-                  <div className={`p-2 rounded border transition-all ${
-                    trade.completionReason === 'stop_loss_hit' 
-                      ? 'bg-slate-100 border-slate-300 dark:bg-slate-700/50 dark:border-slate-600/50' 
-                      : 'bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700/50'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Stop Loss</span>
-                      {trade.completionReason === 'stop_loss_hit' && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-lg font-bold text-slate-500">•</span>
-                          <span className="text-xs">😰</span>
-                        </div>
-                      )}
-                    </div>
-                    <p className={`font-semibold text-xs mt-0.5 ${
-                      trade.completionReason === 'stop_loss_hit' 
-                        ? 'text-slate-600 dark:text-slate-400' 
-                        : 'text-red-600 dark:text-red-400'
-                    }`} data-testid={`text-stop-loss-${trade.id}`}>
-                      ${Number(trade.stopLossTrigger).toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Take Profits in compact boxes */}
-                {(trade.takeProfitTrigger || trade.takeProfit2 || trade.takeProfit3 || (trade.completionReason === 'safe_book' && trade.safebookPrice)) && (
-                  <div>
-                    <p className="text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Targets</p>
-                    <div className="flex gap-1">
-                      {/* Show Safebook FIRST when completion reason is safe_book */}
-                      {trade.completionReason === 'safe_book' && trade.safebookPrice && (
-                        <div className="flex-1 p-1.5 rounded border transition-all bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800/50">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400">Safebook</span>
-                            <div className="flex items-center gap-1">
-                              <Star className="w-2.5 h-2.5 text-blue-500 fill-blue-500" />
-                              <span className="text-xs">🎉</span>
-                            </div>
-                          </div>
-                          <p className="text-[10px] font-medium text-blue-700 dark:text-blue-300" data-testid={`text-safebook-${trade.id}`}>
-                            ${Number(trade.safebookPrice).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {trade.takeProfitTrigger && (
-                        <div className={`flex-1 p-1.5 rounded border transition-all ${
-                          trade.completionReason === 'target_1_hit' 
-                            ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
-                            : 'bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700/50'
-                        }`}>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">T1</span>
-                            {trade.completionReason === 'target_1_hit' && (
-                              <div className="flex items-center gap-1">
-                                <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
-                                <span className="text-xs">🎉</span>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit1-${trade.id}`}>
-                            ${Number(trade.takeProfitTrigger).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {trade.takeProfit2 && (
-                        <div className={`flex-1 p-1.5 rounded border transition-all ${
-                          trade.completionReason === 'target_2_hit' 
-                            ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
-                            : 'bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700/50'
-                        }`}>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">T2</span>
-                            {trade.completionReason === 'target_2_hit' && (
-                              <div className="flex items-center gap-1">
-                                <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
-                                <span className="text-xs">🎉</span>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit2-${trade.id}`}>
-                            ${Number(trade.takeProfit2).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
-                      
-                      {/* Show T3 or Safebook based on completion reason */}
-                      {trade.takeProfit3 && trade.completionReason !== 'safe_book' && (
-                        <div className={`flex-1 p-1.5 rounded border transition-all ${
-                          trade.completionReason === 'target_3_hit' 
-                            ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
-                            : 'bg-slate-50 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700/50'
-                        }`}>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">T3</span>
-                            {trade.completionReason === 'target_3_hit' && (
-                              <div className="flex items-center gap-1">
-                                <Star className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
-                                <span className="text-xs">🎉</span>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300" data-testid={`text-take-profit3-${trade.id}`}>
-                            ${Number(trade.takeProfit3).toLocaleString('en-IN')}
-                          </p>
-                        </div>
-                      )}
-                      
-                    </div>
-                  </div>
-                )}
-
-                {/* Notes */}
-                {trade.notes && (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800/50">
-                    <p className="text-[10px] font-medium text-amber-700 dark:text-amber-400 mb-0.5">Notes</p>
-                    <p className="text-[10px] text-amber-800 dark:text-amber-300 break-words leading-3" data-testid={`text-notes-${trade.id}`}>
-                      {trade.notes}
-                    </p>
-                  </div>
-                )}
-                
-                {/* Time in bottom corner with reserved space */}
-                <div className="absolute bottom-1.5 right-1.5 text-[8px] text-slate-400 dark:text-slate-500 bg-slate-50/90 dark:bg-slate-800/90 px-1.5 py-0.5 rounded" data-testid={`text-time-${trade.id}`}>
-                  {trade.createdAt 
-                    ? format(new Date(trade.createdAt), 'HH:mm')
-                    : 'N/A'
-                  }
-                </div>
-              </CardContent>
-                </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
