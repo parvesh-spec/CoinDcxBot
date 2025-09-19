@@ -47,7 +47,7 @@ function calculateTradePnLPercentage(trade: Trade): number {
     return 0;
   }
 
-  // Calculate P&L percentage based on trade type
+  // Calculate P&L percentage based on trade type (fixed case-sensitive issue)
   let pnlPercentage: number;
   
   if (trade.type.toLowerCase() === 'buy') {
@@ -69,14 +69,25 @@ function getLocalDateKey(date: Date): string {
 
 export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapProps) {
   const monthlyData = useMemo(() => {
-    const currentYear = new Date().getFullYear();
+    // Trading season: September 2025 to August 2026
+    const startYear = 2025;
+    const endYear = 2026;
     
     // Pre-index trades by local date for better performance
     const tradesByDate = new Map<string, Trade[]>();
     trades.forEach(trade => {
       if (trade.status === 'completed') {
         const tradeDate = new Date(trade.createdAt || new Date());
-        if (tradeDate.getFullYear() === currentYear) {
+        const tradeYear = tradeDate.getFullYear();
+        const tradeMonth = tradeDate.getMonth(); // 0-11
+        
+        // Check if trade is in Sept 2025 - Aug 2026 season
+        const isInSeason = (
+          (tradeYear === startYear && tradeMonth >= 8) || // Sept-Dec 2025 (month 8-11)
+          (tradeYear === endYear && tradeMonth <= 7)     // Jan-Aug 2026 (month 0-7)
+        );
+        
+        if (isInSeason) {
           const dateKey = getLocalDateKey(tradeDate);
           if (!tradesByDate.has(dateKey)) {
             tradesByDate.set(dateKey, []);
@@ -86,12 +97,33 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
       }
     });
     
-    const months = [];
+    const months: {
+      name: string;
+      weeks: DayData[][];
+      monthIndex: number;
+    }[] = [];
     
-    // Create data for 12 months
-    for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
-      const monthStart = new Date(currentYear, monthIndex, 1);
-      const monthEnd = new Date(currentYear, monthIndex + 1, 0);
+    // Create data for trading season: Sept 2025 - Aug 2026
+    const seasonMonths = [
+      // Sept-Dec 2025
+      { year: startYear, month: 8 },  // September 2025
+      { year: startYear, month: 9 },  // October 2025
+      { year: startYear, month: 10 }, // November 2025
+      { year: startYear, month: 11 }, // December 2025
+      // Jan-Aug 2026
+      { year: endYear, month: 0 },    // January 2026
+      { year: endYear, month: 1 },    // February 2026
+      { year: endYear, month: 2 },    // March 2026
+      { year: endYear, month: 3 },    // April 2026
+      { year: endYear, month: 4 },    // May 2026
+      { year: endYear, month: 5 },    // June 2026
+      { year: endYear, month: 6 },    // July 2026
+      { year: endYear, month: 7 },    // August 2026
+    ];
+    
+    seasonMonths.forEach(({ year, month: monthIndex }, index) => {
+      const monthStart = new Date(year, monthIndex, 1);
+      const monthEnd = new Date(year, monthIndex + 1, 0);
       const daysInMonth = monthEnd.getDate();
       const monthName = monthStart.toLocaleDateString('en', { month: 'short' }).toUpperCase();
       
@@ -99,7 +131,7 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
       
       // Create daily data for the month
       for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(currentYear, monthIndex, day);
+        const date = new Date(year, monthIndex, day);
         const dateKey = getLocalDateKey(date);
         
         // Get trades for this date from pre-indexed map
@@ -160,9 +192,9 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
       months.push({
         name: monthName,
         weeks,
-        monthIndex,
+        monthIndex: index, // Use sequential index for display
       });
-    }
+    });
     
     return months;
   }, [trades]);
@@ -208,7 +240,7 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          {new Date().getFullYear()} Trading P&L Heatmap
+          2025 Trading P&L Heatmap
         </h3>
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <span>Less</span>
@@ -232,7 +264,7 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
               {month.weeks.flat().map((day, dayIndex) => (
                 <div
                   key={dayIndex}
-                  className={`w-3 h-3 rounded-sm ${getDayColor(day)} cursor-pointer hover:opacity-80 transition-opacity`}
+                  className={`w-3 h-3 rounded-sm border border-slate-300 dark:border-slate-600 ${getDayColor(day)} cursor-pointer hover:opacity-80 transition-opacity`}
                   title={getTooltipText(day)}
                   data-testid={day.isCurrentMonth ? `heatmap-${getLocalDateKey(day.date)}` : 'empty-day'}
                 />
