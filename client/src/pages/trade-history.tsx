@@ -26,7 +26,7 @@ interface TradeHistoryResponse {
 type FilterType = 'all' | 'today' | 'yesterday' | 'this_week' | 'this_month' | 'custom';
 
 export default function TradeHistoryPage() {
-  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [filterType, setFilterType] = useState<FilterType>('this_month');
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
   
   const { data, isLoading } = useQuery<TradeHistoryResponse>({
