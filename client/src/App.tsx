@@ -16,7 +16,7 @@ function Router() {
   return (
     <Switch>
       {/* Public routes - no authentication required */}
-      <Route path="/tradehistory" component={TradeHistoryPage} />
+      <Route path="/trade-history" component={TradeHistoryPage} />
       
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={AuthPage} />
