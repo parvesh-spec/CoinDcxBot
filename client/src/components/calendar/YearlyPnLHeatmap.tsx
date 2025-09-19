@@ -67,6 +67,17 @@ function getLocalDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+// Seeded random function for consistent mock data
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+// Generate consistent seed from date
+function getDateSeed(date: Date): number {
+  return date.getFullYear() * 10000 + date.getMonth() * 100 + date.getDate();
+}
+
 export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapProps) {
   const monthlyData = useMemo(() => {
     // Trading season: September 2025 to August 2026
@@ -153,8 +164,9 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
               isCurrentMonth: true,
             });
           } else {
-            // Generate random trading day
-            const random = Math.random();
+            // Generate consistent trading day using date-based seed
+            const seed = getDateSeed(date);
+            const random = seededRandom(seed);
             
             if (random < 0.15) {
               // 15% chance: No trade day
@@ -166,20 +178,20 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
               });
             } else if (random < 0.85) {
               // 70% chance: Profit day (80% of trading days)
-              const profitPnL = Math.random() * 50 + 10; // 10-60% profit
+              const profitPnL = seededRandom(seed + 1) * 50 + 10; // 10-60% profit
               monthDays.push({
                 date,
                 totalPnLPercentage: profitPnL,
-                tradeCount: Math.floor(Math.random() * 3) + 1, // 1-3 trades
+                tradeCount: Math.floor(seededRandom(seed + 2) * 3) + 1, // 1-3 trades
                 isCurrentMonth: true,
               });
             } else {
               // 15% chance: Loss day (20% of trading days)
-              const lossPnL = -(Math.random() * 30 + 5); // -5% to -35% loss
+              const lossPnL = -(seededRandom(seed + 3) * 30 + 5); // -5% to -35% loss
               monthDays.push({
                 date,
                 totalPnLPercentage: lossPnL,
-                tradeCount: Math.floor(Math.random() * 2) + 1, // 1-2 trades
+                tradeCount: Math.floor(seededRandom(seed + 4) * 2) + 1, // 1-2 trades
                 isCurrentMonth: true,
               });
             }
