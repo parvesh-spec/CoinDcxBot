@@ -256,7 +256,7 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
       </div>
       
       {/* Monthly Heatmap Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-6 gap-2">
         {monthlyData.map((month) => (
           <div key={month.monthIndex} className="flex flex-col items-center">
             {/* Month Grid */}
@@ -264,7 +264,7 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
               {month.weeks.flat().map((day, dayIndex) => (
                 <div
                   key={dayIndex}
-                  className={`w-3 h-3 rounded-sm border border-slate-300 dark:border-slate-600 ${getDayColor(day)} cursor-pointer hover:opacity-80 transition-opacity`}
+                  className={`w-2 h-2 sm:w-3 sm:h-3 rounded-sm border border-slate-300 dark:border-slate-600 ${getDayColor(day)} cursor-pointer hover:opacity-80 transition-opacity`}
                   title={getTooltipText(day)}
                   data-testid={day.isCurrentMonth ? `heatmap-${getLocalDateKey(day.date)}` : 'empty-day'}
                 />
