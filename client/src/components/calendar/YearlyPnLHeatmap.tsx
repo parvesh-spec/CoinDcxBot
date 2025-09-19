@@ -10,6 +10,7 @@ interface DayData {
   date: Date;
   totalPnLPercentage: number;
   tradeCount: number;
+  isCurrentMonth: boolean;
 }
 
 // Calculate P&L percentage for a single trade
@@ -61,86 +62,114 @@ function calculateTradePnLPercentage(trade: Trade): number {
   return pnlPercentage * (trade.leverage || 1);
 }
 
+// Helper function to create local date key
+function getLocalDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapProps) {
-  // Process trades to get daily P&L data for the year
-  const yearlyData = useMemo(() => {
-    const dailyData = new Map<string, DayData>();
+  const monthlyData = useMemo(() => {
     const currentYear = new Date().getFullYear();
     
-    // Initialize all days of the year
-    const startDate = new Date(currentYear, 0, 1);
-    const endDate = new Date(currentYear, 11, 31);
-    
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dateKey = d.toISOString().split('T')[0];
-      dailyData.set(dateKey, {
-        date: new Date(d),
-        totalPnLPercentage: 0,
-        tradeCount: 0,
-      });
-    }
-    
-    // Process trades and accumulate P&L by date
+    // Pre-index trades by local date for better performance
+    const tradesByDate = new Map<string, Trade[]>();
     trades.forEach(trade => {
-      const tradeDate = new Date(trade.updatedAt || trade.createdAt || new Date());
-      
-      // Only process trades from current year
-      if (tradeDate.getFullYear() === currentYear) {
-        const dateKey = tradeDate.toISOString().split('T')[0];
-        const dayData = dailyData.get(dateKey);
-        
-        if (dayData) {
-          const tradePnL = calculateTradePnLPercentage(trade);
-          dayData.totalPnLPercentage += tradePnL;
-          dayData.tradeCount += 1;
+      if (trade.status === 'completed') {
+        const tradeDate = new Date(trade.updatedAt || trade.createdAt || new Date());
+        if (tradeDate.getFullYear() === currentYear) {
+          const dateKey = getLocalDateKey(tradeDate);
+          if (!tradesByDate.has(dateKey)) {
+            tradesByDate.set(dateKey, []);
+          }
+          tradesByDate.get(dateKey)!.push(trade);
         }
       }
     });
     
-    // Convert to array and create weeks
-    const daysArray = Array.from(dailyData.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
+    const months = [];
     
-    // Group into weeks for GitHub-style layout
-    const weeks: DayData[][] = [];
-    let currentWeek: DayData[] = [];
-    
-    // Add empty days at the beginning if year doesn't start on Sunday
-    const firstDay = daysArray[0];
-    const startDayOfWeek = firstDay.date.getDay(); // 0 = Sunday
-    
-    for (let i = 0; i < startDayOfWeek; i++) {
-      currentWeek.push({
-        date: new Date(0), // Placeholder
-        totalPnLPercentage: 0,
-        tradeCount: 0,
-      });
-    }
-    
-    daysArray.forEach((day, index) => {
-      currentWeek.push(day);
+    // Create data for 12 months
+    for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
+      const monthStart = new Date(currentYear, monthIndex, 1);
+      const monthEnd = new Date(currentYear, monthIndex + 1, 0);
+      const daysInMonth = monthEnd.getDate();
+      const monthName = monthStart.toLocaleDateString('en', { month: 'short' }).toUpperCase();
       
-      // If it's Saturday (6) or last day, complete the week
-      if (day.date.getDay() === 6 || index === daysArray.length - 1) {
-        // Fill rest of week if needed
+      const monthDays: DayData[] = [];
+      
+      // Create daily data for the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(currentYear, monthIndex, day);
+        const dateKey = getLocalDateKey(date);
+        
+        // Get trades for this date from pre-indexed map
+        const dayTrades = tradesByDate.get(dateKey) || [];
+        
+        // Calculate total P&L for the day
+        let totalPnL = 0;
+        dayTrades.forEach(trade => {
+          totalPnL += calculateTradePnLPercentage(trade);
+        });
+        
+        monthDays.push({
+          date,
+          totalPnLPercentage: totalPnL,
+          tradeCount: dayTrades.length,
+          isCurrentMonth: true,
+        });
+      }
+      
+      // Organize days into weeks (rows of 7)
+      const weeks: DayData[][] = [];
+      const firstDayOfWeek = monthStart.getDay(); // 0 = Sunday
+      
+      let currentWeek: DayData[] = [];
+      
+      // Add empty days for the beginning of first week
+      for (let i = 0; i < firstDayOfWeek; i++) {
+        currentWeek.push({
+          date: new Date(0),
+          totalPnLPercentage: 0,
+          tradeCount: 0,
+          isCurrentMonth: false,
+        });
+      }
+      
+      // Add actual days
+      monthDays.forEach(day => {
+        currentWeek.push(day);
+        if (currentWeek.length === 7) {
+          weeks.push(currentWeek);
+          currentWeek = [];
+        }
+      });
+      
+      // Fill the last week if needed
+      if (currentWeek.length > 0) {
         while (currentWeek.length < 7) {
           currentWeek.push({
-            date: new Date(0), // Placeholder
+            date: new Date(0),
             totalPnLPercentage: 0,
             tradeCount: 0,
+            isCurrentMonth: false,
           });
         }
         weeks.push(currentWeek);
-        currentWeek = [];
       }
-    });
+      
+      months.push({
+        name: monthName,
+        weeks,
+        monthIndex,
+      });
+    }
     
-    return weeks;
+    return months;
   }, [trades]);
 
   // Get color for a day based on P&L
   const getDayColor = (day: DayData) => {
-    if (day.date.getTime() === 0) {
-      // Placeholder day
+    if (!day.isCurrentMonth) {
       return 'bg-transparent';
     }
     
@@ -170,7 +199,7 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
   };
 
   const getTooltipText = (day: DayData) => {
-    if (day.date.getTime() === 0 || day.tradeCount === 0) {
+    if (!day.isCurrentMonth || day.tradeCount === 0) {
       return '';
     }
     
@@ -181,16 +210,17 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
 
   return (
     <div className={`bg-white dark:bg-slate-800 rounded-lg p-4 ${className}`} data-testid="yearly-pnl-heatmap">
-      {/* Minimal Header */}
-      <div className="flex items-center justify-between mb-3">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          {new Date().getFullYear()} Trading Activity
+          {new Date().getFullYear()} Trading P&L Heatmap
         </h3>
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <span>Less</span>
           <div className="flex gap-1">
             <div className="w-2 h-2 bg-slate-100 dark:bg-slate-800 rounded-sm"></div>
-            <div className="w-2 h-2 bg-green-200 dark:bg-green-900 rounded-sm"></div>
+            <div className="w-2 h-2 bg-red-200 dark:bg-red-900 rounded-sm"></div>
+            <div className="w-2 h-2 bg-red-400 dark:bg-red-700 rounded-sm"></div>
             <div className="w-2 h-2 bg-green-400 dark:bg-green-700 rounded-sm"></div>
             <div className="w-2 h-2 bg-green-500 dark:bg-green-600 rounded-sm"></div>
           </div>
@@ -198,25 +228,38 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
         </div>
       </div>
       
-      {/* Heatmap Grid */}
-      <div className="flex gap-1 overflow-x-auto">
-        {yearlyData.map((week, weekIndex) => (
-          <div key={weekIndex} className="flex flex-col gap-1">
-            {week.map((day, dayIndex) => (
-              <div
-                key={`${weekIndex}-${dayIndex}`}
-                className={`w-2 h-2 rounded-sm ${getDayColor(day)} cursor-pointer hover:opacity-80 transition-opacity`}
-                title={getTooltipText(day)}
-                data-testid={day.date.getTime() === 0 ? 'empty-day' : `heatmap-${day.date.toISOString().split('T')[0]}`}
-              />
-            ))}
+      {/* Monthly Heatmap Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        {monthlyData.map((month) => (
+          <div key={month.monthIndex} className="flex flex-col items-center">
+            {/* Month Grid */}
+            <div className="grid grid-cols-7 gap-0.5 mb-2">
+              {month.weeks.flat().map((day, dayIndex) => (
+                <div
+                  key={dayIndex}
+                  className={`w-3 h-3 rounded-sm ${getDayColor(day)} cursor-pointer hover:opacity-80 transition-opacity`}
+                  title={getTooltipText(day)}
+                  data-testid={day.isCurrentMonth ? `heatmap-${getLocalDateKey(day.date)}` : 'empty-day'}
+                />
+              ))}
+            </div>
+            
+            {/* Month Label */}
+            <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
+              {month.name}
+            </div>
           </div>
         ))}
       </div>
       
-      {/* Compact Stats */}
-      <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 text-center">
-        {trades.filter(t => t.status === 'completed').length} completed trades this year
+      {/* Stats */}
+      <div className="mt-4 text-xs text-slate-500 dark:text-slate-400 text-center">
+        {trades.filter(t => t.status === 'completed').length} completed trades • 
+        {monthlyData.reduce((count, month) => {
+          return count + month.weeks.flat().filter(day => 
+            day.isCurrentMonth && day.tradeCount > 0 && day.totalPnLPercentage > 0
+          ).length;
+        }, 0)} profitable days
       </div>
     </div>
   );
