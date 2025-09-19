@@ -56,16 +56,20 @@ export function HeatmapWidget({
       let fullUrl: string;
       
       if (safeClickTarget.startsWith('http')) {
-        // Absolute URL
+        // Absolute URL - use as is
         const url = new URL(safeClickTarget);
         url.searchParams.set('utm_source', 'widget');
         url.searchParams.set('utm_medium', 'embed');
         url.searchParams.set('utm_campaign', 'heatmap');
         fullUrl = url.toString();
       } else {
-        // Relative URL - build from current origin
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-        const url = new URL(safeClickTarget, baseUrl);
+        // Relative URL - always use the widget source origin, not parent page origin
+        // This ensures clicks from external sites always go to our trade history app
+        const widgetOrigin = typeof window !== 'undefined' && window.location.hostname.includes('replit') 
+          ? window.location.origin 
+          : 'https://your-app-domain.replit.app'; // Replace with actual domain when published
+          
+        const url = new URL(safeClickTarget, widgetOrigin);
         url.searchParams.set('utm_source', 'widget');
         url.searchParams.set('utm_medium', 'embed');
         url.searchParams.set('utm_campaign', 'heatmap');
