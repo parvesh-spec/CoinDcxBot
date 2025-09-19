@@ -12,9 +12,11 @@ interface HeatmapWidgetProps {
 export function HeatmapWidget({ 
   trades, 
   scale = 1.0, 
-  clickTarget = window.location.origin + '/trade-history',
+  clickTarget,
   theme = 'light' 
 }: HeatmapWidgetProps) {
+  // Safe default for click target
+  const safeClickTarget = clickTarget || (typeof window !== 'undefined' ? window.location.origin + '/trade-history' : '/trade-history');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-resize functionality via postMessage
@@ -50,7 +52,7 @@ export function HeatmapWidget({
   // Handle click navigation
   const handleClick = () => {
     // Add UTM parameters for tracking
-    const url = new URL(clickTarget);
+    const url = new URL(safeClickTarget);
     url.searchParams.set('utm_source', 'widget');
     url.searchParams.set('utm_medium', 'embed');
     url.searchParams.set('utm_campaign', 'heatmap');
