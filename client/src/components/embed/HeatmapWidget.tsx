@@ -67,7 +67,7 @@ export function HeatmapWidget({
         // This ensures clicks from external sites always go to our trade history app
         const widgetOrigin = typeof window !== 'undefined' && window.location.hostname.includes('replit') 
           ? window.location.origin 
-          : 'https://your-app-domain.replit.app'; // Replace with actual domain when published
+          : 'https://coin-dcx-bot-parveshsangwan1.replit.app';
           
         const url = new URL(safeClickTarget, widgetOrigin);
         url.searchParams.set('utm_source', 'widget');
