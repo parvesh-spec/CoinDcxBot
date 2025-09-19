@@ -81,10 +81,10 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
         const tradeYear = tradeDate.getFullYear();
         const tradeMonth = tradeDate.getMonth(); // 0-11
         
-        // Check if trade is in Sept 2025 - Aug 2026 season
+        // Check if trade is in Apr 2025 - Mar 2026 season
         const isInSeason = (
-          (tradeYear === startYear && tradeMonth >= 8) || // Sept-Dec 2025 (month 8-11)
-          (tradeYear === endYear && tradeMonth <= 7)     // Jan-Aug 2026 (month 0-7)
+          (tradeYear === startYear && tradeMonth >= 3) || // Apr-Dec 2025 (month 3-11)
+          (tradeYear === endYear && tradeMonth <= 2)     // Jan-Mar 2026 (month 0-2)
         );
         
         if (isInSeason) {
@@ -103,22 +103,23 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
       monthIndex: number;
     }[] = [];
     
-    // Create data for trading season: Sept 2025 - Aug 2026
+    // Create data for trading season: April 2025 - March 2026
     const seasonMonths = [
-      // Sept-Dec 2025
+      // Apr-Aug 2025 (mock data period)
+      { year: startYear, month: 3 },  // April 2025
+      { year: startYear, month: 4 },  // May 2025
+      { year: startYear, month: 5 },  // June 2025
+      { year: startYear, month: 6 },  // July 2025
+      { year: startYear, month: 7 },  // August 2025
+      // Sept-Dec 2025 (real data)
       { year: startYear, month: 8 },  // September 2025
       { year: startYear, month: 9 },  // October 2025
       { year: startYear, month: 10 }, // November 2025
       { year: startYear, month: 11 }, // December 2025
-      // Jan-Aug 2026
+      // Jan-Mar 2026
       { year: endYear, month: 0 },    // January 2026
       { year: endYear, month: 1 },    // February 2026
       { year: endYear, month: 2 },    // March 2026
-      { year: endYear, month: 3 },    // April 2026
-      { year: endYear, month: 4 },    // May 2026
-      { year: endYear, month: 5 },    // June 2026
-      { year: endYear, month: 6 },    // July 2026
-      { year: endYear, month: 7 },    // August 2026
     ];
     
     seasonMonths.forEach(({ year, month: monthIndex }, index) => {
@@ -134,21 +135,73 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
         const date = new Date(year, monthIndex, day);
         const dateKey = getLocalDateKey(date);
         
-        // Get trades for this date from pre-indexed map
-        const dayTrades = tradesByDate.get(dateKey) || [];
+        // Check if this is mock data period (April-August 2025)
+        const isMockDataPeriod = year === startYear && monthIndex >= 3 && monthIndex <= 7;
         
-        // Calculate total P&L for the day
-        let totalPnL = 0;
-        dayTrades.forEach(trade => {
-          totalPnL += calculateTradePnLPercentage(trade);
-        });
-        
-        monthDays.push({
-          date,
-          totalPnLPercentage: totalPnL,
-          tradeCount: dayTrades.length,
-          isCurrentMonth: true,
-        });
+        if (isMockDataPeriod) {
+          // Generate mock data for April-August 2025
+          // Skip weekends (Saturday=6, Sunday=0) for realistic trading
+          const dayOfWeek = date.getDay();
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+          
+          if (isWeekend) {
+            // No trading on weekends
+            monthDays.push({
+              date,
+              totalPnLPercentage: 0,
+              tradeCount: 0,
+              isCurrentMonth: true,
+            });
+          } else {
+            // Generate random trading day
+            const random = Math.random();
+            
+            if (random < 0.15) {
+              // 15% chance: No trade day
+              monthDays.push({
+                date,
+                totalPnLPercentage: 0,
+                tradeCount: 0,
+                isCurrentMonth: true,
+              });
+            } else if (random < 0.85) {
+              // 70% chance: Profit day (80% of trading days)
+              const profitPnL = Math.random() * 50 + 10; // 10-60% profit
+              monthDays.push({
+                date,
+                totalPnLPercentage: profitPnL,
+                tradeCount: Math.floor(Math.random() * 3) + 1, // 1-3 trades
+                isCurrentMonth: true,
+              });
+            } else {
+              // 15% chance: Loss day (20% of trading days)
+              const lossPnL = -(Math.random() * 30 + 5); // -5% to -35% loss
+              monthDays.push({
+                date,
+                totalPnLPercentage: lossPnL,
+                tradeCount: Math.floor(Math.random() * 2) + 1, // 1-2 trades
+                isCurrentMonth: true,
+              });
+            }
+          }
+        } else {
+          // Real data period (September onwards)
+          // Get trades for this date from pre-indexed map
+          const dayTrades = tradesByDate.get(dateKey) || [];
+          
+          // Calculate total P&L for the day
+          let totalPnL = 0;
+          dayTrades.forEach(trade => {
+            totalPnL += calculateTradePnLPercentage(trade);
+          });
+          
+          monthDays.push({
+            date,
+            totalPnLPercentage: totalPnL,
+            tradeCount: dayTrades.length,
+            isCurrentMonth: true,
+          });
+        }
       }
       
       // No weeks layout - just use actual days
