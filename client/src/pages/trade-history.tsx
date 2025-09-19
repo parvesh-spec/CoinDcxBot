@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { formatDistanceToNow, format, isToday, isYesterday, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isWithinInterval } from "date-fns";
 import { Calendar, Star, TrendingUp, TrendingDown, Filter, ExternalLink } from "lucide-react";
 import campusLogo from "@assets/6208450096694152058_1758021301213.jpg";
+import { PnLChart } from '@/components/charts/PnLChart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trade, TargetStatusV2 } from "@shared/schema";
 
@@ -253,6 +254,12 @@ export default function TradeHistoryPage() {
             )}
           </div>
         </div>
+        
+        {/* P&L Analysis Chart */}
+        <PnLChart 
+          trades={filteredTrades} 
+          className="mb-6"
+        />
         
         {/* Header and Filter */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
