@@ -758,6 +758,15 @@ export default function TradeHistoryPage() {
           ))}
         </div>
       )}
+      
+      {/* Educational Disclaimer */}
+      <div className="mt-8 mb-4 text-center">
+        <p className="text-xs text-gray-500 leading-relaxed max-w-2xl mx-auto">
+          <em>Educational Content:</em> All trades displayed here were shared live on our Telegram channel for educational and learning purposes. 
+          These are real market positions that were publicly shared to help our community understand trading strategies and risk management. 
+          Past performance is not indicative of future results.
+        </p>
+      </div>
       </div>
     </div>
   );
