@@ -75,7 +75,7 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
     const tradesByDate = new Map<string, Trade[]>();
     trades.forEach(trade => {
       if (trade.status === 'completed') {
-        const tradeDate = new Date(trade.updatedAt || trade.createdAt || new Date());
+        const tradeDate = new Date(trade.createdAt || new Date());
         if (tradeDate.getFullYear() === currentYear) {
           const dateKey = getLocalDateKey(tradeDate);
           if (!tradesByDate.has(dateKey)) {
