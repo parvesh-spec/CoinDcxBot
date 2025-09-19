@@ -167,45 +167,40 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
     return months;
   }, [trades]);
 
-  // Get color for a day based on P&L
+  // Get color for a day based on P&L (Only 3 colors: green, red, no-trade)
   const getDayColor = (day: DayData) => {
     if (!day.isCurrentMonth) {
-      return 'bg-transparent';
+      return 'bg-slate-100 dark:bg-slate-800'; // Show empty days as gray
     }
     
     if (day.tradeCount === 0) {
-      return 'bg-slate-100 dark:bg-slate-800';
+      return 'bg-slate-100 dark:bg-slate-800'; // No trade days - gray
     }
     
     const pnl = day.totalPnLPercentage;
     
     if (pnl > 0) {
-      // Green for profit - intensity based on magnitude
-      if (pnl < 5) return 'bg-green-200 dark:bg-green-900';
-      if (pnl < 15) return 'bg-green-300 dark:bg-green-800';
-      if (pnl < 30) return 'bg-green-400 dark:bg-green-700';
-      return 'bg-green-500 dark:bg-green-600';
+      return 'bg-green-500 dark:bg-green-600'; // Profit - green
     } else if (pnl < 0) {
-      // Red for loss - intensity based on magnitude
-      const absPnl = Math.abs(pnl);
-      if (absPnl < 5) return 'bg-red-200 dark:bg-red-900';
-      if (absPnl < 15) return 'bg-red-300 dark:bg-red-800';
-      if (absPnl < 30) return 'bg-red-400 dark:bg-red-700';
-      return 'bg-red-500 dark:bg-red-600';
+      return 'bg-red-500 dark:bg-red-600'; // Loss - red
     } else {
-      // Neutral (exactly 0%)
-      return 'bg-slate-300 dark:bg-slate-600';
+      return 'bg-slate-300 dark:bg-slate-600'; // Exactly 0% - gray
     }
   };
 
   const getTooltipText = (day: DayData) => {
-    if (!day.isCurrentMonth || day.tradeCount === 0) {
+    if (!day.isCurrentMonth) {
       return '';
     }
     
     const dateStr = day.date.toLocaleDateString();
+    
+    if (day.tradeCount === 0) {
+      return `${dateStr}: No trades`;
+    }
+    
     const pnlSign = day.totalPnLPercentage >= 0 ? '+' : '';
-    return `${dateStr}: ${pnlSign}${day.totalPnLPercentage.toFixed(1)}% (${day.tradeCount} trades)`;
+    return `${dateStr}: ${pnlSign}${day.totalPnLPercentage.toFixed(2)}% (${day.tradeCount} trades)`;
   };
 
   return (
