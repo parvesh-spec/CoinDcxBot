@@ -488,7 +488,7 @@ export default function TradeHistoryPage() {
                                   <span className={`text-sm font-bold ${
                                     trade.gainLoss.isGain ? 'text-green-400' : 'text-red-400'
                                   }`} data-testid={`profit-loss-${trade.id}`}>
-                                    {trade.gainLoss.isGain ? '+' : ''}{trade.gainLoss.percentage.toFixed(1)}%
+                                    {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(1)}%
                                   </span>
                                 </div>
                               )}
@@ -684,7 +684,7 @@ export default function TradeHistoryPage() {
                                 <span className={`text-sm font-bold ${
                                   trade.gainLoss.isGain ? 'text-green-400' : 'text-red-400'
                                 }`} data-testid={`profit-loss-${trade.id}`}>
-                                  {trade.gainLoss.isGain ? '+' : ''}{trade.gainLoss.percentage.toFixed(1)}%
+                                  {trade.gainLoss.isGain ? '+' : '-'}{trade.gainLoss.percentage.toFixed(1)}%
                                 </span>
                               </div>
                             )}
