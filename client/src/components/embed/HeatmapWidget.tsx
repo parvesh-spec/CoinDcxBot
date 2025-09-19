@@ -51,30 +51,54 @@ export function HeatmapWidget({
 
   // Handle click navigation
   const handleClick = () => {
-    // Add UTM parameters for tracking
-    const url = new URL(safeClickTarget);
-    url.searchParams.set('utm_source', 'widget');
-    url.searchParams.set('utm_medium', 'embed');
-    url.searchParams.set('utm_campaign', 'heatmap');
-    
-    // Try to navigate parent window
     try {
+      // Build URL safely
+      let fullUrl: string;
+      
+      if (safeClickTarget.startsWith('http')) {
+        // Absolute URL
+        const url = new URL(safeClickTarget);
+        url.searchParams.set('utm_source', 'widget');
+        url.searchParams.set('utm_medium', 'embed');
+        url.searchParams.set('utm_campaign', 'heatmap');
+        fullUrl = url.toString();
+      } else {
+        // Relative URL - build from current origin
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+        const url = new URL(safeClickTarget, baseUrl);
+        url.searchParams.set('utm_source', 'widget');
+        url.searchParams.set('utm_medium', 'embed');
+        url.searchParams.set('utm_campaign', 'heatmap');
+        fullUrl = url.toString();
+      }
+      
+      // Try to navigate parent window
       if (window.parent !== window) {
         window.parent.postMessage({
           type: 'cfw:heatmap:click',
-          url: url.toString()
+          url: fullUrl
         }, '*');
         
         // Fallback: try direct navigation
         setTimeout(() => {
-          window.parent.location.href = url.toString();
+          try {
+            window.parent.location.href = fullUrl;
+          } catch (err) {
+            // If cross-origin, open in new tab
+            window.open(fullUrl, '_blank');
+          }
         }, 100);
       } else {
-        window.location.href = url.toString();
+        window.location.href = fullUrl;
       }
     } catch (error) {
+      console.error('Navigation error:', error);
       // Fallback: open in new tab
-      window.open(url.toString(), '_blank');
+      try {
+        window.open(safeClickTarget, '_blank');
+      } catch (fallbackError) {
+        console.error('Fallback navigation failed:', fallbackError);
+      }
     }
   };
 
