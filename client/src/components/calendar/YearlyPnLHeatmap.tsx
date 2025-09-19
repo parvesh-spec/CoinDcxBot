@@ -50,7 +50,7 @@ function calculateTradePnLPercentage(trade: Trade): number {
   // Calculate P&L percentage based on trade type
   let pnlPercentage: number;
   
-  if (trade.type === 'buy') {
+  if (trade.type.toLowerCase() === 'buy') {
     // Long position: profit when exit > entry
     pnlPercentage = ((exitPrice - entryPrice) / entryPrice) * 100;
   } else {
