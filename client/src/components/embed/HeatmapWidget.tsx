@@ -63,11 +63,9 @@ export function HeatmapWidget({
         url.searchParams.set('utm_campaign', 'heatmap');
         fullUrl = url.toString();
       } else {
-        // Relative URL - always use the widget source origin, not parent page origin
+        // Relative URL - always use the trade history app domain, not parent page origin
         // This ensures clicks from external sites always go to our trade history app
-        const widgetOrigin = typeof window !== 'undefined' && window.location.hostname.includes('replit') 
-          ? window.location.origin 
-          : 'https://coin-dcx-bot-parveshsangwan1.replit.app';
+        const widgetOrigin = 'https://trade.campusforwisdom.com';
           
         const url = new URL(safeClickTarget, widgetOrigin);
         url.searchParams.set('utm_source', 'widget');
