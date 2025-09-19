@@ -99,7 +99,7 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
     
     const months: {
       name: string;
-      weeks: DayData[][];
+      days: DayData[];
       monthIndex: number;
     }[] = [];
     
@@ -151,47 +151,11 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
         });
       }
       
-      // Organize days into weeks (rows of 7)
-      const weeks: DayData[][] = [];
-      const firstDayOfWeek = monthStart.getDay(); // 0 = Sunday
-      
-      let currentWeek: DayData[] = [];
-      
-      // Add empty days for the beginning of first week
-      for (let i = 0; i < firstDayOfWeek; i++) {
-        currentWeek.push({
-          date: new Date(0),
-          totalPnLPercentage: 0,
-          tradeCount: 0,
-          isCurrentMonth: false,
-        });
-      }
-      
-      // Add actual days
-      monthDays.forEach(day => {
-        currentWeek.push(day);
-        if (currentWeek.length === 7) {
-          weeks.push(currentWeek);
-          currentWeek = [];
-        }
-      });
-      
-      // Fill the last week if needed
-      if (currentWeek.length > 0) {
-        while (currentWeek.length < 7) {
-          currentWeek.push({
-            date: new Date(0),
-            totalPnLPercentage: 0,
-            tradeCount: 0,
-            isCurrentMonth: false,
-          });
-        }
-        weeks.push(currentWeek);
-      }
+      // No weeks layout - just use actual days
       
       months.push({
         name: monthName,
-        weeks,
+        days: monthDays, // Just actual days, no weeks
         monthIndex: index, // Use sequential index for display
       });
     });
@@ -242,31 +206,20 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
         <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">
           2025 Trading P&L Heatmap
         </h3>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span>Less</span>
-          <div className="flex gap-1">
-            <div className="w-2 h-2 bg-slate-100 dark:bg-slate-800 rounded-sm"></div>
-            <div className="w-2 h-2 bg-red-200 dark:bg-red-900 rounded-sm"></div>
-            <div className="w-2 h-2 bg-red-400 dark:bg-red-700 rounded-sm"></div>
-            <div className="w-2 h-2 bg-green-400 dark:bg-green-700 rounded-sm"></div>
-            <div className="w-2 h-2 bg-green-500 dark:bg-green-600 rounded-sm"></div>
-          </div>
-          <span>More</span>
-        </div>
       </div>
       
       {/* Monthly Heatmap Grid */}
       <div className="grid grid-cols-6 gap-2">
         {monthlyData.map((month) => (
           <div key={month.monthIndex} className="flex flex-col items-center">
-            {/* Month Grid */}
-            <div className="grid grid-cols-7 gap-0.5 mb-2">
-              {month.weeks.flat().map((day, dayIndex) => (
+            {/* Month Grid - Flow layout for actual days only */}
+            <div className="flex flex-wrap gap-0.5 mb-2 justify-center max-w-[120px]">
+              {month.days.map((day, dayIndex) => (
                 <div
                   key={dayIndex}
                   className={`w-2 h-2 sm:w-3 sm:h-3 rounded-sm border border-slate-300 dark:border-slate-600 ${getDayColor(day)} cursor-pointer hover:opacity-80 transition-opacity`}
                   title={getTooltipText(day)}
-                  data-testid={day.isCurrentMonth ? `heatmap-${getLocalDateKey(day.date)}` : 'empty-day'}
+                  data-testid={`heatmap-${getLocalDateKey(day.date)}`}
                 />
               ))}
             </div>
@@ -283,8 +236,8 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
       <div className="mt-4 text-xs text-slate-500 dark:text-slate-400 text-center">
         {trades.filter(t => t.status === 'completed').length} completed trades • 
         {monthlyData.reduce((count, month) => {
-          return count + month.weeks.flat().filter(day => 
-            day.isCurrentMonth && day.tradeCount > 0 && day.totalPnLPercentage > 0
+          return count + month.days.filter(day => 
+            day.tradeCount > 0 && day.totalPnLPercentage > 0
           ).length;
         }, 0)} profitable days
       </div>
