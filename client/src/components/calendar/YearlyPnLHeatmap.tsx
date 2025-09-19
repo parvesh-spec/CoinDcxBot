@@ -269,7 +269,7 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          2025 Trading P&L Heatmap
+          2025-26 Trading P&L Heatmap
         </h3>
       </div>
       
@@ -295,16 +295,6 @@ export function YearlyPnLHeatmap({ trades, className = '' }: YearlyPnLHeatmapPro
             </div>
           </div>
         ))}
-      </div>
-      
-      {/* Stats */}
-      <div className="mt-4 text-xs text-slate-500 dark:text-slate-400 text-center">
-        {trades.filter(t => t.status === 'completed').length} completed trades • 
-        {monthlyData.reduce((count, month) => {
-          return count + month.days.filter(day => 
-            day.tradeCount > 0 && day.totalPnLPercentage > 0
-          ).length;
-        }, 0)} profitable days
       </div>
     </div>
   );
