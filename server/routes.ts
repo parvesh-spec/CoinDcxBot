@@ -816,6 +816,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Security headers middleware for embed routes  
+  app.use('/embed/*', (req, res, next) => {
+    // Allow embedding from any origin for embed routes only
+    res.header('X-Frame-Options', 'ALLOWALL');
+    res.header('Content-Security-Policy', "frame-ancestors *; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';");
+    next();
+  });
+
+  // CORS middleware for public API endpoints
+  app.use('/api/public/*', (req, res, next) => {
+    // Allow all origins for public endpoints
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Max-Age', '86400'); // 24 hours
+    res.header('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300'); // Cache for 1 minute
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    
+    next();
+  });
+
   // Public routes (no authentication required)
   app.get('/api/public/trades/completed', async (req, res) => {
     try {

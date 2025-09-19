@@ -8,7 +8,10 @@ import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import TradeHistoryPage from "@/pages/trade-history";
 import NotFound from "@/pages/not-found";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
+
+// Lazy load embed page for code-splitting
+const EmbedHeatmapPage = lazy(() => import("@/pages/embed/heatmap"));
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -17,6 +20,19 @@ function Router() {
     <Switch>
       {/* Public routes - no authentication required */}
       <Route path="/trade-history" component={TradeHistoryPage} />
+      
+      {/* Embed routes - lightweight for external embedding */}
+      <Route path="/embed/heatmap">
+        <Suspense fallback={
+          <div className="bg-white min-h-screen flex items-center justify-center">
+            <div className="animate-pulse bg-slate-200 rounded-lg p-8">
+              Loading widget...
+            </div>
+          </div>
+        }>
+          <EmbedHeatmapPage />
+        </Suspense>
+      </Route>
       
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={AuthPage} />
