@@ -136,44 +136,8 @@ export default function RichTextEditor({
       <CardContent className="p-0">
         {/* Toolbar */}
         <div className="flex items-center gap-1 p-3 border-b bg-muted/20">
-          {/* Formatting buttons */}
-          <div className="flex items-center gap-1 border-r pr-2 mr-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => wrapSelectedText("**", "**")}
-              className="h-8 w-8 p-0"
-              data-testid="button-format-bold"
-              title="Bold (Markdown: **text** or HTML: <b>text</b>)"
-            >
-              <Bold className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => wrapSelectedText("*", "*")}
-              className="h-8 w-8 p-0"
-              data-testid="button-format-italic"
-              title="Italic (Markdown: *text* or HTML: <i>text</i>)"
-            >
-              <Italic className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => wrapSelectedText("`", "`")}
-              className="h-8 w-8 p-0"
-              data-testid="button-format-code"
-              title="Code (Markdown: `text` or HTML: <code>text</code>)"
-            >
-              <Code className="h-4 w-4" />
-            </Button>
-          </div>
 
-          {/* HTML Tags */}
+          {/* Telegram HTML Tags */}
           <div className="flex items-center gap-1 border-r pr-2 mr-2">
             <Button
               type="button"
@@ -182,7 +146,7 @@ export default function RichTextEditor({
               onClick={() => wrapSelectedText("<b>", "</b>")}
               className="h-8 px-2 text-xs font-bold"
               data-testid="button-html-bold"
-              title="HTML Bold Tag"
+              title="Bold Text"
             >
               &lt;b&gt;
             </Button>
@@ -193,9 +157,31 @@ export default function RichTextEditor({
               onClick={() => wrapSelectedText("<i>", "</i>")}
               className="h-8 px-2 text-xs italic"
               data-testid="button-html-italic"
-              title="HTML Italic Tag"
+              title="Italic Text"
             >
               &lt;i&gt;
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => wrapSelectedText("<u>", "</u>")}
+              className="h-8 px-2 text-xs underline"
+              data-testid="button-html-underline"
+              title="Underline Text"
+            >
+              &lt;u&gt;
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => wrapSelectedText("<s>", "</s>")}
+              className="h-8 px-2 text-xs line-through"
+              data-testid="button-html-strikethrough"
+              title="Strikethrough Text"
+            >
+              &lt;s&gt;
             </Button>
             <Button
               type="button"
@@ -204,9 +190,20 @@ export default function RichTextEditor({
               onClick={() => wrapSelectedText("<code>", "</code>")}
               className="h-8 px-2 text-xs font-mono"
               data-testid="button-html-code"
-              title="HTML Code Tag"
+              title="Monospace Code"
             >
               &lt;code&gt;
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => wrapSelectedText("<pre>", "</pre>")}
+              className="h-8 px-2 text-xs font-mono"
+              data-testid="button-html-pre"
+              title="Pre-formatted Block"
+            >
+              &lt;pre&gt;
             </Button>
           </div>
 
@@ -273,9 +270,11 @@ export default function RichTextEditor({
         {/* Help Text */}
         <div className="px-3 py-2 bg-muted/20 border-t text-xs text-muted-foreground">
           <div className="flex flex-wrap gap-4">
-            <span><strong>Bold:</strong> **text** or &lt;b&gt;text&lt;/b&gt;</span>
-            <span><strong>Italic:</strong> *text* or &lt;i&gt;text&lt;/i&gt;</span>
-            <span><strong>Code:</strong> `text` or &lt;code&gt;text&lt;/code&gt;</span>
+            <span><strong>Bold:</strong> &lt;b&gt;text&lt;/b&gt;</span>
+            <span><strong>Italic:</strong> &lt;i&gt;text&lt;/i&gt;</span>
+            <span><strong>Underline:</strong> &lt;u&gt;text&lt;/u&gt;</span>
+            <span><strong>Strike:</strong> &lt;s&gt;text&lt;/s&gt;</span>
+            <span><strong>Code:</strong> &lt;code&gt;text&lt;/code&gt;</span>
             <span><strong>Variables:</strong> {"{variable}"}</span>
           </div>
         </div>

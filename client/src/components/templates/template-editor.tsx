@@ -58,7 +58,7 @@ export default function TemplateEditor({
         templateType: selectedTemplate.templateType || "trade",
         template: selectedTemplate.template,
         buttons: selectedTemplate.buttons || [],
-        parseMode: selectedTemplate.parseMode || "HTML",
+        parseMode: "HTML",
         imageUrl: selectedTemplate.imageUrl || "",
       });
     }
@@ -141,7 +141,7 @@ export default function TemplateEditor({
       templateType: formData.templateType,
       template: formData.template,
       buttons: formData.buttons,
-      parseMode: formData.parseMode,
+      parseMode: "HTML",
       imageUrl: formData.imageUrl,
       isActive: true,
     });
@@ -326,25 +326,6 @@ Stay tuned for more updates.
           )}
         </div>
 
-        {/* Parse Mode Selection */}
-        <div>
-          <Label htmlFor="parseMode">Message Format</Label>
-          <Select
-            value={formData.parseMode}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, parseMode: value }))}
-          >
-            <SelectTrigger data-testid="select-parse-mode">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="HTML">HTML</SelectItem>
-              <SelectItem value="Markdown">Markdown</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground mt-1">
-            HTML supports <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;code&gt;</code> tags. Markdown supports **bold**, *italic*, `code`.
-          </p>
-        </div>
 
         {/* Image Upload Section */}
         <div>

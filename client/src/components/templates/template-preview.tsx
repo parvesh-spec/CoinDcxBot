@@ -92,28 +92,27 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
   const renderFormattedText = (text: string) => {
     let formattedText = text;
     
-    if (parseMode === "HTML") {
-      // Convert HTML tags to proper HTML for rendering
-      formattedText = formattedText
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/&lt;b&gt;/g, '<strong>')
-        .replace(/&lt;\/b&gt;/g, '</strong>')
-        .replace(/&lt;i&gt;/g, '<em>')
-        .replace(/&lt;\/i&gt;/g, '</em>')
-        .replace(/&lt;code&gt;/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs font-mono">')
-        .replace(/&lt;\/code&gt;/g, '</code>');
-    } else if (parseMode === "Markdown") {
-      // Convert Markdown to HTML
-      formattedText = formattedText
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs font-mono">$1</code>');
-    }
+    // Convert HTML tags to proper HTML for rendering
+    formattedText = formattedText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/&lt;b&gt;/g, '<strong>')
+      .replace(/&lt;\/b&gt;/g, '</strong>')
+      .replace(/&lt;strong&gt;/g, '<strong>')
+      .replace(/&lt;\/strong&gt;/g, '</strong>')
+      .replace(/&lt;i&gt;/g, '<em>')
+      .replace(/&lt;\/i&gt;/g, '</em>')
+      .replace(/&lt;em&gt;/g, '<em>')
+      .replace(/&lt;\/em&gt;/g, '</em>')
+      .replace(/&lt;u&gt;/g, '<u>')
+      .replace(/&lt;\/u&gt;/g, '</u>')
+      .replace(/&lt;s&gt;/g, '<s>')
+      .replace(/&lt;\/s&gt;/g, '</s>')
+      .replace(/&lt;code&gt;/g, '<code class="bg-muted px-1 py-0.5 rounded text-xs font-mono">')
+      .replace(/&lt;\/code&gt;/g, '</code>')
+      .replace(/&lt;pre&gt;/g, '<pre class="bg-muted px-2 py-1 rounded text-xs font-mono whitespace-pre-wrap">')
+      .replace(/&lt;\/pre&gt;/g, '</pre>');
     
     return formattedText;
   };
@@ -194,7 +193,7 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
         
         <div className="text-xs text-muted-foreground mt-4 text-center space-y-1">
           <p>✨ Live Telegram-style preview • Updates as you type</p>
-          <p>Format: {parseMode} • Buttons: {buttons?.length || 0} rows{imageUrl ? ' • Image: Yes' : ''}</p>
+          <p>Format: HTML • Buttons: {buttons?.length || 0} rows{imageUrl ? ' • Image: Yes' : ''}</p>
         </div>
       </CardContent>
     </Card>
