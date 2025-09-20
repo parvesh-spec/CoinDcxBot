@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Clock } from "lucide-react";
 
 interface TemplatePreviewProps {
   template: string;
@@ -56,7 +56,7 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
     };
 
     return buttons.map((row, rowIndex) => (
-      <div key={rowIndex} className="flex gap-2 flex-wrap">
+      <div key={rowIndex} className="flex gap-1">
         {row.map((button, buttonIndex) => {
           let buttonText = button.text || '';
           let buttonUrl = button.url || '';
@@ -69,17 +69,20 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
           });
 
           return (
-            <Button
+            <button
               key={buttonIndex}
-              variant="outline"
-              size="sm"
-              className="text-xs"
+              type="button"
+              className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-slate-100 text-xs px-3 py-2 rounded-md font-medium opacity-75 cursor-not-allowed"
               disabled
               data-testid={`preview-button-${rowIndex}-${buttonIndex}`}
             >
-              {buttonText || 'Button Text'}
-              {buttonUrl && <i className="fas fa-external-link-alt ml-1" />}
-            </Button>
+              <span className="truncate">
+                {buttonText || 'Button Text'}
+              </span>
+              {buttonUrl && (
+                <span className="ml-1 text-slate-400">🔗</span>
+              )}
+            </button>
           );
         })}
       </div>
@@ -122,49 +125,75 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Message Preview</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <span className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+            TB
+          </span>
+          Telegram Message Preview
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm space-y-3">
-          {/* Image Preview */}
-          {imageUrl && (
-            <div className="mb-3" data-testid="image-preview">
-              <img
-                src={imageUrl}
-                alt="Template image"
-                className="w-full max-w-md mx-auto h-auto rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
-                style={{ maxHeight: '300px', objectFit: 'contain' }}
-                data-testid="img-template-preview"
-              />
+        {/* Telegram Chat Interface */}
+        <div className="bg-slate-100 dark:bg-slate-900 rounded-lg p-4 max-w-lg mx-auto">
+          {/* Chat Header */}
+          <div className="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-700 mb-4">
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+              TB
             </div>
-          )}
-          
-          {/* Text Preview */}
-          <div
-            className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-              lineHeight: '1.5'
-            }}
-            data-testid="text-template-preview"
-            dangerouslySetInnerHTML={createMarkup(generatePreview())}
-          />
-          
-          {/* Buttons Preview */}
-          {buttons && buttons.length > 0 && (
-            <div className="space-y-2" data-testid="buttons-preview">
-              <div className="text-xs text-muted-foreground border-t border-gray-200 dark:border-gray-600 pt-2">
-                Inline Buttons:
-              </div>
-              <div className="space-y-2">
-                {generateButtonPreview()}
-              </div>
+            <div>
+              <div className="font-semibold text-slate-900 dark:text-slate-100">Trading Bot</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">online</div>
             </div>
-          )}
+          </div>
+          
+          {/* Message Bubble */}
+          <div className="flex justify-end mb-2">
+            <div className="max-w-[85%]">
+              <div className="bg-blue-500 text-white rounded-2xl rounded-br-md px-4 py-3 shadow-sm">
+                {/* Image Preview */}
+                {imageUrl && (
+                  <div className="mb-3" data-testid="image-preview">
+                    <img
+                      src={imageUrl}
+                      alt="Template image"
+                      className="w-full h-auto rounded-lg"
+                      style={{ maxHeight: '200px', objectFit: 'cover' }}
+                      data-testid="img-template-preview"
+                    />
+                  </div>
+                )}
+                
+                {/* Text Content */}
+                <div
+                  className="text-sm whitespace-pre-wrap leading-relaxed"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    lineHeight: '1.4'
+                  }}
+                  data-testid="text-template-preview"
+                  dangerouslySetInnerHTML={createMarkup(generatePreview())}
+                />
+                
+                {/* Time Stamp */}
+                <div className="flex items-center justify-end gap-1 mt-2 text-xs text-blue-100">
+                  <Clock className="w-3 h-3" />
+                  <span>14:32</span>
+                  <span className="text-blue-200">✓✓</span>
+                </div>
+              </div>
+              
+              {/* Inline Buttons */}
+              {buttons && buttons.length > 0 && (
+                <div className="mt-2 space-y-1" data-testid="buttons-preview">
+                  {generateButtonPreview()}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         
-        <div className="text-xs text-muted-foreground mt-2 space-y-1">
-          <p>This preview updates in real-time as you edit the template</p>
+        <div className="text-xs text-muted-foreground mt-4 text-center space-y-1">
+          <p>✨ Live Telegram-style preview • Updates as you type</p>
           <p>Format: {parseMode} • Buttons: {buttons?.length || 0} rows{imageUrl ? ' • Image: Yes' : ''}</p>
         </div>
       </CardContent>
