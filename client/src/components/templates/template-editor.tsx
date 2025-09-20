@@ -10,6 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ObjectUploader from "@/components/ui/object-uploader";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 
 interface TemplateEditorProps {
   channels: any[];
@@ -281,57 +282,48 @@ Stay tuned for more updates.
         {/* Message Template */}
         <div>
           <Label htmlFor="template">Message Template *</Label>
-          <Textarea
-            id="template"
-            rows={8}
-            placeholder="Enter your message template here..."
+          <RichTextEditor
             value={formData.template}
-            onChange={(e) => setFormData(prev => ({ ...prev, template: e.target.value }))}
-            data-testid="textarea-template"
+            onChange={(value) => setFormData(prev => ({ ...prev, template: value }))}
+            placeholder="Enter your message template here..."
+            className="mt-2"
+            minHeight={250}
           />
-          <div className="mt-3 p-3 border rounded-lg bg-muted/30 space-y-2">
-            <div className="text-xs font-medium text-foreground">📚 Formatting Guide</div>
-            
-            {formData.templateType === 'trade' ? (
-              <div className="space-y-1">
-                <div className="text-xs font-medium text-muted-foreground">🔧 Available Variables:</div>
-                <div className="text-xs text-muted-foreground">
-                  {"{pair}"} {"{price}"} {"{type}"} {"{leverage}"} {"{stopLoss}"} {"{takeProfit1}"} {"{takeProfit2}"} {"{takeProfit3}"} {"{safebookPrice}"} {"{timestamp}"} {"{profitLoss}"}
-                </div>
+          {formData.templateType === 'trade' && (
+            <div className="mt-3 p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/20 space-y-2">
+              <div className="text-xs font-medium text-blue-900 dark:text-blue-100">🔧 Available Variables for Trade Messages:</div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  "{pair}", "{price}", "{type}", "{leverage}", "{stopLoss}", 
+                  "{takeProfit1}", "{takeProfit2}", "{takeProfit3}", 
+                  "{safebookPrice}", "{timestamp}", "{profitLoss}"
+                ].map(variable => (
+                  <span 
+                    key={variable}
+                    className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 rounded text-xs font-mono cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900/60 transition-colors"
+                    onClick={() => {
+                      const newTemplate = formData.template + variable;
+                      setFormData(prev => ({ ...prev, template: newTemplate }));
+                    }}
+                  >
+                    {variable}
+                  </span>
+                ))}
               </div>
-            ) : (
-              <div className="space-y-1">
-                <div className="text-xs font-medium text-muted-foreground">⚠️ Variable Restriction:</div>
-                <div className="text-xs text-muted-foreground text-orange-600">
-                  Simple message templates cannot use variables like {"{pair}"}, {"{price}"}, etc. Use static text only.
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">🎨 HTML Formatting:</div>
-              <div className="text-xs text-muted-foreground font-mono">
-                <code>&lt;b&gt;Bold text&lt;/b&gt;</code> • <code>&lt;i&gt;Italic text&lt;/i&gt;</code> • <code>&lt;code&gt;Code text&lt;/code&gt;</code>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">📝 Markdown Formatting:</div>
-              <div className="text-xs text-muted-foreground font-mono">
-                <code>**Bold text**</code> • <code>*Italic text*</code> • <code>`Code text`</code>
+              <div className="text-xs text-blue-700 dark:text-blue-300">
+                💡 Click on any variable above to add it to your template
               </div>
             </div>
-
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">💡 Example Template:</div>
-              <div className="text-xs text-muted-foreground font-mono bg-background p-2 rounded border">
-                🚨 <code>&lt;b&gt;TRADE ALERT&lt;/b&gt;</code><br/>
-                📊 Pair: <code>{"{pair}"}</code><br/>
-                💰 Price: <code>&lt;code&gt;{"{price}"}&lt;/code&gt;</code><br/>
-                📈 Type: <code>&lt;i&gt;{"{type}"}&lt;/i&gt;</code>
+          )}
+          
+          {formData.templateType === 'simple' && (
+            <div className="mt-3 p-3 border rounded-lg bg-orange-50 dark:bg-orange-950/20">
+              <div className="text-xs font-medium text-orange-900 dark:text-orange-100">⚠️ Variable Restriction:</div>
+              <div className="text-xs text-orange-700 dark:text-orange-300">
+                Simple message templates cannot use variables like {"{pair}"}, {"{price}"}, etc. Use static text only.
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Parse Mode Selection */}
