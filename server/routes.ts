@@ -440,6 +440,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/templates/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { isArchived } = req.body;
+      if (typeof isArchived !== 'boolean') {
+        return res.status(400).json({ message: "isArchived must be a boolean" });
+      }
+      
+      const template = await storage.updateMessageTemplate(req.params.id, { isArchived });
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      console.error("Error archiving template:", error);
+      res.status(500).json({ message: "Failed to archive template" });
+    }
+  });
+
   app.delete('/api/templates/:id', isAuthenticated, async (req, res) => {
     try {
       const success = await storage.deleteMessageTemplate(req.params.id);

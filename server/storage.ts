@@ -151,11 +151,16 @@ export class DatabaseStorage implements IStorage {
 
   // Message template operations
   async getMessageTemplates(channelId?: string): Promise<MessageTemplate[]> {
-    const query = db.select().from(messageTemplates);
+    let conditions = [eq(messageTemplates.isArchived, false)];
+    
     if (channelId) {
-      return await query.where(eq(messageTemplates.channelId, channelId)).orderBy(desc(messageTemplates.createdAt));
+      conditions.push(eq(messageTemplates.channelId, channelId));
     }
-    return await query.orderBy(desc(messageTemplates.createdAt));
+    
+    return await db.select()
+      .from(messageTemplates)
+      .where(and(...conditions))
+      .orderBy(desc(messageTemplates.createdAt));
   }
 
   async getMessageTemplate(id: string): Promise<MessageTemplate | undefined> {

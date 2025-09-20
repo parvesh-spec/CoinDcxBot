@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -23,27 +24,31 @@ export default function SavedTemplates({
   const { toast } = useToast();
   const [testDialogOpen, setTestDialogOpen] = useState<string | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<string>("");
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState<string | null>(null);
 
   const { data: channelsData } = useQuery({
     queryKey: ["/api/channels"],
     retry: false,
   });
 
-  const deleteMutation = useMutation({
+  const archiveMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      await apiRequest("DELETE", `/api/templates/${templateId}`);
+      await apiRequest("PATCH", `/api/templates/${templateId}`, {
+        isArchived: true
+      });
     },
     onSuccess: () => {
-      onTemplateDeleted();
+      setArchiveDialogOpen(null);
+      onTemplateDeleted(); // This will refresh the template list
       toast({
-        title: "Success",
-        description: "Template deleted successfully",
+        title: "Template Archived",
+        description: "Template has been archived and hidden from view",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete template",
+        title: "Archive Failed",
+        description: error instanceof Error ? error.message : "Failed to archive template",
         variant: "destructive",
       });
     },
@@ -237,8 +242,8 @@ export default function SavedTemplates({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => deleteMutation.mutate(template.id)}
-                        disabled={deleteMutation.isPending}
+                        onClick={() => setArchiveDialogOpen(template.id)}
+                        disabled={archiveMutation.isPending}
                         className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/20 h-9 w-9 p-0 rounded-lg transition-all duration-200"
                         data-testid={`button-archive-template-${template.id}`}
                         title="Archive Template"
@@ -334,6 +339,32 @@ export default function SavedTemplates({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Archive Confirmation Dialog */}
+      <AlertDialog open={!!archiveDialogOpen} onOpenChange={(open) => !open && setArchiveDialogOpen(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive this template? It will be hidden from view but can be restored later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (archiveDialogOpen) {
+                  archiveMutation.mutate(archiveDialogOpen);
+                }
+              }}
+              disabled={archiveMutation.isPending}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {archiveMutation.isPending ? "Archiving..." : "Archive Template"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

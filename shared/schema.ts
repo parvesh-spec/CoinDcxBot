@@ -49,6 +49,7 @@ export const messageTemplates = pgTable("message_templates", {
   parseMode: varchar("parse_mode").default("HTML"), // HTML or Markdown
   imageUrl: text("image_url"), // Optional image URL from object storage
   isActive: boolean("is_active").default(true),
+  isArchived: boolean("is_archived").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
