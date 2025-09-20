@@ -116,13 +116,13 @@ export default function TemplatesPage() {
                   Add New Template
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {selectedTemplate ? 'Edit Template' : 'Create New Template'}
                   </DialogTitle>
                 </DialogHeader>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mt-4">
                   <TemplateEditor
                     channels={Array.isArray(channelsData) ? channelsData : []}
                     selectedTemplate={selectedTemplate}
