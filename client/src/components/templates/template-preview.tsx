@@ -125,17 +125,14 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
         <CardTitle>Message Preview</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="bg-background border rounded-lg p-4 shadow-sm space-y-3" style={{
-          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-          border: '1px solid #e2e8f0'
-        }}>
+        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm space-y-3">
           {/* Image Preview */}
           {imageUrl && (
             <div className="mb-3" data-testid="image-preview">
               <img
                 src={imageUrl}
                 alt="Template image"
-                className="w-full max-w-md mx-auto h-auto rounded-lg border border-gray-200 shadow-sm"
+                className="w-full max-w-md mx-auto h-auto rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
                 style={{ maxHeight: '300px', objectFit: 'contain' }}
                 data-testid="img-template-preview"
               />
@@ -144,7 +141,7 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
           
           {/* Text Preview */}
           <div
-            className="text-sm text-foreground whitespace-pre-wrap leading-relaxed"
+            className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed"
             style={{
               fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
               lineHeight: '1.5'
@@ -156,7 +153,7 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
           {/* Buttons Preview */}
           {buttons && buttons.length > 0 && (
             <div className="space-y-2" data-testid="buttons-preview">
-              <div className="text-xs text-muted-foreground border-t pt-2">
+              <div className="text-xs text-muted-foreground border-t border-gray-200 dark:border-gray-600 pt-2">
                 Inline Buttons:
               </div>
               <div className="space-y-2">
