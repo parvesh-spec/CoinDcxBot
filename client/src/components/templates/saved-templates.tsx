@@ -2,11 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useMutation } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Edit2, Copy, Trash2, Eye, Image } from "lucide-react";
+import { ChevronDown, ChevronUp, Edit2, Copy, Trash2, Eye, Image, TestTube, Play } from "lucide-react";
 
 interface SavedTemplatesProps {
   templates: any[];
@@ -21,6 +23,13 @@ export default function SavedTemplates({
 }: SavedTemplatesProps) {
   const { toast } = useToast();
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [testDialogOpen, setTestDialogOpen] = useState<string | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<string>("");
+
+  const { data: channelsData } = useQuery({
+    queryKey: ["/api/channels"],
+    retry: false,
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async (templateId: string) => {
@@ -37,6 +46,30 @@ export default function SavedTemplates({
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete template",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const testMutation = useMutation({
+    mutationFn: async ({ channelId, template }: { channelId: string; template: any }) => {
+      const previewMessage = generatePreview(template.template);
+      await apiRequest("POST", `/api/channels/${channelId}/test`, {
+        message: previewMessage
+      });
+    },
+    onSuccess: () => {
+      setTestDialogOpen(null);
+      setSelectedChannel("");
+      toast({
+        title: "Test Successful",
+        description: "Template test message sent successfully!",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Test Failed",
+        description: error instanceof Error ? error.message : "Failed to send test message",
         variant: "destructive",
       });
     },
@@ -105,6 +138,20 @@ export default function SavedTemplates({
       newExpanded.add(templateId);
     }
     setExpandedCards(newExpanded);
+  };
+
+  const handleTestTemplate = (template: any) => {
+    setTestDialogOpen(template.id);
+    setSelectedChannel("");
+  };
+
+  const handleSendTest = () => {
+    if (selectedChannel && testDialogOpen) {
+      const template = templates.find(t => t.id === testDialogOpen);
+      if (template) {
+        testMutation.mutate({ channelId: selectedChannel, template });
+      }
+    }
   };
 
   return (
@@ -187,6 +234,15 @@ export default function SavedTemplates({
                         data-testid={`button-preview-template-${template.id}`}
                       >
                         <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleTestTemplate(template)}
+                        className="text-blue-600 hover:text-blue-700 h-8 w-8 p-0"
+                        data-testid={`button-test-template-${template.id}`}
+                      >
+                        <TestTube className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -294,26 +350,36 @@ export default function SavedTemplates({
                       })()}
 
                       {/* Quick Actions */}
-                      <div className="flex gap-2 pt-2 border-t">
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleTestTemplate(template)}
+                          className="flex items-center justify-center"
+                          data-testid={`button-quick-test-template-${template.id}`}
+                        >
+                          <TestTube className="mr-1 h-3 w-3" />
+                          Test
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => onTemplateSelect(template)}
-                          className="flex-1"
+                          className="flex items-center justify-center"
                           data-testid={`button-quick-edit-template-${template.id}`}
                         >
                           <Edit2 className="mr-1 h-3 w-3" />
-                          Edit Template
+                          Edit
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => copyToClipboard(template.template)}
-                          className="flex-1"
+                          className="flex items-center justify-center"
                           data-testid={`button-quick-copy-template-${template.id}`}
                         >
                           <Copy className="mr-1 h-3 w-3" />
-                          Copy Text
+                          Copy
                         </Button>
                       </div>
                     </CollapsibleContent>
@@ -324,6 +390,78 @@ export default function SavedTemplates({
           })}
         </div>
       )}
+
+      {/* Test Template Dialog */}
+      <Dialog open={!!testDialogOpen} onOpenChange={(open) => !open && setTestDialogOpen(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Test Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Select a channel to test this template:
+              </p>
+              <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+                <SelectTrigger data-testid="select-test-channel">
+                  <SelectValue placeholder="Select a channel..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.isArray(channelsData) && channelsData.length > 0 ? (
+                    channelsData.map((channel: any) => (
+                      <SelectItem 
+                        key={channel.id} 
+                        value={channel.id}
+                        data-testid={`channel-option-${channel.id}`}
+                      >
+                        {channel.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-channels" disabled>
+                      No channels configured
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            {testDialogOpen && (
+              <div className="bg-muted/50 rounded-lg p-3 border">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Preview:</p>
+                <div className="text-sm text-foreground whitespace-pre-wrap font-mono max-h-32 overflow-y-auto">
+                  {generatePreview(templates.find(t => t.id === testDialogOpen)?.template || "")}
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setTestDialogOpen(null)}
+                data-testid="button-cancel-test"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSendTest}
+                disabled={!selectedChannel || testMutation.isPending}
+                data-testid="button-send-test"
+              >
+                {testMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-4 w-4" />
+                    Send Test
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
