@@ -6,10 +6,7 @@ import {
   Bold, 
   Italic, 
   Code, 
-  Smile, 
-  Type,
-  Eye,
-  EyeOff
+  Smile
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -39,7 +36,6 @@ export default function RichTextEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectionStart, setSelectionStart] = useState(0);
   const [selectionEnd, setSelectionEnd] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -256,62 +252,22 @@ export default function RichTextEditor({
             </Popover>
           </div>
 
-          {/* Preview toggle */}
-          <div className="ml-auto">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowPreview(!showPreview)}
-              className="h-8 px-3"
-              data-testid="button-toggle-preview"
-              title={showPreview ? "Hide Preview" : "Show Preview"}
-            >
-              {showPreview ? (
-                <>
-                  <EyeOff className="h-4 w-4 mr-1" />
-                  Hide Preview
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4 mr-1" />
-                  Show Preview
-                </>
-              )}
-            </Button>
-          </div>
         </div>
 
-        {/* Editor/Preview Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x">
-          {/* Text Editor */}
-          <div className="relative">
-            <Textarea
-              ref={textareaRef}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholder}
-              className="border-0 resize-none focus-visible:ring-0 rounded-none"
-              style={{ minHeight: `${minHeight}px` }}
-              data-testid="rich-text-editor-textarea"
-            />
-            <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-              {value.length} chars
-            </div>
+        {/* Editor Area */}
+        <div className="relative">
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className="border-0 resize-none focus-visible:ring-0 rounded-none"
+            style={{ minHeight: `${minHeight}px` }}
+            data-testid="rich-text-editor-textarea"
+          />
+          <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+            {value.length} chars
           </div>
-
-          {/* Live Preview */}
-          {showPreview && (
-            <div className="p-3 bg-muted/10">
-              <div className="text-xs font-medium text-muted-foreground mb-2">Live Preview:</div>
-              <div 
-                className="prose prose-sm max-w-none text-sm whitespace-pre-wrap"
-                style={{ minHeight: `${minHeight - 60}px` }}
-                dangerouslySetInnerHTML={renderFormattedPreview()}
-                data-testid="rich-text-preview"
-              />
-            </div>
-          )}
         </div>
 
         {/* Help Text */}
