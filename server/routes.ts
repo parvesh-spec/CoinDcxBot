@@ -432,28 +432,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Handle image if present
         if (template.imageUrl && template.imageUrl.trim()) {
-          // Convert to absolute URL for Telegram
-          let absoluteImageUrl = template.imageUrl.trim();
+          let absoluteImageUrl: string | null = null;
           
-          // If relative URL, convert to absolute
-          if (!absoluteImageUrl.startsWith('http://') && !absoluteImageUrl.startsWith('https://')) {
-            const baseUrl = process.env.REPL_SLUG ? 
-              `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 
-              'http://localhost:5000';
-            absoluteImageUrl = new URL(absoluteImageUrl, baseUrl).href;
+          // Convert to absolute URL for Telegram
+          const imageUrl = template.imageUrl.trim();
+          
+          // If already absolute URL, use it
+          if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+            absoluteImageUrl = imageUrl;
+          } else {
+            // Convert relative URL to absolute
+            const candidates = [
+              process.env.PUBLIC_BASE_URL,
+              process.env.REPLIT_URL
+            ].filter(Boolean);
+            
+            for (const candidate of candidates) {
+              try {
+                const url = new URL(candidate as string);
+                
+                // Must be HTTPS for production reliability
+                if (url.protocol === 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+                  absoluteImageUrl = new URL(imageUrl, candidate as string).href;
+                  console.log(`🔄 Converting relative URL '${imageUrl}' to absolute: ${absoluteImageUrl}`);
+                  break;
+                }
+              } catch (error) {
+                continue;
+              }
+            }
           }
-
-          // Use photo message if image is available
-          if (processedMessage.length <= 1024) { // Telegram caption limit
+          
+          // Only proceed if we have a valid absolute URL
+          if (absoluteImageUrl && processedMessage.length <= 1024) { // Telegram caption limit
+            console.log(`📸 Attempting photo message with URL: ${absoluteImageUrl}`);
             telegramMessage = {
               photo: absoluteImageUrl,
               caption: processedMessage,
               parse_mode: template.parseMode || 'HTML'
             };
           } else {
-            // Add image link to text if caption too long
-            telegramMessage.text += `\n\n📷 <a href="${absoluteImageUrl}">View Image</a>`;
-            telegramMessage.disable_web_page_preview = false;
+            // Add image link to text message
+            if (absoluteImageUrl) {
+              telegramMessage.text += `\n\n📷 <a href="${absoluteImageUrl}">View Image</a>`;
+              telegramMessage.disable_web_page_preview = false;
+            } else {
+              console.log(`⚠️ Could not convert image URL to absolute: ${template.imageUrl}`);
+            }
           }
         }
 
