@@ -21,7 +21,12 @@ export class AutomationService {
   private getPublicBaseUrl(): string | null {
     const candidates = [
       process.env.PUBLIC_BASE_URL,
-      process.env.REPLIT_URL
+      process.env.REPLIT_URL,
+      // Custom domain for deployed apps
+      'https://trade.campusforwisdom.com',
+      // Development domain (only available in dev mode)
+      process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : null,
+      process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : null
     ].filter(Boolean);
     
     for (const candidate of candidates) {
