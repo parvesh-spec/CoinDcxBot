@@ -1,14 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Edit2, Archive, Image, TestTube, Play } from "lucide-react";
+import { Edit2, Archive, Image, TestTube, Play } from "lucide-react";
 
 interface SavedTemplatesProps {
   templates: any[];
@@ -22,7 +21,6 @@ export default function SavedTemplates({
   onTemplateDeleted,
 }: SavedTemplatesProps) {
   const { toast } = useToast();
-  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [testDialogOpen, setTestDialogOpen] = useState<string | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<string>("");
 
@@ -130,15 +128,6 @@ export default function SavedTemplates({
     return preview;
   };
 
-  const toggleCard = (templateId: string) => {
-    const newExpanded = new Set(expandedCards);
-    if (newExpanded.has(templateId)) {
-      newExpanded.delete(templateId);
-    } else {
-      newExpanded.add(templateId);
-    }
-    setExpandedCards(newExpanded);
-  };
 
   const handleTestTemplate = (template: any) => {
     setTestDialogOpen(template.id);
@@ -174,10 +163,9 @@ export default function SavedTemplates({
       ) : (
         <div className="grid grid-cols-3 gap-6">
           {templates.map((template) => {
-            const isExpanded = expandedCards.has(template.id);
             const previewText = generatePreview(template.template);
-            const truncatedPreview = previewText.length > 150 
-              ? previewText.substring(0, 150) + "..." 
+            const truncatedPreview = previewText.length > 120 
+              ? previewText.substring(0, 120) + "..." 
               : previewText;
             
             return (
@@ -260,116 +248,14 @@ export default function SavedTemplates({
                     </div>
                   </div>
 
-                  {/* Quick Preview */}
+                  {/* Template Preview */}
                   <div className="mb-4">
                     <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-lg p-4 border border-slate-200 dark:border-slate-600">
                       <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed line-clamp-3">
-                        {isExpanded ? previewText : truncatedPreview}
+                        {truncatedPreview}
                       </div>
                     </div>
                   </div>
-
-                  {/* Expandable Full Preview */}
-                  <Collapsible open={isExpanded} onOpenChange={() => toggleCard(template.id)}>
-                    <CollapsibleTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 p-0 text-xs text-muted-foreground hover:text-foreground w-full justify-center"
-                      >
-                        {isExpanded ? (
-                          <>Hide Details <ChevronUp className="ml-1 h-3 w-3" /></>
-                        ) : (
-                          <>Show Details <ChevronDown className="ml-1 h-3 w-3" /></>
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-3 mt-3">
-                      {/* Image Preview in Details */}
-                      {template.imageUrl && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-2">Template Image</p>
-                          <div className="max-w-xs">
-                            <img
-                              src={template.imageUrl}
-                              alt={template.name}
-                              className="w-full rounded-md border border-border shadow-sm"
-                              data-testid={`img-template-full-${template.id}`}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Template Details */}
-                      <div className="grid grid-cols-2 gap-4 p-3 bg-accent/30 rounded-md">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Created</p>
-                          <p className="text-sm">{new Date(template.createdAt || Date.now()).toLocaleDateString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Status</p>
-                          <Badge 
-                            variant={template.isActive ? "default" : "secondary"}
-                            className="text-xs"
-                          >
-                            {template.isActive ? "Active" : "Inactive"}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {/* Variables Used */}
-                      {(() => {
-                        const variables = extractVariables(template.template);
-                        return variables.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-2">Variables Used</p>
-                            <div className="flex flex-wrap gap-1">
-                              {variables.map((variable) => (
-                                <Badge key={variable} variant="outline" className="text-xs font-mono">
-                                  {`{${variable}}`}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Quick Actions */}
-                      <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-200 dark:border-slate-600">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onTemplateSelect(template)}
-                          className="flex items-center justify-center bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700 dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-400"
-                          data-testid={`button-quick-edit-template-${template.id}`}
-                        >
-                          <Edit2 className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleTestTemplate(template)}
-                          className="flex items-center justify-center bg-green-50 hover:bg-green-100 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-800 dark:text-green-400"
-                          data-testid={`button-quick-test-template-${template.id}`}
-                        >
-                          <TestTube className="mr-2 h-4 w-4" />
-                          Test
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteMutation.mutate(template.id)}
-                          disabled={deleteMutation.isPending}
-                          className="flex items-center justify-center bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-400"
-                          data-testid={`button-quick-archive-template-${template.id}`}
-                        >
-                          <Archive className="mr-2 h-4 w-4" />
-                          Archive
-                        </Button>
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
                 </CardContent>
               </Card>
             );
