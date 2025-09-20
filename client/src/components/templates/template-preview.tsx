@@ -149,7 +149,7 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
           {/* Message Bubble */}
           <div className="flex justify-end mb-2">
             <div className="max-w-[85%]">
-              <div className="bg-blue-500 text-white rounded-2xl rounded-br-md px-4 py-3 shadow-sm">
+              <div className="bg-white text-black rounded-2xl rounded-br-md px-4 py-3 shadow-sm border">
                 {/* Image Preview */}
                 {imageUrl && (
                   <div className="mb-3" data-testid="image-preview">
@@ -175,10 +175,10 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
                 />
                 
                 {/* Time Stamp */}
-                <div className="flex items-center justify-end gap-1 mt-2 text-xs text-blue-100">
+                <div className="flex items-center justify-end gap-1 mt-2 text-xs text-gray-500">
                   <Clock className="w-3 h-3" />
                   <span>14:32</span>
-                  <span className="text-blue-200">✓✓</span>
+                  <span className="text-gray-400">✓✓</span>
                 </div>
               </div>
               
