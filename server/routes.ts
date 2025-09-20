@@ -346,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send test message to channel
   app.post('/api/channels/:id/test', isAuthenticated, async (req, res) => {
     try {
-      const { message } = req.body;
+      const { message, templateId } = req.body;
       const channelId = req.params.id;
       
       // Get channel details
@@ -357,44 +357,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Channel not found' });
       }
 
-      // Send actual message to Telegram
+      // Check if bot token is configured
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       if (!botToken) {
         return res.status(500).json({ message: 'Telegram bot token not configured' });
       }
 
-      const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-      const telegramResponse = await fetch(telegramApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: channel.channelId,
-          text: message,
-          parse_mode: 'HTML'
-        }),
-      });
+      // If templateId is provided, use template with proper image and button handling
+      if (templateId) {
+        const templates = await storage.getMessageTemplates();
+        const template = templates.find(t => t.id === templateId);
+        
+        if (!template) {
+          return res.status(404).json({ message: 'Template not found' });
+        }
 
-      if (!telegramResponse.ok) {
-        const errorData = await telegramResponse.json();
-        console.error('Telegram API error:', errorData);
-        return res.status(500).json({ 
-          message: 'Failed to send message to Telegram',
-          error: errorData.description || 'Unknown Telegram API error'
+        // Use telegramService for proper template handling
+        
+        // Create mock trade data for template testing
+        const mockTrade = {
+          id: 'test-trade-123',
+          pair: 'BTC-USDT',
+          price: '45,250.50',
+          type: 'BUY',
+          leverage: '10x',
+          stopLoss: '42,000.00',
+          takeProfit1: '47,000.00',
+          takeProfit2: '48,500.00',
+          takeProfit3: '50,000.00',
+          safebookPrice: '46,000.00',
+          timestamp: new Date().toLocaleString('en-GB', { 
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          profitLoss: '+2.5%',
+          quantity: '0.1',
+          tradeId: 'TXN-TEST-123'
+        };
+
+        // Process template with mock data
+        let processedMessage = template.template;
+        
+        // Replace variables in template
+        const variables = {
+          pair: mockTrade.pair,
+          price: mockTrade.price,
+          type: mockTrade.type,
+          leverage: mockTrade.leverage,
+          stopLoss: mockTrade.stopLoss,
+          takeProfit1: mockTrade.takeProfit1,
+          takeProfit2: mockTrade.takeProfit2,
+          takeProfit3: mockTrade.takeProfit3,
+          safebookPrice: mockTrade.safebookPrice,
+          timestamp: mockTrade.timestamp,
+          profitLoss: mockTrade.profitLoss,
+          quantity: mockTrade.quantity,
+          tradeId: mockTrade.tradeId
+        };
+
+        for (const [key, value] of Object.entries(variables)) {
+          const placeholder = `{${key}}`;
+          processedMessage = processedMessage.replace(new RegExp(placeholder, 'g'), value || '');
+        }
+
+        // Prepare message for Telegram
+        let telegramMessage: any = {
+          text: processedMessage,
+          parse_mode: template.parseMode || 'HTML'
+        };
+
+        // Handle image if present
+        if (template.imageUrl && template.imageUrl.trim()) {
+          // Convert to absolute URL for Telegram
+          let absoluteImageUrl = template.imageUrl.trim();
+          
+          // If relative URL, convert to absolute
+          if (!absoluteImageUrl.startsWith('http://') && !absoluteImageUrl.startsWith('https://')) {
+            const baseUrl = process.env.REPL_SLUG ? 
+              `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : 
+              'http://localhost:5000';
+            absoluteImageUrl = new URL(absoluteImageUrl, baseUrl).href;
+          }
+
+          // Use photo message if image is available
+          if (processedMessage.length <= 1024) { // Telegram caption limit
+            telegramMessage = {
+              photo: absoluteImageUrl,
+              caption: processedMessage,
+              parse_mode: template.parseMode || 'HTML'
+            };
+          } else {
+            // Add image link to text if caption too long
+            telegramMessage.text += `\n\n📷 <a href="${absoluteImageUrl}">View Image</a>`;
+            telegramMessage.disable_web_page_preview = false;
+          }
+        }
+
+        // Handle inline buttons if present
+        if (template.buttons && Array.isArray(template.buttons) && template.buttons.length > 0) {
+          const processedButtons = template.buttons.map((row: any[]) => {
+            return row.map((button: any) => {
+              let buttonText = button.text || '';
+              let buttonUrl = button.url || '';
+              
+              // Replace variables in button text and URL
+              for (const [key, value] of Object.entries(variables)) {
+                const placeholder = `{${key}}`;
+                buttonText = buttonText.replace(new RegExp(placeholder, 'g'), value || '');
+                if (buttonUrl) {
+                  buttonUrl = buttonUrl.replace(new RegExp(placeholder, 'g'), value || '');
+                }
+              }
+              
+              const renderedButton: any = { text: buttonText };
+              if (button.url && buttonUrl) {
+                renderedButton.url = buttonUrl;
+              } else if (button.callback_data) {
+                renderedButton.callback_data = button.callback_data;
+              }
+              
+              return renderedButton;
+            });
+          });
+
+          telegramMessage.reply_markup = {
+            inline_keyboard: processedButtons
+          };
+        }
+
+        // Send message using TelegramService
+        const result = await telegramService.sendMessage(channel.channelId, telegramMessage);
+        
+        if (result.success) {
+          console.log(`✅ Template test message sent successfully to channel ${channel.name} (${channel.channelId})`);
+          res.json({ 
+            success: true, 
+            message: 'Template test message sent successfully',
+            channelName: channel.name,
+            channelId: channel.channelId,
+            telegramMessageId: result.messageId,
+            templateUsed: template.name
+          });
+        } else {
+          console.error('Telegram message failed:', result.error);
+          res.status(500).json({ 
+            message: 'Failed to send template message to Telegram',
+            error: result.error
+          });
+        }
+      } else {
+        // Fallback to simple text message
+        const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+        const telegramResponse = await fetch(telegramApiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: channel.channelId,
+            text: message,
+            parse_mode: 'HTML'
+          }),
+        });
+
+        if (!telegramResponse.ok) {
+          const errorData = await telegramResponse.json();
+          console.error('Telegram API error:', errorData);
+          return res.status(500).json({ 
+            message: 'Failed to send message to Telegram',
+            error: errorData.description || 'Unknown Telegram API error'
+          });
+        }
+
+        const telegramData = await telegramResponse.json();
+        console.log(`✅ Test message sent successfully to channel ${channel.name} (${channel.channelId})`);
+        
+        res.json({ 
+          success: true, 
+          message: 'Test message sent successfully',
+          channelName: channel.name,
+          channelId: channel.channelId,
+          telegramMessageId: telegramData.result?.message_id
         });
       }
-
-      const telegramData = await telegramResponse.json();
-      console.log(`✅ Test message sent successfully to channel ${channel.name} (${channel.channelId})`);
-      
-      res.json({ 
-        success: true, 
-        message: 'Test message sent successfully',
-        channelName: channel.name,
-        channelId: channel.channelId,
-        telegramMessageId: telegramData.result?.message_id
-      });
     } catch (error) {
       console.error('Error sending test message:', error);
       res.status(500).json({ message: 'Failed to send test message' });

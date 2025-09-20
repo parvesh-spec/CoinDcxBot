@@ -58,7 +58,8 @@ export default function SavedTemplates({
     mutationFn: async ({ channelId, template }: { channelId: string; template: any }) => {
       const previewMessage = generatePreview(template.template);
       await apiRequest("POST", `/api/channels/${channelId}/test`, {
-        message: previewMessage
+        message: previewMessage,
+        templateId: template.id
       });
     },
     onSuccess: () => {
