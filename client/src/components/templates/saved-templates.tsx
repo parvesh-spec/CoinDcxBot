@@ -8,7 +8,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Edit2, Copy, Trash2, Eye, Image, TestTube, Play } from "lucide-react";
+import { ChevronDown, ChevronUp, Edit2, Archive, Image, TestTube, Play } from "lucide-react";
 
 interface SavedTemplatesProps {
   templates: any[];
@@ -172,7 +172,7 @@ export default function SavedTemplates({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-3 gap-6">
           {templates.map((template) => {
             const isExpanded = expandedCards.has(template.id);
             const previewText = generatePreview(template.template);
@@ -181,7 +181,7 @@ export default function SavedTemplates({
               : previewText;
             
             return (
-              <Card key={template.id} className="group hover:shadow-md transition-all duration-200" data-testid={`template-item-${template.id}`}>
+              <Card key={template.id} className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 shadow-md hover:scale-[1.02]" data-testid={`template-item-${template.id}`}>
                 <CardContent className="p-6">
                   {/* Header Section */}
                   <div className="flex items-start justify-between mb-4">
@@ -225,60 +225,45 @@ export default function SavedTemplates({
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleCard(template.id)}
-                        className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                        data-testid={`button-preview-template-${template.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleTestTemplate(template)}
-                        className="text-blue-600 hover:text-blue-700 h-8 w-8 p-0"
-                        data-testid={`button-test-template-${template.id}`}
-                      >
-                        <TestTube className="h-4 w-4" />
-                      </Button>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => onTemplateSelect(template)}
-                        className="text-primary hover:text-primary/80 h-8 w-8 p-0"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/20 h-9 w-9 p-0 rounded-lg transition-all duration-200"
                         data-testid={`button-edit-template-${template.id}`}
+                        title="Edit Template"
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => copyToClipboard(template.template)}
-                        className="text-muted-foreground hover:text-foreground h-8 w-8 p-0"
-                        data-testid={`button-copy-template-${template.id}`}
+                        onClick={() => handleTestTemplate(template)}
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20 h-9 w-9 p-0 rounded-lg transition-all duration-200"
+                        data-testid={`button-test-template-${template.id}`}
+                        title="Test Template"
                       >
-                        <Copy className="h-4 w-4" />
+                        <TestTube className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => deleteMutation.mutate(template.id)}
                         disabled={deleteMutation.isPending}
-                        className="text-destructive hover:text-destructive/80 h-8 w-8 p-0"
-                        data-testid={`button-delete-template-${template.id}`}
+                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/20 h-9 w-9 p-0 rounded-lg transition-all duration-200"
+                        data-testid={`button-archive-template-${template.id}`}
+                        title="Archive Template"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Archive className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
 
                   {/* Quick Preview */}
-                  <div className="mb-3">
-                    <div className="bg-muted/50 rounded-md p-3 border-l-4 border-primary/20">
-                      <div className="text-xs font-mono text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  <div className="mb-4">
+                    <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-lg p-4 border border-slate-200 dark:border-slate-600">
+                      <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed line-clamp-3">
                         {isExpanded ? previewText : truncatedPreview}
                       </div>
                     </div>
@@ -350,36 +335,37 @@ export default function SavedTemplates({
                       })()}
 
                       {/* Quick Actions */}
-                      <div className="grid grid-cols-3 gap-2 pt-2 border-t">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleTestTemplate(template)}
-                          className="flex items-center justify-center"
-                          data-testid={`button-quick-test-template-${template.id}`}
-                        >
-                          <TestTube className="mr-1 h-3 w-3" />
-                          Test
-                        </Button>
+                      <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-200 dark:border-slate-600">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => onTemplateSelect(template)}
-                          className="flex items-center justify-center"
+                          className="flex items-center justify-center bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700 dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-400"
                           data-testid={`button-quick-edit-template-${template.id}`}
                         >
-                          <Edit2 className="mr-1 h-3 w-3" />
+                          <Edit2 className="mr-2 h-4 w-4" />
                           Edit
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => copyToClipboard(template.template)}
-                          className="flex items-center justify-center"
-                          data-testid={`button-quick-copy-template-${template.id}`}
+                          onClick={() => handleTestTemplate(template)}
+                          className="flex items-center justify-center bg-green-50 hover:bg-green-100 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-800 dark:text-green-400"
+                          data-testid={`button-quick-test-template-${template.id}`}
                         >
-                          <Copy className="mr-1 h-3 w-3" />
-                          Copy
+                          <TestTube className="mr-2 h-4 w-4" />
+                          Test
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteMutation.mutate(template.id)}
+                          disabled={deleteMutation.isPending}
+                          className="flex items-center justify-center bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-400"
+                          data-testid={`button-quick-archive-template-${template.id}`}
+                        >
+                          <Archive className="mr-2 h-4 w-4" />
+                          Archive
                         </Button>
                       </div>
                     </CollapsibleContent>
