@@ -148,6 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const autoCompletingTargets = ['stop_loss', 'target_3'];
       
       console.log(`🔍 Debug: targetType=${targetType}, hit=${hit}, isAutoCompleting=${autoCompletingTargets.includes(targetType)}`);
+      console.log(`🎯 TARGET-STATUS: Processing ${targetType} hit=${hit} for trade ${trade.id} (${trade.tradeId})`);
       
       if (hit && autoCompletingTargets.includes(targetType)) {
         console.log(`🚀 Pre-completion automation trigger for ${targetType}`);
@@ -163,6 +164,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { trade: updatedTrade, autoCompleted } = result;
+      
+      console.log(`✅ TARGET-STATUS: Storage update complete. AutoCompleted=${autoCompleted}, CompletionReason=${updatedTrade.completionReason || 'N/A'}, Status=${updatedTrade.status}`);
       
       // For non-auto-completing targets (safebook, target_1, target_2), trigger automation AFTER update
       if (hit && !autoCompletingTargets.includes(targetType)) {

@@ -112,9 +112,9 @@ export default function TradesTable({
     tradePair: null,
   });
 
-  // Mutation for updating target status (V2: target_1, target_2, target_3)
+  // Mutation for updating target status (V2: stop_loss, target_1, target_2, target_3)
   const updateTargetStatusMutation = useMutation({
-    mutationFn: async ({ tradeId, targetType }: { tradeId: string; targetType: 'target_1' | 'target_2' | 'target_3' }) => {
+    mutationFn: async ({ tradeId, targetType }: { tradeId: string; targetType: 'stop_loss' | 'target_1' | 'target_2' | 'target_3' }) => {
       return apiRequest('PATCH', `/api/trades/${tradeId}/target-status`, {
         targetType, 
         hit: true
@@ -160,10 +160,14 @@ export default function TradesTable({
       // Return context with all previous queries
       return { previousQueries };
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       // Don't invalidate immediately - let optimistic update show first
       setTimeout(() => {
         queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades" });
+        // Also invalidate stats when trade auto-completes (stop_loss, target_3)
+        if ((data as any)?.autoCompleted) {
+          queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades/stats" || (Array.isArray(query.queryKey) && query.queryKey.includes("/api/trades/stats")) });
+        }
       }, 100); // Small delay to let user see the optimistic update
       toast({ title: "Target status updated successfully" });
     },
@@ -377,7 +381,9 @@ export default function TradesTable({
   };
 
   const handleStopLoss = (tradeId: string) => {
-    completeTradeBaseMutation.mutate({ tradeId, completionReason: 'stop_loss_hit' });
+    console.log('🔴 STOP LOSS: Starting stop loss hit for trade:', tradeId);
+    console.log('🔴 STOP LOSS: Using target-status endpoint with targetType=stop_loss');
+    updateTargetStatusMutation.mutate({ tradeId, targetType: 'stop_loss' });
   };
 
 
@@ -440,7 +446,7 @@ export default function TradesTable({
           variant="outline"
           className={getButtonClasses(targetStatus.stop_loss, "text-xs h-6 px-2")}
           onClick={() => handleStopLoss(trade.id)}
-          disabled={completeTradeBaseMutation.isPending}
+          disabled={updateTargetStatusMutation.isPending}
           data-testid={`button-stop-loss-${trade.id}`}
         >
           SL
