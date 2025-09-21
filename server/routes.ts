@@ -117,6 +117,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint to reopen completed trades
+  app.patch('/api/trades/:id/reopen', isAuthenticated, async (req, res) => {
+    try {
+      const trade = await storage.getTrade(req.params.id);
+      if (!trade) {
+        return res.status(404).json({ message: "Trade not found" });
+      }
+
+      if (trade.status !== 'completed') {
+        return res.status(400).json({ message: "Only completed trades can be reopened" });
+      }
+
+      console.log(`🔄 API: Reopening completed trade ${trade.tradeId} (${req.params.id})`);
+      
+      const reopenedTrade = await storage.reopenTrade(trade.id);
+      if (!reopenedTrade) {
+        return res.status(500).json({ message: "Failed to reopen trade" });
+      }
+      
+      console.log(`✅ API: Trade reopened successfully: ${reopenedTrade.tradeId}, status: ${reopenedTrade.status}`);
+      res.json(reopenedTrade);
+    } catch (error) {
+      console.error("Error reopening trade:", error);
+      res.status(500).json({ message: "Failed to reopen trade" });
+    }
+  });
+
   // Endpoint to update target status (for all 5 target types) - V2 with 5-field support
   app.patch('/api/trades/:id/target-status', isAuthenticated, async (req, res) => {
     try {

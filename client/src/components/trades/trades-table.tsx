@@ -375,6 +375,27 @@ export default function TradesTable({
     },
   });
 
+  // Mutation for reopening completed trades
+  const reopenTradeMutation = useMutation({
+    mutationFn: async (tradeId: string) => {
+      return apiRequest('PATCH', `/api/trades/${tradeId}/reopen`, {});
+    },
+    onSuccess: () => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades" });
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "trades/stats" || (Array.isArray(query.queryKey) && query.queryKey.includes("/api/trades/stats")) });
+      }, 100);
+      toast({ title: "Trade reopened successfully - ready for fresh targeting!" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to reopen trade", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
   // Handler functions
   const handleTargetHit = (tradeId: string, targetType: 'target_1' | 'target_2' | 'target_3') => {
     updateTargetStatusMutation.mutate({ tradeId, targetType });
@@ -408,6 +429,11 @@ export default function TradesTable({
 
   const handleDeleteTrade = (tradeId: string, tradePair: string) => {
     setDeleteDialog({ isOpen: true, tradeId, tradePair });
+  };
+
+  const handleReopenTrade = (tradeId: string) => {
+    console.log('🔄 REOPEN: Starting reopen for completed trade:', tradeId);
+    reopenTradeMutation.mutate(tradeId);
   };
 
   // Function to render target status content
@@ -705,6 +731,18 @@ export default function TradesTable({
                       >
                         Edit
                       </Button>
+                      {trade.status === 'completed' && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleReopenTrade(trade.id)}
+                          className="text-xs h-7 px-2"
+                          disabled={reopenTradeMutation.isPending}
+                          data-testid={`button-reopen-${trade.id}`}
+                        >
+                          🔄 Reopen
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="destructive"

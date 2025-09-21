@@ -62,6 +62,7 @@ export interface IStorage {
   updateTrade(id: string, trade: UpdateTrade): Promise<Trade | undefined>;
   deleteTrade(id: string): Promise<boolean>;
   completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined>;
+  reopenTrade(id: string): Promise<Trade | undefined>;
   // New V2 target status method supporting all 5 target types with business logic
   updateTradeTargetStatusV2(id: string, targetUpdate: UpdateTargetStatus): Promise<{trade: Trade | undefined, autoCompleted: boolean}>;
   updateTradeSafebook(id: string, safebook: UpdateSafebook): Promise<Trade | undefined>;
@@ -594,6 +595,60 @@ export class DatabaseStorage implements IStorage {
     }
 
     return updatedTrade;
+  }
+
+  async reopenTrade(id: string): Promise<Trade | undefined> {
+    console.log(`🔄 Reopening completed trade: ${id}`);
+
+    // Get current trade
+    const currentTrade = await this.getTrade(id);
+    if (!currentTrade) {
+      console.log(`❌ Trade not found: ${id}`);
+      return undefined;
+    }
+
+    if (currentTrade.status !== 'completed') {
+      console.log(`⚠️ Trade is not completed, cannot reopen: ${id} (status: ${currentTrade.status})`);
+      return currentTrade;
+    }
+
+    console.log(`📋 Reopening completed trade: ${currentTrade.tradeId}, completionReason: ${currentTrade.completionReason}`);
+
+    try {
+      // Reset trade to fresh active state
+      const freshTargetStatus: TargetStatusV2 = {
+        stop_loss: false,
+        safebook: false,
+        target_1: false,
+        target_2: false,
+        target_3: false
+      };
+
+      const [reopenedTrade] = await db
+        .update(trades)
+        .set({ 
+          status: 'active', // Change back to active
+          completionReason: null, // Clear completion reason
+          targetStatus: freshTargetStatus, // Reset all targets to false
+          safebookPrice: null, // Clear safebook price
+          notes: null, // Clear notes
+          updatedAt: new Date() 
+        })
+        .where(eq(trades.id, id))
+        .returning();
+      
+      if (reopenedTrade) {
+        console.log(`✅ Trade reopened successfully: ${reopenedTrade.id}, status: ${reopenedTrade.status}`);
+        console.log(`🎯 Reset target status:`, reopenedTrade.targetStatus);
+      } else {
+        console.log(`❌ Failed to reopen trade: ${id} - no rows returned`);
+      }
+      
+      return reopenedTrade;
+    } catch (error) {
+      console.error(`💥 Database error reopening trade ${id}:`, error);
+      throw error;
+    }
   }
 
   // Automation operations
