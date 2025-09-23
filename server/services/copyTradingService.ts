@@ -159,7 +159,8 @@ export class CopyTradingService {
       }
 
       // Create a temporary CoinDCX service instance with user's credentials
-      const userCoindcxService = new CoinDCXService(apiKey, apiSecret);
+      const userCoindcxService = new CoinDCXService();
+      // TODO: Set custom credentials for user-specific API calls
 
       // For now, we'll mark as executed without actually placing trades
       // This is because implementing actual trade execution requires careful consideration of:
@@ -207,7 +208,7 @@ export class CopyTradingService {
       await storage.updateCopyTradeStatus(
         copyTrade.id,
         'executed',
-        null
+        undefined
       );
 
       console.log(`✅ Copy trade ${copyTrade.id} executed successfully at ${executionPrice}`);

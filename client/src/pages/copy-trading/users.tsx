@@ -19,6 +19,12 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { insertCopyTradingUserSchema, type CopyTradingUser, type InsertCopyTradingUser } from "@shared/schema";
 import { z } from "zod";
 
+// Extended type for user with wallet balance information
+interface CopyTradingUserWithWallet extends CopyTradingUser {
+  walletBalance?: any[] | null;
+  walletError?: string | null;
+}
+
 export default function CopyTradingUsersPage() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -56,7 +62,7 @@ export default function CopyTradingUsersPage() {
     queryKey: ["/api/copy-trading/users"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/copy-trading/users");
-      return response.json() as Promise<CopyTradingUser[]>;
+      return response.json() as Promise<CopyTradingUserWithWallet[]>;
     },
   });
 
@@ -190,7 +196,7 @@ export default function CopyTradingUsersPage() {
     saveUserMutation.mutate(values);
   };
 
-  const handleEditUser = (user: CopyTradingUser) => {
+  const handleEditUser = (user: CopyTradingUserWithWallet) => {
     setEditingUser(user);
     form.reset({
       name: user.name,
@@ -274,7 +280,7 @@ export default function CopyTradingUsersPage() {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {users.map((user: CopyTradingUser) => (
+          {users.map((user: CopyTradingUserWithWallet) => (
             <Card key={user.id} className="relative">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -307,6 +313,40 @@ export default function CopyTradingUsersPage() {
                     <span className="text-sm text-muted-foreground">Risk per Trade:</span>
                     <span className="font-medium">{user.riskPerTrade}%</span>
                   </div>
+                  
+                  {/* Futures Wallet Balance */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Futures Wallet:</span>
+                    <div className="text-right">
+                      {user.walletBalance ? (
+                        <div className="space-y-1">
+                          {/* Show USDT balance prominently */}
+                          {user.walletBalance.find((wallet: any) => wallet.short_name === 'USDT') ? (
+                            <div className="font-medium text-green-600">
+                              {parseFloat(user.walletBalance.find((wallet: any) => wallet.short_name === 'USDT').balance || '0').toFixed(2)} USDT
+                            </div>
+                          ) : (
+                            <div className="font-medium text-muted-foreground">No USDT</div>
+                          )}
+                          {/* Show total wallets count */}
+                          <div className="text-xs text-muted-foreground">
+                            {user.walletBalance.length} currencies
+                          </div>
+                        </div>
+                      ) : user.walletError ? (
+                        <div className="text-xs text-muted-foreground" title={user.walletError}>
+                          <i className="fas fa-exclamation-triangle mr-1" />
+                          Check API credentials
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground">
+                          <i className="fas fa-spinner fa-spin mr-1" />
+                          Loading...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
                   {user.maxTradesPerDay && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Max Trades/Day:</span>

@@ -151,6 +151,67 @@ export class CoinDCXService {
   }
 
   // Method to validate custom API credentials for copy trading users
+  // Get futures wallet balance with custom credentials
+  async getFuturesWalletBalance(apiKey: string, apiSecret: string): Promise<{ success: boolean; balance?: any; message: string }> {
+    try {
+      console.log(`💰 Fetching futures wallet balance for API key: ${apiKey.substring(0, 8)}...`);
+      
+      // Try the general balance endpoint first, which should include futures balances
+      const endpoint = '/exchange/v1/users/balances';
+      const timestamp = Date.now();
+      const body = JSON.stringify({ timestamp });
+      
+      // Generate signature with custom secret
+      const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('hex');
+      
+      const headers = {
+        'X-AUTH-APIKEY': apiKey,
+        'X-AUTH-SIGNATURE': signature,
+        'Content-Type': 'application/json',
+      };
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers,
+        timeout: 10000, // 10 second timeout
+      });
+
+      if (response.status === 200) {
+        console.log(`✅ Futures wallet balance fetched successfully for API key: ${apiKey.substring(0, 8)}...`);
+        return { 
+          success: true, 
+          balance: response.data,
+          message: 'Balance fetched successfully' 
+        };
+      } else {
+        console.log(`❌ Unexpected response status: ${response.status}`);
+        return { 
+          success: false, 
+          message: 'Failed to fetch balance' 
+        };
+      }
+    } catch (error: any) {
+      console.error(`❌ Futures wallet balance fetch failed for API key: ${apiKey.substring(0, 8)}...`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        responseData: error.response?.data
+      });
+      
+      // Provide specific error messages
+      if (error.response?.status === 401) {
+        return { success: false, message: 'Invalid API credentials' };
+      } else if (error.response?.status === 403) {
+        return { success: false, message: 'API access forbidden' };
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        return { success: false, message: 'Connection failed' };
+      } else if (error.code === 'ECONNABORTED') {
+        return { success: false, message: 'Connection timeout' };
+      } else {
+        return { success: false, message: `Balance fetch failed: ${error.message}` };
+      }
+    }
+  }
+
   async validateCustomCredentials(apiKey: string, apiSecret: string): Promise<{ valid: boolean; message: string }> {
     try {
       console.log(`🔐 Validating credentials for API key: ${apiKey.substring(0, 8)}...`);

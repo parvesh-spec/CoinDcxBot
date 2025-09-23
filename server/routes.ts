@@ -9,6 +9,7 @@ import { automationService } from "./services/automationService";
 import { sendApplicationConfirmationEmail } from "./services/email";
 import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { safeDecrypt } from "./utils/encryption";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize time-based scheduler for simple automations
@@ -1068,7 +1069,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/copy-trading/users', isAuthenticated, async (req, res) => {
     try {
       const users = await storage.getCopyTradingUsers();
-      res.json(users);
+      
+      // Fetch wallet balance for each user asynchronously
+      const usersWithBalance = await Promise.all(
+        users.map(async (user) => {
+          try {
+            // Decrypt API credentials
+            const apiKey = safeDecrypt(user.apiKey);
+            const apiSecret = safeDecrypt(user.apiSecret);
+            
+            if (apiKey && apiSecret) {
+              const walletResult = await coindcxService.getFuturesWalletBalance(apiKey, apiSecret);
+              
+              return {
+                ...user,
+                walletBalance: walletResult.success ? walletResult.balance : null,
+                walletError: walletResult.success ? null : walletResult.message,
+              };
+            } else {
+              return {
+                ...user,
+                walletBalance: null,
+                walletError: 'Failed to decrypt credentials',
+              };
+            }
+          } catch (error) {
+            console.warn(`Failed to fetch wallet for user ${user.name}:`, error);
+            return {
+              ...user,
+              walletBalance: null,
+              walletError: 'Balance fetch failed',
+            };
+          }
+        })
+      );
+      
+      res.json(usersWithBalance);
     } catch (error) {
       console.error("Error fetching copy trading users:", error);
       res.status(500).json({ message: "Failed to fetch copy trading users" });
