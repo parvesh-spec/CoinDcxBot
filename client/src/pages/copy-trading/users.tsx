@@ -34,13 +34,21 @@ export default function CopyTradingUsersPage() {
   const [rejectingApplication, setRejectingApplication] = useState<any | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
 
-  // Form schema with validation
-  const formSchema = insertCopyTradingUserSchema.extend({
+  // Form schema with conditional validation for edit vs create
+  const createFormSchema = insertCopyTradingUserSchema.extend({
     apiKey: z.string().min(1, "API Key is required"),
     apiSecret: z.string().min(1, "API Secret is required"),
   });
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const editFormSchema = insertCopyTradingUserSchema.extend({
+    apiKey: z.string().optional(), // Optional for edit
+    apiSecret: z.string().optional(), // Optional for edit
+  });
+
+  // Use appropriate schema based on edit mode
+  const formSchema = editingUser ? editFormSchema : createFormSchema;
+
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -80,7 +88,7 @@ export default function CopyTradingUsersPage() {
 
   // Add/Update user mutation
   const saveUserMutation = useMutation({
-    mutationFn: async (userData: z.infer<typeof formSchema>) => {
+    mutationFn: async (userData: any) => {
       if (editingUser) {
         return apiRequest("PATCH", `/api/copy-trading/users/${editingUser.id}`, userData);
       } else {
