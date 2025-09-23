@@ -6,7 +6,7 @@ import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, sendOtpSchema, verifyOtpSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1451,6 +1451,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public routes (no authentication required)
+  
+  // OTP Routes - Email verification for application process
+  app.post('/api/public/otp/send', async (req, res) => {
+    try {
+      const otpData = sendOtpSchema.parse(req.body);
+      
+      const result = await storage.generateAndSendOTP(otpData);
+      
+      if (result.success) {
+        res.status(200).json({
+          success: true,
+          message: result.message,
+          otpId: result.otpId
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    } catch (error) {
+      console.error("OTP generation error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to generate OTP. Please try again." 
+      });
+    }
+  });
+
+  app.post('/api/public/otp/verify', async (req, res) => {
+    try {
+      const verifyData = verifyOtpSchema.parse(req.body);
+      
+      const result = await storage.verifyOTP(verifyData);
+      
+      if (result.success) {
+        res.status(200).json({
+          success: true,
+          message: result.message,
+          verified: result.verified
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to verify OTP. Please try again." 
+      });
+    }
+  });
+
+  // OTP Stats (Admin only)
+  app.get('/api/otp/stats', isAuthenticated, async (req, res) => {
+    try {
+      const stats = await storage.getOTPStats();
+      res.status(200).json(stats);
+    } catch (error) {
+      console.error("OTP stats error:", error);
+      res.status(500).json({ message: "Failed to fetch OTP statistics" });
+    }
+  });
+
   app.get('/api/public/trades/completed', async (req, res) => {
     try {
       const { limit = '50', offset = '0' } = req.query;
