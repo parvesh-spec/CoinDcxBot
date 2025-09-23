@@ -251,6 +251,16 @@ export class CopyTradingService {
         throw new Error('Copy trading user not found');
       }
 
+      // Check if user has sufficient funds before executing trade
+      if (user.lowFund) {
+        const errorMsg = `Trade blocked: User ${user.name} has insufficient funds (wallet balance < ${user.tradeFund} USDT)`;
+        console.log(`⚠️ ${errorMsg}`);
+        
+        // Update copy trade status to failed with error message
+        await storage.updateCopyTradeStatus(copyTrade.id, 'failed', errorMsg);
+        return;
+      }
+
       // Decrypt API credentials
       const apiKey = safeDecrypt(user.apiKey);
       const apiSecret = safeDecrypt(user.apiSecret);

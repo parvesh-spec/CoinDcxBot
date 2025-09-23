@@ -367,6 +367,19 @@ export default function CopyTradingUsersPage() {
                     </div>
                   </div>
                   
+                  {/* Low fund warning */}
+                  {user.lowFund && (
+                    <div className="flex items-center justify-center space-x-2 mt-3 mb-2 p-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                      <i className="fas fa-exclamation-triangle text-red-500" />
+                      <span className="text-sm font-medium text-red-700 dark:text-red-400">
+                        Low Fund Warning
+                      </span>
+                      <span className="text-xs text-red-600 dark:text-red-400">
+                        Insufficient balance for trades
+                      </span>
+                    </div>
+                  )}
+                  
                   {user.maxTradesPerDay && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Max Trades/Day:</span>
