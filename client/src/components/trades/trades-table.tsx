@@ -399,8 +399,7 @@ export default function TradesTable({
   // Mutation for exiting active trades on exchange
   const exitTradeMutation = useMutation({
     mutationFn: async (tradeId: string) => {
-      const response = await apiRequest('PATCH', `/api/trades/${tradeId}/exit`, {});
-      return response.json(); // Parse JSON from Response object
+      return apiRequest('PATCH', `/api/trades/${tradeId}/exit`, {});
     },
     onSuccess: (data: any) => {
       // Check if the response indicates actual success
