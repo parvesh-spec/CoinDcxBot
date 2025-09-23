@@ -100,11 +100,25 @@ export default function CopyTradingApplyPage() {
       form.reset();
     },
     onError: (error: any) => {
-      toast({
-        title: "❌ Submission Failed",
-        description: error.message || "Failed to submit application",
-        variant: "destructive",
-      });
+      // Handle duplicate email errors with user-friendly message
+      if (error.message && (
+        error.message.includes("email already exists") || 
+        error.message.includes("application with this email already exists") ||
+        error.message.includes("user with this email already exists")
+      )) {
+        toast({
+          title: "📧 Email Already Registered",
+          description: "This email is already registered in our system. Please use a different email address.",
+          variant: "destructive",
+        });
+      } else {
+        // Generic error message for other errors
+        toast({
+          title: "❌ Submission Failed",
+          description: error.message || "Failed to submit application",
+          variant: "destructive",
+        });
+      }
     },
     onSettled: () => {
       setIsSubmitting(false);
