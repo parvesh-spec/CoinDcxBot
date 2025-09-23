@@ -176,8 +176,8 @@ export class CopyTradingService {
       // 4. Monitor execution
       // 5. Update copy trade with execution details
 
-      // For this implementation, we'll simulate successful execution
-      await this.simulateTradeExecution(copyTrade);
+      // Execute real trade using trade fund and mathematical formulas
+      await this.executeRealTrade(copyTrade, user, apiKey, apiSecret);
 
     } catch (error) {
       console.error(`❌ Failed to execute copy trade ${copyTrade.id}:`, error);
@@ -231,6 +231,113 @@ export class CopyTradingService {
       );
 
       console.log(`❌ Copy trade ${copyTrade.id} failed: ${randomReason}`);
+    }
+  }
+
+  /**
+   * Execute real trade on CoinDCX exchange using user's trade fund and API credentials
+   */
+  private async executeRealTrade(
+    copyTrade: CopyTrade, 
+    user: any, 
+    apiKey: string, 
+    apiSecret: string
+  ): Promise<void> {
+    try {
+      console.log(`🚀 Executing REAL trade: ${copyTrade.pair} ${copyTrade.type} for user ${user.name}`);
+      
+      // Get original trade data for calculations
+      const originalTrade = await storage.getTrade(copyTrade.originalTradeId);
+      if (!originalTrade) {
+        throw new Error('Original trade not found');
+      }
+      
+      // Use tradeFund from user settings instead of wallet balance
+      const tradeFund = parseFloat(user.tradeFund); // e.g., 100 USDT
+      const entryPrice = parseFloat(copyTrade.originalPrice);
+      const stopLossPrice = originalTrade.stopLossTrigger ? parseFloat(originalTrade.stopLossTrigger) : null;
+      const takeProfitPrice = originalTrade.takeProfitTrigger ? parseFloat(originalTrade.takeProfitTrigger) : null;
+      
+      console.log(`💰 Using trade fund: ${tradeFund} USDT for ${copyTrade.pair}`);
+      
+      // Calculate leverage using mathematical formula
+      let calculatedLeverage = 1;
+      if (stopLossPrice) {
+        calculatedLeverage = this.coindcxService.calculateLeverage(
+          user.riskPerTrade, // Risk percentage (e.g., 2%)
+          entryPrice,
+          stopLossPrice
+        );
+      } else {
+        // Use default leverage from original trade if no stop loss
+        calculatedLeverage = copyTrade.leverage;
+        console.log(`⚠️ No stop loss found, using original leverage: ${calculatedLeverage}x`);
+      }
+      
+      // Calculate quantity using trade fund formula
+      const calculatedQuantity = this.coindcxService.calculateQuantity(
+        tradeFund,
+        calculatedLeverage,
+        entryPrice
+      );
+      
+      console.log(`📊 Calculated: leverage=${calculatedLeverage}x, quantity=${calculatedQuantity}`);
+      
+      // Validate order parameters
+      const validation = this.coindcxService.validateOrderParameters(
+        copyTrade.pair,
+        calculatedQuantity,
+        entryPrice
+      );
+      
+      if (!validation.valid) {
+        throw new Error(`Order validation failed: ${validation.message}`);
+      }
+      
+      // Prepare order data for CoinDCX API
+      const orderData = {
+        side: copyTrade.type.toLowerCase() as 'buy' | 'sell',
+        pair: copyTrade.pair,
+        total_quantity: calculatedQuantity,
+        leverage: calculatedLeverage,
+        ...(stopLossPrice && { stop_loss_price: stopLossPrice }),
+        ...(takeProfitPrice && { take_profit_price: takeProfitPrice })
+      };
+      
+      console.log(`📤 Placing order on CoinDCX:`, orderData);
+      
+      // Execute the trade on CoinDCX exchange
+      const orderResult = await this.coindcxService.createFuturesOrder(
+        apiKey,
+        apiSecret,
+        orderData
+      );
+      
+      if (orderResult.success && orderResult.orderId) {
+        // Update copy trade with execution details
+        await storage.updateCopyTradeExecution(copyTrade.id, {
+          executedTradeId: orderResult.orderId,
+          executedPrice: entryPrice, // Market order will execute near this price
+          executedQuantity: calculatedQuantity,
+          leverage: calculatedLeverage
+        });
+        
+        console.log(`✅ Copy trade ${copyTrade.id} executed successfully! Order ID: ${orderResult.orderId}`);
+      } else {
+        throw new Error(orderResult.message || 'Order execution failed');
+      }
+      
+    } catch (error) {
+      console.error(`❌ Real trade execution failed for ${copyTrade.id}:`, error);
+      
+      // Update copy trade with failure status
+      await storage.updateCopyTradeStatus(
+        copyTrade.id,
+        'failed',
+        `Real execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      
+      throw error; // Re-throw to be caught by caller
     }
   }
 
