@@ -326,14 +326,8 @@ export default function CopyTradingUsersPage() {
                     <div className="text-right">
                       {/* Prioritize database balance over API balance */}
                       {user.futuresWalletBalance !== null && user.futuresWalletBalance !== undefined ? (
-                        <div className="space-y-1">
-                          {/* Show database USDT balance prominently */}
-                          <div className="font-medium text-green-600">
-                            {parseFloat(user.futuresWalletBalance.toString()).toFixed(2)} USDT
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            From database
-                          </div>
+                        <div className="font-medium text-green-600">
+                          {parseFloat(user.futuresWalletBalance.toString()).toFixed(2)} USDT
                         </div>
                       ) : user.walletBalance ? (
                         <div className="space-y-1">
