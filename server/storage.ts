@@ -8,6 +8,7 @@ import {
   copyTradingUsers,
   copyTrades,
   copyTradingApplications,
+  otpVerifications,
   type User,
   type InsertUser,
   type TelegramChannel,
@@ -30,6 +31,10 @@ import {
   type InsertCopyTradingUser,
   type CopyTrade,
   type InsertCopyTrade,
+  type OtpVerification,
+  type InsertOtpVerification,
+  type VerifyOtp,
+  type SendOtp,
   normalizeTargetStatus,
 } from "@shared/schema";
 import { db } from "./db";
@@ -116,6 +121,13 @@ export interface IStorage {
   getCopyTradingApplication(id: string): Promise<any | undefined>;
   createCopyTradingApplication(application: any): Promise<any>;
   updateCopyTradingApplicationStatus(id: string, status: string, notes?: string): Promise<any | undefined>;
+  
+  // OTP Verification operations
+  generateAndSendOTP(data: SendOtp): Promise<{ success: boolean; message: string; otpId?: string }>;
+  verifyOTP(data: VerifyOtp): Promise<{ success: boolean; message: string; verified?: boolean }>;
+  isEmailVerified(email: string, purpose?: string): Promise<boolean>;
+  cleanupExpiredOTPs(): Promise<number>;
+  getOTPStats(): Promise<{ total: number; active: number; expired: number; verified: number }>;
   
   // Copy Trade operations
   getCopyTrades(filters?: {
@@ -1216,6 +1228,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(copyTrades.id, id))
       .returning();
     return updatedTrade;
+  }
+
+  // OTP Verification operations
+  async generateAndSendOTP(data: SendOtp): Promise<{ success: boolean; message: string; otpId?: string }> {
+    const { generateAndSendOTP } = await import('./services/otp');
+    return generateAndSendOTP(data);
+  }
+
+  async verifyOTP(data: VerifyOtp): Promise<{ success: boolean; message: string; verified?: boolean }> {
+    const { verifyOTP } = await import('./services/otp');
+    return verifyOTP(data);
+  }
+
+  async isEmailVerified(email: string, purpose: string = 'application_submission'): Promise<boolean> {
+    const { isEmailVerified } = await import('./services/otp');
+    return isEmailVerified(email, purpose);
+  }
+
+  async cleanupExpiredOTPs(): Promise<number> {
+    const { cleanupExpiredOTPs } = await import('./services/otp');
+    return cleanupExpiredOTPs();
+  }
+
+  async getOTPStats(): Promise<{ total: number; active: number; expired: number; verified: number }> {
+    const { getOTPStats } = await import('./services/otp');
+    return getOTPStats();
   }
 }
 
