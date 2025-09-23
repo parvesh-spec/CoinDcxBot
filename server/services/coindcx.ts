@@ -156,21 +156,21 @@ export class CoinDCXService {
     try {
       // Removed API key logging for production security
       
-      // Use the actual futures wallet endpoint as per CoinDCX documentation
+      // Use the actual futures wallet endpoint as per CoinDCX documentation - GET request
       const endpoint = '/exchange/v1/derivatives/futures/wallets';
-      const timestamp = Date.now();
-      const body = JSON.stringify({ timestamp });
+      const timestamp = Date.now().toString();
       
-      // Generate signature with custom secret
-      const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('hex');
+      // Generate signature for GET request with timestamp
+      const signature = crypto.createHmac('sha256', apiSecret).update(timestamp).digest('hex');
       
       const headers = {
         'X-AUTH-APIKEY': apiKey,
         'X-AUTH-SIGNATURE': signature,
+        'X-AUTH-TIMESTAMP': timestamp,
         'Content-Type': 'application/json',
       };
       
-      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+      const response = await axios.get(`${this.config.baseUrl}${endpoint}`, {
         headers,
         timeout: 10000, // 10 second timeout
       });
