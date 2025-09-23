@@ -121,6 +121,44 @@ export const sentMessages = pgTable("sent_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Copy Trading Users table
+export const copyTradingUsers = pgTable("copy_trading_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // Display name for the user
+  telegramId: varchar("telegram_id").notNull().unique(), // Telegram user ID
+  telegramUsername: varchar("telegram_username"), // @username for easy identification
+  exchange: varchar("exchange").notNull().default('coindcx'), // 'coindcx', 'binance', 'delta' (future)
+  apiKey: text("api_key").notNull(), // Encrypted API key
+  apiSecret: text("api_secret").notNull(), // Encrypted API secret
+  riskPerTrade: decimal("risk_per_trade", { precision: 5, scale: 2 }).notNull().default('2.00'), // Risk % per trade (e.g., 2.00%)
+  maxDailyLoss: decimal("max_daily_loss", { precision: 5, scale: 2 }), // Max daily loss % (optional)
+  isActive: boolean("is_active").default(true), // Enable/disable copy trading
+  notes: text("notes"), // Optional notes about the user
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Copy Trades table - tracks trades executed for copy trading users
+export const copyTrades = pgTable("copy_trades", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  originalTradeId: varchar("original_trade_id").notNull().references(() => trades.id), // Reference to original trade
+  copyUserId: varchar("copy_user_id").notNull().references(() => copyTradingUsers.id), // Which copy user
+  executedTradeId: varchar("executed_trade_id"), // Exchange trade ID after execution
+  pair: varchar("pair").notNull(), // Trading pair (same as original)
+  type: varchar("type").notNull(), // 'buy' or 'sell'
+  originalPrice: decimal("original_price", { precision: 20, scale: 8 }).notNull(), // Original trade price
+  executedPrice: decimal("executed_price", { precision: 20, scale: 8 }), // Actual executed price
+  originalQuantity: decimal("original_quantity", { precision: 20, scale: 8 }).notNull(), // Original quantity
+  executedQuantity: decimal("executed_quantity", { precision: 20, scale: 8 }), // Actual executed quantity (adjusted for risk)
+  leverage: integer("leverage").notNull(), // Leverage used
+  status: varchar("status").notNull().default('pending'), // 'pending', 'executed', 'failed', 'cancelled'
+  executionTime: timestamp("execution_time"), // When trade was executed
+  errorMessage: text("error_message"), // Error details if failed
+  pnl: decimal("pnl", { precision: 20, scale: 8 }), // P&L if trade is closed
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations (no circular references)
 
 // Relations
@@ -168,6 +206,22 @@ export const sentMessageRelations = relations(sentMessages, ({ one }) => ({
   trade: one(trades, {
     fields: [sentMessages.tradeId],
     references: [trades.id],
+  }),
+}));
+
+// Copy Trading Relations
+export const copyTradingUserRelations = relations(copyTradingUsers, ({ many }) => ({
+  copyTrades: many(copyTrades),
+}));
+
+export const copyTradeRelations = relations(copyTrades, ({ one }) => ({
+  originalTrade: one(trades, {
+    fields: [copyTrades.originalTradeId],
+    references: [trades.id],
+  }),
+  copyUser: one(copyTradingUsers, {
+    fields: [copyTrades.copyUserId],
+    references: [copyTradingUsers.id],
   }),
 }));
 
@@ -411,6 +465,23 @@ export const finalizeImageUploadSchema = z.object({
     }, "Invalid image URL - must be from authorized storage provider and in valid upload directory"),
 });
 
+// Copy Trading Schemas
+export const insertCopyTradingUserSchema = createInsertSchema(copyTradingUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  riskPerTrade: z.coerce.number().min(0.1, "Risk per trade must be at least 0.1%").max(10, "Risk per trade cannot exceed 10%"),
+  maxDailyLoss: z.coerce.number().min(1, "Max daily loss must be at least 1%").max(50, "Max daily loss cannot exceed 50%").optional(),
+});
+
+export const insertCopyTradeSchema = createInsertSchema(copyTrades).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  executionTime: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
@@ -430,3 +501,7 @@ export type SentMessage = typeof sentMessages.$inferSelect;
 export type InsertSentMessage = z.infer<typeof insertSentMessageSchema>;
 export type UploadUrlRequest = z.infer<typeof uploadUrlRequestSchema>;
 export type FinalizeImageUpload = z.infer<typeof finalizeImageUploadSchema>;
+export type CopyTradingUser = typeof copyTradingUsers.$inferSelect;
+export type InsertCopyTradingUser = z.infer<typeof insertCopyTradingUserSchema>;
+export type CopyTrade = typeof copyTrades.$inferSelect;
+export type InsertCopyTrade = z.infer<typeof insertCopyTradeSchema>;
