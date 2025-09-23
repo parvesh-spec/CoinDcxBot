@@ -90,7 +90,15 @@ export default function CopyTradingUsersPage() {
   const saveUserMutation = useMutation({
     mutationFn: async (userData: any) => {
       if (editingUser) {
-        return apiRequest("PATCH", `/api/copy-trading/users/${editingUser.id}`, userData);
+        // Filter out empty credentials for PATCH requests to preserve existing credentials
+        const cleanData = { ...userData };
+        if (cleanData.apiKey === "" || cleanData.apiKey === undefined) {
+          delete cleanData.apiKey;
+        }
+        if (cleanData.apiSecret === "" || cleanData.apiSecret === undefined) {
+          delete cleanData.apiSecret;
+        }
+        return apiRequest("PATCH", `/api/copy-trading/users/${editingUser.id}`, cleanData);
       } else {
         return apiRequest("POST", "/api/copy-trading/users", userData);
       }
@@ -217,7 +225,7 @@ export default function CopyTradingUsersPage() {
       apiSecret: "", // Don't populate for security
       riskPerTrade: parseFloat(user.riskPerTrade),
       tradeFund: parseFloat(user.tradeFund),
-      maxTradesPerDay: user.maxTradesPerDay ? parseFloat(user.maxTradesPerDay.toString()) : undefined,
+      maxTradesPerDay: user.maxTradesPerDay ? parseInt(user.maxTradesPerDay.toString()) : undefined,
       isActive: !!user.isActive,
       notes: user.notes || "",
     });
