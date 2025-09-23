@@ -64,6 +64,7 @@ export interface IStorage {
   completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined>;
   reopenTrade(id: string): Promise<Trade | undefined>;
   manualExitTrade(id: string, notes: string): Promise<Trade | undefined>;
+  addTradeNote(id: string, note: string): Promise<Trade | undefined>;
   // New V2 target status method supporting all 5 target types with business logic
   updateTradeTargetStatusV2(id: string, targetUpdate: UpdateTargetStatus): Promise<{trade: Trade | undefined, autoCompleted: boolean}>;
   updateTradeSafebook(id: string, safebook: UpdateSafebook): Promise<Trade | undefined>;
@@ -457,6 +458,44 @@ export class DatabaseStorage implements IStorage {
       return updatedTrade;
     } catch (error) {
       console.error(`💥 Database error manually exiting trade ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async addTradeNote(id: string, note: string): Promise<Trade | undefined> {
+    console.log(`📝 Adding note to trade: ${id}`);
+    
+    try {
+      // Get existing trade first to append to existing notes
+      const existingTrade = await this.getTrade(id);
+      if (!existingTrade) {
+        console.log(`❌ Trade not found: ${id}`);
+        return undefined;
+      }
+      
+      // Append new note to existing notes with timestamp
+      const timestamp = new Date().toISOString();
+      const newNote = `[${timestamp}] ${note}`;
+      const updatedNotes = existingTrade.notes 
+        ? `${existingTrade.notes}\n${newNote}`
+        : newNote;
+      
+      const [updatedTrade] = await db
+        .update(trades)
+        .set({ 
+          notes: updatedNotes,
+          updatedAt: new Date() 
+        })
+        .where(eq(trades.id, id))
+        .returning();
+      
+      if (updatedTrade) {
+        console.log(`✅ Note added to trade: ${updatedTrade.id}`);
+      }
+      
+      return updatedTrade;
+    } catch (error) {
+      console.error(`💥 Database error adding note to trade ${id}:`, error);
       throw error;
     }
   }

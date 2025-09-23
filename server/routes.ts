@@ -185,23 +185,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`✅ API: Trade exited successfully on exchange: ${trade.tradeId}`);
       
-      // Update trade status to completed with manual exit reason
-      const completedTrade = await storage.manualExitTrade(trade.id, 
-        `Trade exited manually on exchange at market price. ${exitResult.message}`
+      // Exit trade only on exchange - keep database trade status unchanged (active)
+      // Add a note about the exchange exit for record keeping
+      const updatedTrade = await storage.addTradeNote(trade.id, 
+        `🚪 Position exited on exchange at market price: ${exitResult.message}`
       );
       
-      if (!completedTrade) {
-        console.error(`❌ API: Trade exited on exchange but failed to update database status`);
-        return res.status(500).json({ 
-          message: "Failed to update trade status after successful exchange exit"
-        });
-      }
-      
-      console.log(`🏁 API: Trade exit completed - Exchange exited + Database updated`);
+      console.log(`🏁 API: Trade exit completed - Exchange exited, Database remains active`);
       res.json({
         success: true,
-        message: "Trade successfully exited on exchange",
-        trade: completedTrade,
+        message: "Trade position successfully exited on exchange - trade remains active for tracking",
+        trade: updatedTrade || trade,
         exchange: exitResult.data
       });
       
