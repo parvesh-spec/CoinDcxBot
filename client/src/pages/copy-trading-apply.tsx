@@ -25,6 +25,14 @@ export default function CopyTradingApplyPage() {
   const [applicationSubmitted, setApplicationSubmitted] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showRiskWarning, setShowRiskWarning] = useState(false);
+  
+  // OTP verification states
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
 
   const form = useForm<z.infer<typeof insertCopyTradingApplicationSchema>>({
     resolver: zodResolver(insertCopyTradingApplicationSchema),
@@ -103,6 +111,122 @@ export default function CopyTradingApplyPage() {
     },
   });
 
+  // Send OTP mutation
+  const sendOtpMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const response = await apiRequest("POST", "/api/public/otp/send", {
+        email,
+        purpose: "application_submission"
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        setOtpSent(true);
+        setOtpTimer(120); // 2 minutes countdown
+        toast({
+          title: "📧 OTP Sent!",
+          description: "Please check your email for the 6-digit verification code.",
+        });
+        
+        // Start countdown timer
+        const interval = setInterval(() => {
+          setOtpTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(interval);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        toast({
+          title: "❌ Failed to Send OTP",
+          description: data.message || "Unable to send OTP to your email",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "❌ OTP Error",
+        description: error.message || "Failed to send OTP",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsSendingOtp(false);
+    },
+  });
+
+  // Verify OTP mutation
+  const verifyOtpMutation = useMutation({
+    mutationFn: async (data: { email: string; otp: string }) => {
+      const response = await apiRequest("POST", "/api/public/otp/verify", {
+        email: data.email,
+        otp: data.otp,
+        purpose: "application_submission"
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success && data.verified) {
+        setEmailVerified(true);
+        setOtpTimer(0);
+        toast({
+          title: "✅ Email Verified!",
+          description: "Your email has been successfully verified.",
+        });
+      } else {
+        toast({
+          title: "❌ Invalid OTP",
+          description: data.message || "The OTP code is incorrect or expired",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "❌ Verification Failed",
+        description: error.message || "Failed to verify OTP",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setIsVerifyingOtp(false);
+    },
+  });
+
+  const handleSendOtp = () => {
+    const email = form.getValues("email");
+    if (!email) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsSendingOtp(true);
+    sendOtpMutation.mutate(email);
+  };
+
+  const handleVerifyOtp = () => {
+    const email = form.getValues("email");
+    if (!email || !otpCode) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both email and OTP code",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsVerifyingOtp(true);
+    verifyOtpMutation.mutate({ email, otp: otpCode });
+  };
+
   const handleVerifyCredentials = () => {
     const apiKey = form.getValues("apiKey");
     const apiSecret = form.getValues("apiSecret");
@@ -121,6 +245,15 @@ export default function CopyTradingApplyPage() {
   };
 
   const onSubmit = (values: z.infer<typeof insertCopyTradingApplicationSchema>) => {
+    if (!emailVerified) {
+      toast({
+        title: "Email Verification Required",
+        description: "Please verify your email address before submitting",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!credentialsVerified) {
       toast({
         title: "Verification Required",
@@ -331,6 +464,133 @@ export default function CopyTradingApplyPage() {
                         )}
                       />
                     </div>
+
+                    {/* Email Verification Section */}
+                    {!emailVerified && (
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                                📧 Email Verification Required
+                              </h4>
+                              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                                We'll send a 6-digit code to verify your email address
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              {!otpSent ? (
+                                <Button
+                                  type="button"
+                                  onClick={handleSendOtp}
+                                  disabled={isSendingOtp || !form.getValues("email")}
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+                                  data-testid="button-send-otp"
+                                >
+                                  {isSendingOtp ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Sending...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <i className="fas fa-paper-plane mr-2" />
+                                      Send OTP
+                                    </>
+                                  )}
+                                </Button>
+                              ) : (
+                                <div className="text-center">
+                                  <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                                    {Math.floor(otpTimer / 60)}:{(otpTimer % 60).toString().padStart(2, '0')}
+                                  </div>
+                                  <div className="text-xs text-blue-500 dark:text-blue-400">
+                                    Resend available in
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {otpSent && (
+                            <div className="space-y-3">
+                              <div>
+                                <Label htmlFor="otp-code" className="text-sm font-medium">
+                                  Enter 6-digit Code
+                                </Label>
+                                <div className="flex gap-2 mt-2">
+                                  <Input
+                                    id="otp-code"
+                                    type="text"
+                                    placeholder="123456"
+                                    value={otpCode}
+                                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    maxLength={6}
+                                    className="text-center text-lg font-mono tracking-widest"
+                                    data-testid="input-otp-code"
+                                  />
+                                  <Button
+                                    type="button"
+                                    onClick={handleVerifyOtp}
+                                    disabled={isVerifyingOtp || otpCode.length !== 6}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    data-testid="button-verify-otp"
+                                  >
+                                    {isVerifyingOtp ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Verifying...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Verify
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                  Check your email (including spam folder)
+                                </p>
+                                {otpTimer === 0 && (
+                                  <Button
+                                    type="button"
+                                    onClick={handleSendOtp}
+                                    disabled={isSendingOtp}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-blue-600 hover:text-blue-700"
+                                    data-testid="button-resend-otp"
+                                  >
+                                    Resend OTP
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Email Verified Success */}
+                    {emailVerified && (
+                      <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center">
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
+                        <div>
+                          <p className="text-sm font-semibold text-green-800 dark:text-green-200">
+                            ✅ Email Verified Successfully
+                          </p>
+                          <p className="text-xs text-green-700 dark:text-green-300">
+                            Your email address has been verified
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Exchange Information */}
@@ -542,7 +802,7 @@ export default function CopyTradingApplyPage() {
                       <Checkbox
                         id="terms"
                         checked={acceptedTerms}
-                        onCheckedChange={setAcceptedTerms}
+                        onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
                         className="mt-1"
                         data-testid="checkbox-terms"
                       />
@@ -563,7 +823,7 @@ export default function CopyTradingApplyPage() {
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    disabled={isSubmitting || !credentialsVerified || !acceptedTerms}
+                    disabled={isSubmitting || !emailVerified || !credentialsVerified || !acceptedTerms}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-lg shadow-md transition-all duration-200"
                     data-testid="button-submit-application"
                   >
