@@ -32,13 +32,14 @@ export default function CopyTradingUsersPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      email: "",
       telegramId: "",
       telegramUsername: "",
       exchange: "coindcx",
       apiKey: "",
       apiSecret: "",
       riskPerTrade: 2.0,
-      maxDailyLoss: undefined,
+      maxTradesPerDay: undefined,
       isActive: true,
       notes: "",
     },
@@ -129,13 +130,14 @@ export default function CopyTradingUsersPage() {
     setEditingUser(user);
     form.reset({
       name: user.name,
-      telegramId: user.telegramId,
+      email: user.email,
+      telegramId: user.telegramId || "",
       telegramUsername: user.telegramUsername || "",
       exchange: user.exchange,
       apiKey: "", // Don't populate for security
       apiSecret: "", // Don't populate for security
       riskPerTrade: parseFloat(user.riskPerTrade),
-      maxDailyLoss: user.maxDailyLoss ? parseFloat(user.maxDailyLoss) : undefined,
+      maxTradesPerDay: user.maxTradesPerDay ? parseFloat(user.maxTradesPerDay.toString()) : undefined,
       isActive: !!user.isActive,
       notes: user.notes || "",
     });
@@ -228,10 +230,10 @@ export default function CopyTradingUsersPage() {
                     <span className="text-sm text-muted-foreground">Risk per Trade:</span>
                     <span className="font-medium">{user.riskPerTrade}%</span>
                   </div>
-                  {user.maxDailyLoss && (
+                  {user.maxTradesPerDay && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Max Daily Loss:</span>
-                      <span className="font-medium">{user.maxDailyLoss}%</span>
+                      <span className="text-sm text-muted-foreground">Max Trades/Day:</span>
+                      <span className="font-medium">{user.maxTradesPerDay}</span>
                     </div>
                   )}
                   {user.notes && (
@@ -299,10 +301,24 @@ export default function CopyTradingUsersPage() {
 
               <FormField
                 control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Address</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="john@example.com" {...field} data-testid="input-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="telegramId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telegram ID</FormLabel>
+                    <FormLabel>Telegram ID (Optional)</FormLabel>
                     <FormControl>
                       <Input placeholder="123456789" {...field} data-testid="input-telegram-id" />
                     </FormControl>
@@ -413,19 +429,20 @@ export default function CopyTradingUsersPage() {
 
                 <FormField
                   control={form.control}
-                  name="maxDailyLoss"
+                  name="maxTradesPerDay"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Daily Loss (%) - Optional</FormLabel>
+                      <FormLabel>Max Trades/Day - Optional</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          step="0.1"
+                          step="1"
                           min="1"
-                          max="50"
+                          max="20"
                           {...field}
-                          onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                          data-testid="input-max-daily-loss"
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          data-testid="input-max-trades-per-day"
                         />
                       </FormControl>
                       <FormMessage />

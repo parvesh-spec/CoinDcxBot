@@ -125,13 +125,14 @@ export const sentMessages = pgTable("sent_messages", {
 export const copyTradingUsers = pgTable("copy_trading_users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull(), // Display name for the user
-  telegramId: varchar("telegram_id").notNull().unique(), // Telegram user ID
+  email: varchar("email").notNull().unique(), // Email address (mandatory)
+  telegramId: varchar("telegram_id"), // Telegram user ID (optional)
   telegramUsername: varchar("telegram_username"), // @username for easy identification
   exchange: varchar("exchange").notNull().default('coindcx'), // 'coindcx', 'binance', 'delta' (future)
   apiKey: text("api_key").notNull(), // Encrypted API key
   apiSecret: text("api_secret").notNull(), // Encrypted API secret
   riskPerTrade: decimal("risk_per_trade", { precision: 5, scale: 2 }).notNull().default('2.00'), // Risk % per trade (e.g., 2.00%)
-  maxDailyLoss: decimal("max_daily_loss", { precision: 5, scale: 2 }), // Max daily loss % (optional)
+  maxTradesPerDay: integer("max_trades_per_day"), // Max trades per day (optional, e.g., 2 means only first 2 trades copied)
   isActive: boolean("is_active").default(true), // Enable/disable copy trading
   notes: text("notes"), // Optional notes about the user
   createdAt: timestamp("created_at").defaultNow(),
@@ -471,8 +472,10 @@ export const insertCopyTradingUserSchema = createInsertSchema(copyTradingUsers).
   createdAt: true,
   updatedAt: true,
 }).extend({
+  email: z.string().email("Please enter a valid email address"),
+  telegramId: z.string().optional(),
   riskPerTrade: z.coerce.number().min(0.1, "Risk per trade must be at least 0.1%").max(10, "Risk per trade cannot exceed 10%"),
-  maxDailyLoss: z.coerce.number().min(1, "Max daily loss must be at least 1%").max(50, "Max daily loss cannot exceed 50%").optional(),
+  maxTradesPerDay: z.coerce.number().min(1, "Max trades per day must be at least 1").max(20, "Max trades per day cannot exceed 20").optional(),
 });
 
 export const insertCopyTradeSchema = createInsertSchema(copyTrades).omit({
