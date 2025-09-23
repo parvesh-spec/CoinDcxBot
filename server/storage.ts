@@ -63,6 +63,7 @@ export interface IStorage {
   deleteTrade(id: string): Promise<boolean>;
   completeTrade(id: string, completion: CompleteTrade): Promise<Trade | undefined>;
   reopenTrade(id: string): Promise<Trade | undefined>;
+  manualExitTrade(id: string, notes: string): Promise<Trade | undefined>;
   // New V2 target status method supporting all 5 target types with business logic
   updateTradeTargetStatusV2(id: string, targetUpdate: UpdateTargetStatus): Promise<{trade: Trade | undefined, autoCompleted: boolean}>;
   updateTradeSafebook(id: string, safebook: UpdateSafebook): Promise<Trade | undefined>;
@@ -430,6 +431,32 @@ export class DatabaseStorage implements IStorage {
       return updatedTrade;
     } catch (error) {
       console.error(`💥 Database error completing trade ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async manualExitTrade(id: string, notes: string): Promise<Trade | undefined> {
+    console.log(`🚪 Manually exiting trade: ${id} with notes: ${notes}`);
+    
+    try {
+      const [updatedTrade] = await db
+        .update(trades)
+        .set({ 
+          status: 'completed',
+          completionReason: 'manual_exit', // Specific reason for manual exits
+          notes: notes,
+          updatedAt: new Date() 
+        })
+        .where(eq(trades.id, id))
+        .returning();
+      
+      if (updatedTrade) {
+        console.log(`✅ Trade manually exited: ${updatedTrade.id}, reason: manual_exit`);
+      }
+      
+      return updatedTrade;
+    } catch (error) {
+      console.error(`💥 Database error manually exiting trade ${id}:`, error);
       throw error;
     }
   }

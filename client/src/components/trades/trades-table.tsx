@@ -396,6 +396,36 @@ export default function TradesTable({
     },
   });
 
+  // Mutation for exiting active trades on exchange
+  const exitTradeMutation = useMutation({
+    mutationFn: async (tradeId: string) => {
+      return apiRequest('PATCH', `/api/trades/${tradeId}/exit`, {});
+    },
+    onSuccess: (data: any) => {
+      // Check if the response indicates actual success
+      if (data && data.success === true) {
+        // Only invalidate cache and show success toast for true success
+        queryClient.invalidateQueries({ queryKey: ['trades'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/trades/stats'] });
+        toast({ title: "Trade exited successfully on exchange at market price!" });
+      } else {
+        // Handle partial failure or unexpected response format
+        toast({ 
+          title: "Exit may have failed", 
+          description: data?.message || "Unexpected response from server", 
+          variant: "destructive" 
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to exit trade", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
   // Handler functions
   const handleTargetHit = (tradeId: string, targetType: 'target_1' | 'target_2' | 'target_3') => {
     updateTargetStatusMutation.mutate({ tradeId, targetType });
@@ -434,6 +464,11 @@ export default function TradesTable({
   const handleReopenTrade = (tradeId: string) => {
     console.log('🔄 REOPEN: Starting reopen for completed trade:', tradeId);
     reopenTradeMutation.mutate(tradeId);
+  };
+
+  const handleExitTrade = (tradeId: string) => {
+    console.log('🚪 EXIT: Starting exit for active trade:', tradeId);
+    exitTradeMutation.mutate(tradeId);
   };
 
   // Function to render target status content
@@ -731,6 +766,18 @@ export default function TradesTable({
                       >
                         Edit
                       </Button>
+                      {trade.status === 'active' && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleExitTrade(trade.id)}
+                          className="text-xs h-7 px-2 bg-orange-600 hover:bg-orange-700"
+                          disabled={exitTradeMutation.isPending}
+                          data-testid={`button-exit-${trade.id}`}
+                        >
+                          🚪 Exit
+                        </Button>
+                      )}
                       {trade.status === 'completed' && (
                         <Button
                           size="sm"

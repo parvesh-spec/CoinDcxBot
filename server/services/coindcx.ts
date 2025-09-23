@@ -98,9 +98,9 @@ export class CoinDCXService {
         responseData: error.response?.data
       });
       
-      // Show detailed error for debugging
-      console.log('API Credentials being used:');
-      console.log('- API Key:', this.config.apiKey);
+      // Show debugging info without exposing secrets
+      console.log('API Connection Details:');
+      console.log('- API Key Status:', this.config.apiKey ? 'Present' : 'Missing');
       console.log('- Endpoint:', `${this.config.baseUrl}/exchange/v1/derivatives/futures/positions`);
       
       // Don't throw error, just return empty array for now
@@ -147,6 +147,92 @@ export class CoinDCXService {
         endpoint: '/exchange/v1/users/balances'
       });
       return false;
+    }
+  }
+
+  async exitTrade(tradeId: string, pair: string, tradeType: 'spot' | 'margin' | 'futures' = 'futures'): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      console.log(`🚪 EXIT TRADE: Starting exit for ${pair} (${tradeType}) - Trade ID: ${tradeId}`);
+      
+      let endpoint: string;
+      let requestBody: any;
+      const timestamp = Date.now();
+      
+      // Determine the correct endpoint and parameters based on trade type
+      switch (tradeType) {
+        case 'futures':
+          endpoint = '/exchange/v1/derivatives/futures/exit';
+          requestBody = {
+            timestamp,
+            pair: pair,
+            order_type: 'market_order'
+          };
+          break;
+        
+        case 'margin':
+          endpoint = '/exchange/v1/margin/exit';
+          requestBody = {
+            timestamp,
+            market: pair,
+            order_type: 'market_order'
+          };
+          break;
+        
+        case 'spot':
+          // For spot trades, we can't exit automatically without knowing current holdings
+          // This is a limitation - spot trades require manual intervention
+          throw new Error('Spot trade exit not supported - requires manual order placement with specific quantity and side');
+          break;
+        
+        default:
+          throw new Error(`Unsupported trade type: ${tradeType}`);
+      }
+      
+      const body = JSON.stringify(requestBody);
+      const headers = this.getHeaders(body);
+      
+      console.log(`📤 EXIT TRADE: Sending ${tradeType} exit request to ${endpoint}`);
+      console.log(`📋 EXIT TRADE: Request body:`, requestBody);
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers
+      });
+      
+      console.log(`✅ EXIT TRADE: Successfully exited ${pair} at market price`);
+      console.log(`📊 EXIT TRADE: Response:`, response.data);
+      
+      return {
+        success: true,
+        message: `Trade ${pair} successfully exited at market price`,
+        data: response.data
+      };
+      
+    } catch (error: any) {
+      console.error(`❌ EXIT TRADE: Failed to exit ${pair}:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        responseData: error.response?.data,
+        endpoint: error.config?.url
+      });
+      
+      let errorMessage = 'Failed to exit trade on exchange';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed - check API credentials';
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Invalid request - trade may not exist or already closed';
+      } else if (error.response?.status === 429) {
+        errorMessage = 'Rate limit exceeded - please try again later';
+      }
+      
+      return {
+        success: false,
+        message: errorMessage,
+        data: error.response?.data
+      };
     }
   }
 

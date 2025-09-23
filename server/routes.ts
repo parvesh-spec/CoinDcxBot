@@ -144,6 +144,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint to exit trade on exchange immediately at market price
+  app.patch('/api/trades/:id/exit', isAuthenticated, async (req, res) => {
+    try {
+      const trade = await storage.getTrade(req.params.id);
+      if (!trade) {
+        return res.status(404).json({ message: "Trade not found" });
+      }
+
+      if (trade.status !== 'active') {
+        return res.status(400).json({ message: "Only active trades can be exited on exchange" });
+      }
+
+      console.log(`🚪 API: Starting exit for active trade ${trade.tradeId} (${req.params.id}) on CoinDCX exchange`);
+      
+      // Determine trade type based on pair format and trade characteristics
+      // Futures typically have high leverage (>3x), specific naming patterns
+      let tradeType: 'spot' | 'margin' | 'futures' = 'futures'; // Default assumption
+      
+      if (trade.leverage === 1) {
+        tradeType = 'spot';
+      } else if (trade.leverage > 1 && trade.leverage <= 5) {
+        tradeType = 'margin';
+      } else {
+        tradeType = 'futures';
+      }
+      
+      console.log(`🎯 API: Detected trade type: ${tradeType} (leverage: ${trade.leverage}x)`);
+      
+      // Call CoinDCX service to exit position on exchange
+      const exitResult = await coindcxService.exitTrade(trade.tradeId, trade.pair, tradeType);
+      
+      if (!exitResult.success) {
+        console.error(`❌ API: Failed to exit trade on exchange: ${exitResult.message}`);
+        return res.status(400).json({ 
+          message: `Failed to exit trade on exchange: ${exitResult.message}`,
+          exchangeError: exitResult.data
+        });
+      }
+      
+      console.log(`✅ API: Trade exited successfully on exchange: ${trade.tradeId}`);
+      
+      // Update trade status to completed with manual exit reason
+      const completedTrade = await storage.manualExitTrade(trade.id, 
+        `Trade exited manually on exchange at market price. ${exitResult.message}`
+      );
+      
+      if (!completedTrade) {
+        console.error(`❌ API: Trade exited on exchange but failed to update database status`);
+        return res.status(500).json({ 
+          message: "Failed to update trade status after successful exchange exit"
+        });
+      }
+      
+      console.log(`🏁 API: Trade exit completed - Exchange exited + Database updated`);
+      res.json({
+        success: true,
+        message: "Trade successfully exited on exchange",
+        trade: completedTrade,
+        exchangeData: exitResult.data
+      });
+      
+    } catch (error) {
+      console.error("Error exiting trade:", error);
+      res.status(500).json({ message: "Failed to exit trade" });
+    }
+  });
+
   // Endpoint to update target status (for all 5 target types) - V2 with 5-field support
   app.patch('/api/trades/:id/target-status', isAuthenticated, async (req, res) => {
     try {

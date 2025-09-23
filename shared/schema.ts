@@ -223,7 +223,7 @@ export const insertTradeSchema = createInsertSchema(trades).omit({
   updatedAt: true,
 }).extend({
   status: z.enum(['active', 'completed']).optional(),
-  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book']).optional(),
+  completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book', 'manual_exit']).optional(),
 });
 
 export const completeTradeSchema = z.object({
