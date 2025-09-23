@@ -189,10 +189,19 @@ export class TelegramService {
         return false;
       }
 
-      const response = await axios.get(`${this.baseUrl}/getMe`);
+      const response = await axios.get(`${this.baseUrl}/getMe`, {
+        timeout: 5000, // 5 second timeout
+      });
       return response.data.ok;
-    } catch (error) {
-      console.error('Telegram bot token validation failed:', error);
+    } catch (error: any) {
+      // Only log actual errors, not network timeouts/resets
+      if (error.code === 'ECONNRESET' || error.code === 'ECONNABORTED' || error.code === 'ENOTFOUND') {
+        console.log('📡 Telegram API temporarily unavailable (network issue)');
+      } else if (error.response?.status === 401) {
+        console.log('🔑 Telegram bot token invalid');
+      } else {
+        console.error('Telegram bot token validation failed:', error.message);
+      }
       return false;
     }
   }
