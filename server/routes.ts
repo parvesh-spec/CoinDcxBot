@@ -1360,9 +1360,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const emailSent = await sendApplicationConfirmationEmail(
           applicationData.email,
           {
-            name: applicationData.name,
-            applicationId: newApplication.id,
-            exchange: applicationData.exchange,
+            name: applicationData.name || 'Unknown',
+            applicationId: newApplication.id!,
+            exchange: applicationData.exchange || 'Unknown',
             submittedAt: new Date()
           }
         );
