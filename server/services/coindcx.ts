@@ -355,6 +355,135 @@ export class CoinDCXService {
     }
   }
 
+  // Mathematical helper functions for copy trading calculations
+  
+  /**
+   * Calculate leverage based on risk percentage and price difference
+   * Formula: leverage = (risk% / 100) * entry_price / (entry_price - stop_loss)
+   */
+  calculateLeverage(riskPercentage: number, entryPrice: number, stopLossPrice: number): number {
+    try {
+      // Validate inputs
+      if (riskPercentage <= 0 || riskPercentage > 100) {
+        throw new Error(`Invalid risk percentage: ${riskPercentage}. Must be between 0 and 100.`);
+      }
+      
+      if (entryPrice <= 0) {
+        throw new Error(`Invalid entry price: ${entryPrice}. Must be greater than 0.`);
+      }
+      
+      if (stopLossPrice <= 0) {
+        throw new Error(`Invalid stop loss price: ${stopLossPrice}. Must be greater than 0.`);
+      }
+      
+      const priceDifference = Math.abs(entryPrice - stopLossPrice);
+      
+      if (priceDifference === 0) {
+        throw new Error('Entry price and stop loss cannot be the same');
+      }
+      
+      // Calculate leverage using the provided formula
+      const leverage = (riskPercentage / 100) * (entryPrice / priceDifference);
+      
+      // Clamp leverage to safe ranges (1x to 50x max)
+      const clampedLeverage = Math.max(1, Math.min(50, leverage));
+      
+      // Round to 2 decimal places for precision
+      const finalLeverage = Math.round(clampedLeverage * 100) / 100;
+      
+      console.log(`📊 Leverage calculation: ${riskPercentage}% risk, entry: ${entryPrice}, SL: ${stopLossPrice} → ${finalLeverage}x`);
+      
+      return finalLeverage;
+    } catch (error) {
+      console.error('❌ Leverage calculation failed:', error);
+      // Return safe default leverage if calculation fails
+      return 1;
+    }
+  }
+  
+  /**
+   * Calculate quantity based on wallet balance, leverage, and entry price
+   * Formula: quantity = (wallet_balance × leverage) ÷ entry_price
+   * Apply 2% safety margin (use 98% of calculated quantity)
+   */
+  calculateQuantity(walletBalance: number, leverage: number, entryPrice: number): number {
+    try {
+      // Validate inputs
+      if (walletBalance <= 0) {
+        throw new Error(`Invalid wallet balance: ${walletBalance}. Must be greater than 0.`);
+      }
+      
+      if (leverage <= 0) {
+        throw new Error(`Invalid leverage: ${leverage}. Must be greater than 0.`);
+      }
+      
+      if (entryPrice <= 0) {
+        throw new Error(`Invalid entry price: ${entryPrice}. Must be greater than 0.`);
+      }
+      
+      // Calculate base quantity using the provided formula
+      const baseQuantity = (walletBalance * leverage) / entryPrice;
+      
+      // Apply 2% safety margin (use 98% of calculated quantity)
+      const safeQuantity = baseQuantity * 0.98;
+      
+      // Round to appropriate decimal places (6 decimal places for crypto)
+      const finalQuantity = Math.round(safeQuantity * 1000000) / 1000000;
+      
+      console.log(`💰 Quantity calculation: balance: ${walletBalance}, leverage: ${leverage}x, price: ${entryPrice} → ${finalQuantity} (with 2% safety margin)`);
+      
+      return finalQuantity;
+    } catch (error) {
+      console.error('❌ Quantity calculation failed:', error);
+      // Return 0 if calculation fails to prevent invalid orders
+      return 0;
+    }
+  }
+  
+  /**
+   * Validate minimum order requirements
+   */
+  validateOrderParameters(pair: string, quantity: number, price: number): { valid: boolean; message: string } {
+    try {
+      // Basic validation
+      if (quantity <= 0) {
+        return { valid: false, message: 'Quantity must be greater than 0' };
+      }
+      
+      if (price <= 0) {
+        return { valid: false, message: 'Price must be greater than 0' };
+      }
+      
+      // Calculate notional value (quantity * price)
+      const notionalValue = quantity * price;
+      
+      // Minimum notional value for most pairs is around 5 USDT
+      const minNotional = 5;
+      
+      if (notionalValue < minNotional) {
+        return { 
+          valid: false, 
+          message: `Order notional value ${notionalValue.toFixed(2)} USDT is below minimum ${minNotional} USDT` 
+        };
+      }
+      
+      // Check for very small quantities (exchange precision limits)
+      if (quantity < 0.000001) {
+        return { 
+          valid: false, 
+          message: `Quantity ${quantity} is too small (minimum 0.000001)` 
+        };
+      }
+      
+      console.log(`✅ Order validation passed: ${pair} qty:${quantity} notional:${notionalValue.toFixed(2)} USDT`);
+      
+      return { valid: true, message: 'Order parameters validated successfully' };
+    } catch (error) {
+      console.error('❌ Order validation failed:', error);
+      return { valid: false, message: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    }
+  }
+
   // Create futures order with custom credentials for copy trading
   async createFuturesOrder(
     apiKey: string, 
