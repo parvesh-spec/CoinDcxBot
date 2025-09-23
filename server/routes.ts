@@ -1169,7 +1169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/copy-trading/users/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/copy-trading/users/:id', isAuthenticated, async (req, res) => {
     try {
       const userData = insertCopyTradingUserSchema.partial().parse(req.body);
       

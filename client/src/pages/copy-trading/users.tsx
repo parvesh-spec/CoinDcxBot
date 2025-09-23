@@ -82,7 +82,7 @@ export default function CopyTradingUsersPage() {
   const saveUserMutation = useMutation({
     mutationFn: async (userData: z.infer<typeof formSchema>) => {
       if (editingUser) {
-        return apiRequest("PUT", `/api/copy-trading/users/${editingUser.id}`, userData);
+        return apiRequest("PATCH", `/api/copy-trading/users/${editingUser.id}`, userData);
       } else {
         return apiRequest("POST", "/api/copy-trading/users", userData);
       }
