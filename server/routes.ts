@@ -202,11 +202,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: "Trade successfully exited on exchange",
         trade: completedTrade,
-        exchangeData: exitResult.data
+        exchange: exitResult.data
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error exiting trade:", error);
+      
+      // Handle specific error types with appropriate status codes
+      if (error.message && error.message.includes('Spot trade exit not supported')) {
+        return res.status(400).json({ 
+          message: "Spot trade exits not supported - requires manual order placement",
+          errorType: "unsupported_operation"
+        });
+      }
+      
+      // Generic server error for other cases
       res.status(500).json({ message: "Failed to exit trade" });
     }
   });
