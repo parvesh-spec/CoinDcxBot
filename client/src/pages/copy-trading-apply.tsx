@@ -471,7 +471,22 @@ export default function CopyTradingApplyPage() {
                           <FormItem>
                             <FormLabel>Email Address *</FormLabel>
                             <FormControl>
-                              <Input type="email" placeholder="john@example.com" {...field} data-testid="input-email" />
+                              <Input 
+                                type="email" 
+                                placeholder="john@example.com" 
+                                {...field} 
+                                data-testid="input-email"
+                                onChange={(e) => {
+                                  // Reset email verification when email changes
+                                  if (emailVerified && e.target.value !== field.value) {
+                                    setEmailVerified(false);
+                                    setOtpSent(false);
+                                    setOtpCode('');
+                                    setOtpTimer(0);
+                                  }
+                                  field.onChange(e); // Call the original onChange
+                                }}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
