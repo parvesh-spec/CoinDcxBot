@@ -152,26 +152,24 @@ export class CoinDCXService {
 
   async cancelAllOrdersForPosition(positionId: string): Promise<void> {
     try {
-      console.log(`🗑️ CANCEL ORDERS: Cancelling all orders for position ${positionId}`);
+      console.log(`🗑️ CANCEL ORDERS: Fetching active orders for position ${positionId}`);
       
-      const endpoint = '/exchange/v1/derivatives/futures/positions/cancel-all-orders';
-      const timestamp = Date.now();
-      const requestBody = {
-        position_id: positionId,
-        timestamp
-      };
+      // Step 1: Get all active orders for this position
+      const activeOrders = await this.getActiveOrdersForPosition(positionId);
       
-      const body = JSON.stringify(requestBody);
-      const headers = this.getHeaders(body);
+      if (activeOrders.length === 0) {
+        console.log(`✅ CANCEL ORDERS: No active orders found for position ${positionId}`);
+        return;
+      }
       
-      console.log(`📤 CANCEL ORDERS: Sending cancel request for position ${positionId}`);
+      console.log(`📋 CANCEL ORDERS: Found ${activeOrders.length} active orders to cancel`);
       
-      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
-        headers
-      });
+      // Step 2: Cancel each order individually using correct endpoint
+      for (const order of activeOrders) {
+        await this.cancelSingleOrder(order.id);
+      }
       
-      console.log(`✅ CANCEL ORDERS: Successfully cancelled orders for position ${positionId}`);
-      console.log(`📊 CANCEL ORDERS: Response:`, response.data);
+      console.log(`✅ CANCEL ORDERS: All orders cancelled for position ${positionId}`);
       
     } catch (error: any) {
       console.error(`❌ CANCEL ORDERS: Failed to cancel orders for position ${positionId}:`, {
@@ -182,8 +180,72 @@ export class CoinDCXService {
       });
       
       // Don't throw error - continue with exit even if cancellation fails
-      // Some positions might not have active orders
       console.log(`⚠️ CANCEL ORDERS: Continuing with exit despite cancellation issue`);
+    }
+  }
+
+  async getActiveOrdersForPosition(positionId: string): Promise<any[]> {
+    try {
+      console.log(`📋 GET ORDERS: Fetching active orders for position ${positionId}`);
+      
+      const endpoint = '/exchange/v1/derivatives/futures/orders';
+      const timestamp = Date.now();
+      const requestBody = {
+        timestamp
+      };
+      
+      const body = JSON.stringify(requestBody);
+      const headers = this.getHeaders(body);
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers
+      });
+      
+      const allOrders = response.data?.data || [];
+      
+      // Filter orders for this specific position that are still active
+      const positionOrders = allOrders.filter((order: any) => 
+        (order.position_id === positionId || order.id?.includes(positionId)) &&
+        ['open', 'init', 'partial_entry'].includes(order.status)
+      );
+      
+      console.log(`📊 GET ORDERS: Found ${positionOrders.length} active orders for position ${positionId}`);
+      
+      return positionOrders;
+      
+    } catch (error: any) {
+      console.error(`❌ GET ORDERS: Failed to fetch orders:`, error.response?.data || error.message);
+      return []; // Return empty array on error
+    }
+  }
+
+  async cancelSingleOrder(orderId: string): Promise<void> {
+    try {
+      console.log(`🗑️ CANCEL ORDER: Cancelling individual order ${orderId}`);
+      
+      const endpoint = `/exchange/v1/orders/cancel/${orderId}`;
+      const timestamp = Date.now();
+      const requestBody = {
+        order_id: orderId,
+        timestamp
+      };
+      
+      const body = JSON.stringify(requestBody);
+      const headers = this.getHeaders(body);
+      
+      const response = await axios.delete(`${this.config.baseUrl}${endpoint}`, {
+        headers,
+        data: body
+      });
+      
+      console.log(`✅ CANCEL ORDER: Successfully cancelled order ${orderId}`);
+      
+    } catch (error: any) {
+      console.error(`❌ CANCEL ORDER: Failed to cancel order ${orderId}:`, {
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      // Continue with other orders even if one fails
     }
   }
 
