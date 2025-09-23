@@ -13,6 +13,7 @@ export type AutomationTrigger =
 
 export class AutomationService {
   private cronTask?: any; // Store cron task for management
+  private walletBalanceCron?: any; // Store wallet balance cron task
   
   /**
    * Get validated public base URL for image hosting
@@ -703,6 +704,22 @@ export class AutomationService {
       this.cronTask.start();
       
       console.log('🕒 Time-based scheduler initialized and started (Kolkata timezone)');
+
+      // Add a separate 60-second cron job for wallet balance updates
+      this.walletBalanceCron = cron.schedule('* * * * *', async () => {
+        try {
+          await this.updateAllWalletBalances();
+        } catch (error) {
+          console.error('❌ Error in automatic wallet balance update:', error);
+        }
+      }, {
+        timezone: 'Asia/Kolkata'
+      });
+
+      // Start the wallet balance update cron
+      this.walletBalanceCron.start();
+      console.log('💰 60-second wallet balance auto-update initialized and started');
+      
     } catch (error) {
       console.error('❌ Error initializing scheduler:', error);
     }
@@ -861,6 +878,72 @@ export class AutomationService {
         return renderedButton;
       }).filter(Boolean);
     }).filter(row => row.length > 0);
+  }
+
+  /**
+   * Update wallet balances for all copy trading users automatically
+   */
+  async updateAllWalletBalances(): Promise<void> {
+    try {
+      console.log('💰 Starting automatic wallet balance update for all users...');
+      
+      // Get all copy trading users
+      const users = await storage.getCopyTradingUsers();
+      
+      if (users.length === 0) {
+        console.log('ℹ️ No copy trading users found for wallet balance update');
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Process each user's wallet balance
+      await Promise.allSettled(
+        users.map(async (user) => {
+          try {
+            // Import coindcx and encryption services
+            const { CoinDCXService } = await import('./coindcx');
+            const { safeDecrypt } = await import('../utils/encryption');
+            
+            // Decrypt API credentials
+            const apiKey = safeDecrypt(user.apiKey);
+            const apiSecret = safeDecrypt(user.apiSecret);
+            
+            if (!apiKey || !apiSecret) {
+              console.warn(`⚠️ Failed to decrypt credentials for user ${user.name}`);
+              errorCount++;
+              return;
+            }
+
+            // Create CoinDCX service instance
+            const coindcxService = new CoinDCXService();
+            const walletResult = await coindcxService.getFuturesWalletBalance(apiKey, apiSecret);
+            
+            if (walletResult.success && walletResult.balance) {
+              // Extract USDT balance
+              const usdtWallet = walletResult.balance.find((wallet: any) => wallet.short_name === 'USDT');
+              const usdtBalance = usdtWallet ? parseFloat(usdtWallet.balance || '0') : 0;
+              
+              // Update wallet balance in database
+              await storage.updateCopyTradingUserWalletBalance(user.id, usdtBalance);
+              console.log(`✅ Updated wallet balance for ${user.name}: ${usdtBalance} USDT`);
+              successCount++;
+            } else {
+              console.warn(`⚠️ Failed to fetch wallet balance for ${user.name}: ${walletResult.message}`);
+              errorCount++;
+            }
+          } catch (error) {
+            console.error(`❌ Error updating wallet balance for user ${user.name}:`, error);
+            errorCount++;
+          }
+        })
+      );
+
+      console.log(`💰 Wallet balance update completed: ${successCount} success, ${errorCount} errors`);
+    } catch (error) {
+      console.error('❌ Error in automatic wallet balance update:', error);
+    }
   }
 }
 
