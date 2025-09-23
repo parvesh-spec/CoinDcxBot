@@ -1,0 +1,120 @@
+## CoinDCX Futures API: Active Position को Market Price पर Exit करना
+
+CoinDCX की futures trading API में active position को market price पर exit करने के लिए निम्नलिखित API call का इस्तेमाल करना होता है:
+
+### API Endpoint
+
+**URL**: `POST https://api.coindcx.com/exchange/v1/derivatives/futures/positions/exit`[1]
+
+### Required Parameters
+
+जब आप किसी active futures position को exit करना चाहते हैं तो इन parameters की जरूरत होती है:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | String | Yes | Position का unique ID |
+| `timestamp` | Integer | Yes | EPOCH timestamp in milliseconds |
+
+### Authentication Headers
+
+| Header Name | Value |
+|-------------|-------|
+| `X-AUTH-APIKEY` | आपकी API key |
+| `X-AUTH-SIGNATURE` | HMAC-SHA256 signature |
+| `Content-Type` | application/json |
+
+### Sample API Call
+
+```javascript
+const crypto = require('crypto');
+const request = require('request');
+
+const key = "YOUR_API_KEY";
+const secret = "YOUR_API_SECRET";
+const timeStamp = Math.floor(Date.now());
+
+const body = {
+    "id": "position_id_here", // आपकी position का ID
+    "timestamp": timeStamp
+};
+
+const payload = JSON.stringify(body);
+const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+
+const options = {
+    url: "https://api.coindcx.com/exchange/v1/derivatives/futures/positions/exit",
+    headers: {
+        'X-AUTH-APIKEY': key,
+        'X-AUTH-SIGNATURE': signature,
+        'Content-Type': 'application/json'
+    },
+    json: true,
+    body: body
+};
+
+request.post(options, function(error, response, body) {
+    console.log(body);
+});
+```
+
+### Python Example
+
+```python
+import hmac
+import hashlib
+import json
+import time
+import requests
+
+key = "YOUR_API_KEY"
+secret = "YOUR_API_SECRET"
+
+timeStamp = int(round(time.time() * 1000))
+
+body = {
+    "id": "position_id_here",  # आपकी position का ID
+    "timestamp": timeStamp
+}
+
+json_body = json.dumps(body, separators=(',', ':'))
+signature = hmac.new(secret.encode(), json_body.encode(), hashlib.sha256).hexdigest()
+
+url = "https://api.coindcx.com/exchange/v1/derivatives/futures/positions/exit"
+headers = {
+    'Content-Type': 'application/json',
+    'X-AUTH-APIKEY': key,
+    'X-AUTH-SIGNATURE': signature
+}
+
+response = requests.post(url, data=json_body, headers=headers)
+print(response.json())
+```
+
+### Important Notes
+
+**Market Order Execution**: यह endpoint position को market price पर exit करता है। CoinDCX के futures में जब आप position exit करते हैं तो यह automatically market order के रूप में execute होता है।[2][3]
+
+**Position ID कैसे पता करें**: 
+- Active positions देखने के लिए positions list API का इस्तेमाल करें
+- या फिर CoinDCX Pro app में positions tab से position ID देख सकते हैं[2]
+
+**Partial Exit**: अगर आप पूरी position exit नहीं करना चाहते तो app में 25%, 50%, 75% या custom percentage का option भी मिलता है, लेकिन API में यह feature directly available नहीं है।[4]
+
+यह API call आपकी active futures position को तुरंत market price पर close कर देगी।
+
+[1](https://docs.coindcx.com)
+[2](https://support.coindcx.com/articles/futures-trading/how-can-i-exit-my-futures-position-partially-or-completely/6381b98ce7e8da75fa7b4036)
+[3](https://support.coindcx.com/articles/futures-trading/how-to-set-a-stop-loss-and-add-target-in-futures/64e5dd03eaeba61b628075ac)
+[4](https://www.youtube.com/watch?v=wcvT8qgetzM)
+[5](https://docs.coinex.com/api/v2/futures/position/http/close-position)
+[6](https://github.com/coindcx-official/rest-api)
+[7](https://www.scribd.com/document/895654894/Docs-coindcx-com-Margin-Order-API-Reference)
+[8](https://support.coindcx.com/articles/subaccount-balance-transfer-api/where-can-i-find-the-api-documentation/66bef31bc6d4ca63b36e01ec)
+[9](https://support.coindcx.com/articles/margin-trading/can-i-partially-close-a-position/6381b9d8e36cb741dd8e67da)
+[10](https://www.youtube.com/watch?v=G5Hi5CZcW2Y)
+[11](https://www.youtube.com/playlist?list=PLJwpWjwWi05RTd98FS2UGE4TImfOfwH-2)
+[12](https://support.coindcx.com/articles/margin-trading/how-can-i-close-exit-a-position/6381b9d3e7e8da75fa7b4041)
+[13](https://support.coindcx.com/categories/futures-trading/67d2d810762bc73a1c6713b0)
+[14](https://support.coindcx.com/articles/inr-margin-futures/what-happens-when-i-place-or-close-a-trade/670641f1b470bc43d8fb407c)
+[15](https://support.coindcx.com/articles/margin-trading/what-other-options-do-i-get-when-my-positions-are-open/6381b9cfe36cb741dd8e67d9)
+[16](https://support.coindcx.com/articles/futures-trading/futures-trading-glossary/6381b97ae7e8da75fa7b4034)
