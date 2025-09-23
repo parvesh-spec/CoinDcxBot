@@ -269,7 +269,7 @@ export default function CopyTradingUsersPage() {
 
       {/* Add/Edit User Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingUser ? "Edit Copy Trading User" : "Add Copy Trading User"}

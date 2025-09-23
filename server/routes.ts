@@ -6,7 +6,7 @@ import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1060,6 +1060,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching sent messages:", error);
       res.status(500).json({ message: "Failed to fetch sent messages" });
+    }
+  });
+
+  // Copy Trading User Management Routes
+  app.get('/api/copy-trading/users', isAuthenticated, async (req, res) => {
+    try {
+      const users = await storage.getCopyTradingUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching copy trading users:", error);
+      res.status(500).json({ message: "Failed to fetch copy trading users" });
+    }
+  });
+
+  app.post('/api/copy-trading/users', isAuthenticated, async (req, res) => {
+    try {
+      // Validate request body
+      const userData = insertCopyTradingUserSchema.parse(req.body);
+      
+      console.log(`🔐 Verifying credentials for new copy trading user: ${userData.name}`);
+      
+      // Verify credentials with CoinDCX before saving
+      const credentialCheck = await coindcxService.validateCustomCredentials(userData.apiKey, userData.apiSecret);
+      
+      if (!credentialCheck.valid) {
+        console.log(`❌ Credential verification failed for user: ${userData.name}`);
+        return res.status(400).json({ 
+          message: "Credential verification failed", 
+          error: credentialCheck.message 
+        });
+      }
+      
+      console.log(`✅ Credentials verified for user: ${userData.name}, creating account...`);
+      
+      // TODO: Encrypt API credentials before saving (future enhancement)
+      const newUser = await storage.createCopyTradingUser(userData);
+      
+      console.log(`✅ Copy trading user created successfully: ${newUser.id}`);
+      res.status(201).json(newUser);
+    } catch (error: any) {
+      console.error("Error creating copy trading user:", error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to create copy trading user" });
+    }
+  });
+
+  app.put('/api/copy-trading/users/:id', isAuthenticated, async (req, res) => {
+    try {
+      const userData = insertCopyTradingUserSchema.partial().parse(req.body);
+      
+      // If API credentials are being updated, verify them
+      if (userData.apiKey && userData.apiSecret) {
+        console.log(`🔐 Verifying updated credentials for copy trading user: ${req.params.id}`);
+        
+        const credentialCheck = await coindcxService.validateCustomCredentials(userData.apiKey, userData.apiSecret);
+        
+        if (!credentialCheck.valid) {
+          console.log(`❌ Updated credential verification failed for user: ${req.params.id}`);
+          return res.status(400).json({ 
+            message: "Credential verification failed", 
+            error: credentialCheck.message 
+          });
+        }
+        
+        console.log(`✅ Updated credentials verified for user: ${req.params.id}`);
+      }
+      
+      const updatedUser = await storage.updateCopyTradingUser(req.params.id, userData);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Copy trading user not found" });
+      }
+      
+      console.log(`✅ Copy trading user updated successfully: ${updatedUser.id}`);
+      res.json(updatedUser);
+    } catch (error: any) {
+      console.error("Error updating copy trading user:", error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to update copy trading user" });
+    }
+  });
+
+  app.patch('/api/copy-trading/users/:id/toggle', isAuthenticated, async (req, res) => {
+    try {
+      const { isActive } = req.body;
+      
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+      
+      const updatedUser = await storage.toggleCopyTradingUser(req.params.id, isActive);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Copy trading user not found" });
+      }
+      
+      console.log(`✅ Copy trading user ${isActive ? 'activated' : 'deactivated'}: ${updatedUser.id}`);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error toggling copy trading user:", error);
+      res.status(500).json({ message: "Failed to toggle copy trading user status" });
+    }
+  });
+
+  app.delete('/api/copy-trading/users/:id', isAuthenticated, async (req, res) => {
+    try {
+      const deleted = await storage.deleteCopyTradingUser(req.params.id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Copy trading user not found" });
+      }
+      
+      console.log(`✅ Copy trading user deleted successfully: ${req.params.id}`);
+      res.json({ message: "Copy trading user deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting copy trading user:", error);
+      res.status(500).json({ message: "Failed to delete copy trading user" });
     }
   });
 

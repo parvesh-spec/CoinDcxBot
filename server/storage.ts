@@ -950,6 +950,146 @@ export class DatabaseStorage implements IStorage {
     const [newMessage] = await db.insert(sentMessages).values(message).returning();
     return newMessage;
   }
+
+  // Copy Trading User operations
+  async getCopyTradingUsers(): Promise<CopyTradingUser[]> {
+    return await db.select().from(copyTradingUsers).orderBy(desc(copyTradingUsers.createdAt));
+  }
+
+  async getCopyTradingUser(id: string): Promise<CopyTradingUser | undefined> {
+    const [user] = await db.select().from(copyTradingUsers).where(eq(copyTradingUsers.id, id));
+    return user;
+  }
+
+  async createCopyTradingUser(userData: InsertCopyTradingUser): Promise<CopyTradingUser> {
+    // Convert number fields to strings for decimal columns
+    const dbData = {
+      ...userData,
+      riskPerTrade: userData.riskPerTrade.toString(),
+      maxDailyLoss: userData.maxDailyLoss?.toString() || null,
+    };
+    const [user] = await db.insert(copyTradingUsers).values(dbData).returning();
+    return user;
+  }
+
+  async updateCopyTradingUser(id: string, userData: Partial<InsertCopyTradingUser>): Promise<CopyTradingUser | undefined> {
+    // Convert number fields to strings for decimal columns
+    const dbData: any = { ...userData, updatedAt: new Date() };
+    if (userData.riskPerTrade !== undefined) {
+      dbData.riskPerTrade = userData.riskPerTrade.toString();
+    }
+    if (userData.maxDailyLoss !== undefined) {
+      dbData.maxDailyLoss = userData.maxDailyLoss?.toString() || null;
+    }
+    const [updatedUser] = await db
+      .update(copyTradingUsers)
+      .set(dbData)
+      .where(eq(copyTradingUsers.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async toggleCopyTradingUser(id: string, isActive: boolean): Promise<CopyTradingUser | undefined> {
+    const [updatedUser] = await db
+      .update(copyTradingUsers)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(copyTradingUsers.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async deleteCopyTradingUser(id: string): Promise<boolean> {
+    const result = await db.delete(copyTradingUsers).where(eq(copyTradingUsers.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getActiveCopyTradingUsers(): Promise<CopyTradingUser[]> {
+    return await db.select().from(copyTradingUsers).where(eq(copyTradingUsers.isActive, true));
+  }
+
+  // Copy Trade operations
+  async getCopyTrades(filters?: {
+    userId?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ copyTrades: any[]; total: number }> {
+    const limit = filters?.limit || 50;
+    const offset = filters?.offset || 0;
+
+    let whereClause = sql`1=1`;
+    if (filters?.userId) {
+      whereClause = and(whereClause, eq(copyTrades.copyUserId, filters.userId))!;
+    }
+    if (filters?.status) {
+      whereClause = and(whereClause, eq(copyTrades.status, filters.status))!;
+    }
+
+    const copyTradesResult = await db
+      .select({
+        id: copyTrades.id,
+        originalTradeId: copyTrades.originalTradeId,
+        copyUserId: copyTrades.copyUserId,
+        executedTradeId: copyTrades.executedTradeId,
+        pair: copyTrades.pair,
+        type: copyTrades.type,
+        originalPrice: copyTrades.originalPrice,
+        executedPrice: copyTrades.executedPrice,
+        originalQuantity: copyTrades.originalQuantity,
+        executedQuantity: copyTrades.executedQuantity,
+        leverage: copyTrades.leverage,
+        status: copyTrades.status,
+        executionTime: copyTrades.executionTime,
+        errorMessage: copyTrades.errorMessage,
+        pnl: copyTrades.pnl,
+        createdAt: copyTrades.createdAt,
+        copyUser: {
+          name: copyTradingUsers.name,
+          telegramUsername: copyTradingUsers.telegramUsername,
+        },
+        originalTrade: {
+          pair: trades.pair,
+          type: trades.type,
+          price: trades.price,
+        },
+      })
+      .from(copyTrades)
+      .leftJoin(copyTradingUsers, eq(copyTrades.copyUserId, copyTradingUsers.id))
+      .leftJoin(trades, eq(copyTrades.originalTradeId, trades.id))
+      .where(whereClause)
+      .orderBy(desc(copyTrades.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const total = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(copyTrades)
+      .where(whereClause);
+
+    return { copyTrades: copyTradesResult, total: total[0]?.count || 0 };
+  }
+
+  async createCopyTrade(copyTradeData: InsertCopyTrade): Promise<CopyTrade> {
+    const [copyTrade] = await db.insert(copyTrades).values(copyTradeData).returning();
+    return copyTrade;
+  }
+
+  async updateCopyTradeStatus(id: string, status: string, errorMessage?: string): Promise<CopyTrade | undefined> {
+    const updateData: any = { status, updatedAt: new Date() };
+    if (errorMessage) {
+      updateData.errorMessage = errorMessage;
+    }
+    if (status === 'executed') {
+      updateData.executionTime = new Date();
+    }
+
+    const [updatedTrade] = await db
+      .update(copyTrades)
+      .set(updateData)
+      .where(eq(copyTrades.id, id))
+      .returning();
+    return updatedTrade;
+  }
 }
 
 export const storage = new DatabaseStorage();

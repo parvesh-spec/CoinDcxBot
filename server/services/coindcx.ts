@@ -150,6 +150,59 @@ export class CoinDCXService {
     }
   }
 
+  // Method to validate custom API credentials for copy trading users
+  async validateCustomCredentials(apiKey: string, apiSecret: string): Promise<{ valid: boolean; message: string }> {
+    try {
+      console.log(`🔐 Validating credentials for API key: ${apiKey.substring(0, 8)}...`);
+      
+      const endpoint = '/exchange/v1/users/balances';
+      const timestamp = Date.now();
+      const body = JSON.stringify({ timestamp });
+      
+      // Generate signature with custom secret
+      const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('hex');
+      
+      const headers = {
+        'X-AUTH-APIKEY': apiKey,
+        'X-AUTH-SIGNATURE': signature,
+        'Content-Type': 'application/json',
+      };
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers,
+        timeout: 10000, // 10 second timeout
+      });
+
+      if (response.status === 200) {
+        console.log(`✅ Credentials validated successfully for API key: ${apiKey.substring(0, 8)}...`);
+        return { valid: true, message: 'Credentials verified successfully' };
+      } else {
+        console.log(`❌ Unexpected response status: ${response.status}`);
+        return { valid: false, message: 'Invalid API response' };
+      }
+    } catch (error: any) {
+      console.error(`❌ Credential validation failed for API key: ${apiKey.substring(0, 8)}...`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        responseData: error.response?.data
+      });
+      
+      // Provide specific error messages based on response
+      if (error.response?.status === 401) {
+        return { valid: false, message: 'Invalid API key or secret. Please check your CoinDCX credentials.' };
+      } else if (error.response?.status === 403) {
+        return { valid: false, message: 'API access forbidden. Please ensure your API key has trading permissions.' };
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        return { valid: false, message: 'Unable to connect to CoinDCX API. Please check your internet connection.' };
+      } else if (error.code === 'ECONNABORTED') {
+        return { valid: false, message: 'Connection timeout. Please try again.' };
+      } else {
+        return { valid: false, message: `Verification failed: ${error.message}` };
+      }
+    }
+  }
+
   async exitTrade(tradeId: string, pair: string, tradeType: 'spot' | 'margin' | 'futures' = 'futures'): Promise<{ success: boolean; message: string; data?: any }> {
     try {
       console.log(`🚪 EXIT TRADE: Starting exit for ${pair} (${tradeType}) - Trade ID: ${tradeId}`);
