@@ -345,7 +345,7 @@ export default function CopyTradingApplyPage() {
                         <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Security Notice</span>
                       </div>
                       <p className="text-xs text-blue-700 dark:text-blue-400">
-                        Your API credentials are encrypted and stored securely. We never store your funds - only read-only access for trade monitoring.
+                        Your API credentials are encrypted and stored securely. <strong>Important:</strong> Enable trading permissions but DO NOT enable withdrawal permissions for maximum security.
                       </p>
                     </div>
                     
