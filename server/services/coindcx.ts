@@ -154,10 +154,10 @@ export class CoinDCXService {
   // Get futures wallet balance with custom credentials
   async getFuturesWalletBalance(apiKey: string, apiSecret: string): Promise<{ success: boolean; balance?: any; message: string }> {
     try {
-      console.log(`💰 Fetching futures wallet balance for API key: ${apiKey.substring(0, 8)}...`);
+      // Removed API key logging for production security
       
-      // Try the general balance endpoint first, which should include futures balances
-      const endpoint = '/exchange/v1/users/balances';
+      // Use the actual futures wallet endpoint as per CoinDCX documentation
+      const endpoint = '/exchange/v1/derivatives/futures/wallets';
       const timestamp = Date.now();
       const body = JSON.stringify({ timestamp });
       
@@ -176,7 +176,7 @@ export class CoinDCXService {
       });
 
       if (response.status === 200) {
-        console.log(`✅ Futures wallet balance fetched successfully for API key: ${apiKey.substring(0, 8)}...`);
+        console.log(`✅ Futures wallet balance fetched successfully`);
         return { 
           success: true, 
           balance: response.data,
@@ -190,7 +190,7 @@ export class CoinDCXService {
         };
       }
     } catch (error: any) {
-      console.error(`❌ Futures wallet balance fetch failed for API key: ${apiKey.substring(0, 8)}...`, {
+      console.error(`❌ Futures wallet balance fetch failed`, {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message,
@@ -214,7 +214,7 @@ export class CoinDCXService {
 
   async validateCustomCredentials(apiKey: string, apiSecret: string): Promise<{ valid: boolean; message: string }> {
     try {
-      console.log(`🔐 Validating credentials for API key: ${apiKey.substring(0, 8)}...`);
+      // Removed API key logging for production security
       
       const endpoint = '/exchange/v1/users/balances';
       const timestamp = Date.now();
@@ -235,14 +235,14 @@ export class CoinDCXService {
       });
 
       if (response.status === 200) {
-        console.log(`✅ Credentials validated successfully for API key: ${apiKey.substring(0, 8)}...`);
+        console.log(`✅ Credentials validated successfully`);
         return { valid: true, message: 'Credentials verified successfully' };
       } else {
         console.log(`❌ Unexpected response status: ${response.status}`);
         return { valid: false, message: 'Invalid API response' };
       }
     } catch (error: any) {
-      console.error(`❌ Credential validation failed for API key: ${apiKey.substring(0, 8)}...`, {
+      console.error(`❌ Credential validation failed`, {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message,

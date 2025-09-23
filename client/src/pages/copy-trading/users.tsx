@@ -334,9 +334,23 @@ export default function CopyTradingUsersPage() {
                           </div>
                         </div>
                       ) : user.walletError ? (
-                        <div className="text-xs text-muted-foreground" title={user.walletError}>
-                          <i className="fas fa-exclamation-triangle mr-1" />
-                          Check API credentials
+                        <div className="text-xs text-red-500/70" title={user.walletError}>
+                          {user.walletError === 'Invalid API credentials' ? (
+                            <>
+                              <i className="fas fa-key mr-1" />
+                              Invalid API key
+                            </>
+                          ) : user.walletError === 'API access forbidden' ? (
+                            <>
+                              <i className="fas fa-ban mr-1" />
+                              Futures not enabled
+                            </>
+                          ) : (
+                            <>
+                              <i className="fas fa-exclamation-triangle mr-1" />
+                              Balance unavailable
+                            </>
+                          )}
                         </div>
                       ) : (
                         <div className="text-xs text-muted-foreground">

@@ -1074,9 +1074,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const usersWithBalance = await Promise.all(
         users.map(async (user) => {
           try {
-            // Decrypt API credentials
+            // Decrypt API credentials with debugging
             const apiKey = safeDecrypt(user.apiKey);
             const apiSecret = safeDecrypt(user.apiSecret);
+            
+            // Remove sensitive logging for production security
             
             if (apiKey && apiSecret) {
               const walletResult = await coindcxService.getFuturesWalletBalance(apiKey, apiSecret);

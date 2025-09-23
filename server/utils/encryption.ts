@@ -1,7 +1,11 @@
 import crypto from 'crypto';
 
-// Use a secret key from environment or generate a secure random one
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+// Use environment encryption key with safe development fallback
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || (
+  process.env.NODE_ENV !== 'production' 
+    ? 'dev-fallback-key-32-chars-minimum!!' 
+    : (() => { throw new Error('ENCRYPTION_KEY required in production') })()
+);
 const ALGORITHM = 'aes-256-gcm'; // Use GCM for authenticated encryption
 
 /**
