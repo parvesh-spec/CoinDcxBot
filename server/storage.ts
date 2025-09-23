@@ -415,7 +415,7 @@ export class DatabaseStorage implements IStorage {
         .set({ 
           status: 'completed', // Always complete for manual completion
           completionReason: autoCompletionReason, // Use auto-derived reason
-          safebookPrice: completion.safebookPrice || null,
+          safebookPrice: completion.safebookPrice !== undefined ? completion.safebookPrice : currentTrade.safebookPrice,
           notes: completion.notes || null,
           targetStatus: normalizedStatus, // Keep normalized target status in V2 format
           updatedAt: new Date() 
