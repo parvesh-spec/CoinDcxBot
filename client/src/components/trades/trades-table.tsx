@@ -418,9 +418,21 @@ export default function TradesTable({
       }
     },
     onError: (error: any) => {
+      // Show more informative error messages for different scenarios
+      let title = "Failed to exit trade";
+      let description = error.message;
+      
+      if (error.message?.includes('manual action through CoinDCX Pro app')) {
+        title = "Manual Exit Required";
+        description = "Please open CoinDCX Pro app and manually close the position in the Positions tab. Automated exit is not available through API.";
+      } else if (error.message?.includes('not_found')) {
+        title = "API Endpoint Not Available";
+        description = "CoinDCX exit endpoint is not accessible. Please manually close position in CoinDCX Pro app.";
+      }
+      
       toast({ 
-        title: "Failed to exit trade", 
-        description: error.message, 
+        title, 
+        description, 
         variant: "destructive" 
       });
     },

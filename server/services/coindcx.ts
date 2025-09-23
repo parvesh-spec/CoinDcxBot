@@ -161,21 +161,15 @@ export class CoinDCXService {
       // Determine the correct endpoint and parameters based on trade type
       switch (tradeType) {
         case 'futures':
-          endpoint = '/exchange/v1/derivatives/futures/exit';
-          requestBody = {
-            timestamp,
-            pair: pair,
-            order_type: 'market_order'
-          };
+          // CoinDCX Futures API endpoint documentation is not publicly available
+          // The exit endpoint may require different URL structure or authentication
+          throw new Error('Futures position exit requires manual action through CoinDCX Pro app. Automated API exit not available - please close position manually in the CoinDCX app.');
           break;
         
         case 'margin':
-          endpoint = '/exchange/v1/margin/exit';
-          requestBody = {
-            timestamp,
-            market: pair,
-            order_type: 'market_order'
-          };
+          // CoinDCX Margin API endpoint for exit might need verification
+          // For now, instructing manual exit due to API limitations
+          throw new Error('Margin position exit requires manual action through CoinDCX Pro app. Please close position manually in the CoinDCX app under Positions tab.');
           break;
         
         case 'spot':
