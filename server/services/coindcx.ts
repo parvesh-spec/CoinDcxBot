@@ -355,6 +355,104 @@ export class CoinDCXService {
     }
   }
 
+  // Create futures order with custom credentials for copy trading
+  async createFuturesOrder(
+    apiKey: string, 
+    apiSecret: string, 
+    orderData: {
+      side: 'buy' | 'sell';
+      pair: string;
+      total_quantity: number;
+      leverage: number;
+      stop_loss_price?: number;
+      take_profit_price?: number;
+    }
+  ): Promise<{ success: boolean; orderId?: string; message: string; data?: any }> {
+    try {
+      console.log(`🚀 Creating futures order: ${orderData.side.toUpperCase()} ${orderData.pair} qty:${orderData.total_quantity} leverage:${orderData.leverage}x`);
+      
+      const endpoint = '/exchange/v1/derivatives/futures/orders/create';
+      const timestamp = Date.now();
+      
+      // Build request body as per CoinDCX API requirements
+      const requestBody = {
+        timestamp,
+        side: orderData.side,
+        pair: `B-${orderData.pair}`, // Add B- prefix as required by CoinDCX
+        order_type: "market_order",
+        total_quantity: orderData.total_quantity,
+        leverage: orderData.leverage,
+        ...(orderData.stop_loss_price && { stop_loss_price: orderData.stop_loss_price }),
+        ...(orderData.take_profit_price && { take_profit_price: orderData.take_profit_price }),
+        notification: "email_notification",
+        margin_currency_short_name: "USDT"
+      };
+      
+      const body = JSON.stringify(requestBody);
+      
+      // Generate signature with user's secret
+      const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('hex');
+      
+      const headers = {
+        'X-AUTH-APIKEY': apiKey,
+        'X-AUTH-SIGNATURE': signature,
+        'Content-Type': 'application/json',
+      };
+      
+      console.log(`📤 Sending futures order to CoinDCX: ${orderData.side} ${orderData.pair}`);
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers,
+        timeout: 15000, // 15 second timeout for order placement
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        const orderId = response.data?.id || response.data?.orderId || 'unknown';
+        console.log(`✅ Futures order created successfully: ${orderId}`);
+        
+        return { 
+          success: true, 
+          orderId: orderId,
+          message: 'Order placed successfully',
+          data: response.data
+        };
+      } else {
+        console.log(`❌ Unexpected response status: ${response.status}`);
+        return { 
+          success: false, 
+          message: `Unexpected response: ${response.status}` 
+        };
+      }
+    } catch (error: any) {
+      console.error(`❌ Futures order creation failed:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        responseData: error.response?.data,
+        endpoint: error.config?.url
+      });
+      
+      // Classify error types for better handling
+      if (error.response?.status === 401) {
+        return { success: false, message: 'Invalid API credentials' };
+      } else if (error.response?.status === 403) {
+        return { success: false, message: 'API access forbidden - check trading permissions' };
+      } else if (error.response?.status === 400) {
+        const apiMessage = error.response?.data?.message || 'Invalid order parameters';
+        return { success: false, message: `Bad request: ${apiMessage}` };
+      } else if (error.response?.status === 429) {
+        return { success: false, message: 'Rate limit exceeded - retrying...' };
+      } else if (error.code === 'ECONNABORTED') {
+        return { success: false, message: 'Order timeout - connection failed' };
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        return { success: false, message: 'Connection failed' };
+      } else {
+        const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+        return { success: false, message: `Order failed: ${errorMsg}` };
+      }
+    }
+  }
+
   transformTradeData(coindcxTrade: CoinDCXTrade) {
     // Handle futures positions data format
     let pair = coindcxTrade.pair || coindcxTrade.market || 'UNKNOWN';
