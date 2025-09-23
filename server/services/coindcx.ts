@@ -164,9 +164,15 @@ export class CoinDCXService {
       
       console.log(`📋 CANCEL ORDERS: Found ${activeOrders.length} active orders to cancel`);
       
-      // Step 2: Cancel each order individually using correct endpoint
+      // Step 2: Cancel each order individually using correct identifier
       for (const order of activeOrders) {
-        await this.cancelSingleOrder(order.id);
+        const orderId = order.order_id || order.id;
+        if (orderId) {
+          console.log(`🗑️ CANCEL ORDERS: Cancelling order ${orderId}`);
+          await this.cancelSingleOrder(orderId);
+        } else {
+          console.log(`⚠️ CANCEL ORDERS: Order missing ID:`, JSON.stringify(order));
+        }
       }
       
       console.log(`✅ CANCEL ORDERS: All orders cancelled for position ${positionId}`);
@@ -188,39 +194,88 @@ export class CoinDCXService {
     try {
       console.log(`📋 GET ORDERS: Fetching active orders for position ${positionId}`);
       
-      // Use correct CoinDCX active orders endpoint as per API documentation
-      const endpoint = '/exchange/v1/orders/active';
+      // Try futures positions endpoint first as it's known to work
+      // and may contain order information
+      const endpoint = '/exchange/v1/derivatives/futures/positions';
       const timestamp = Date.now();
       const requestBody = {
-        timestamp
+        timestamp,
+        page: 1,
+        size: 100,
+        status: 'open'
       };
       
       const body = JSON.stringify(requestBody);
       const headers = this.getHeaders(body);
       
-      // Use GET method for active orders endpoint
-      const response = await axios.get(`${this.config.baseUrl}${endpoint}?timestamp=${timestamp}`, {
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        }
+      console.log(`📋 GET ORDERS: Making request to ${endpoint} with timestamp ${timestamp}`);
+      
+      // Use POST method for CoinDCX authentication
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers
       });
       
-      const allOrders = response.data?.data || response.data || [];
+      const allPositions = response.data?.data || response.data || [];
+      console.log(`📋 GET ORDERS: Received ${allPositions.length} total positions from API`);
       
-      // Filter orders for this specific position that are still active
-      const positionOrders = allOrders.filter((order: any) => 
-        (order.position_id === positionId || order.id?.includes(positionId)) &&
-        ['open', 'init', 'partial_entry'].includes(order.status)
-      );
+      // Find the specific position and extract any order information
+      const targetPosition = allPositions.find((pos: any) => pos.id === positionId || pos.position_id === positionId);
+      
+      if (targetPosition) {
+        console.log(`📋 GET ORDERS: Found target position:`, JSON.stringify(targetPosition, null, 2));
+        
+        // Check if position has associated orders or order IDs
+        const associatedOrders: any[] = [];
+        
+        // Look for order fields in the position data
+        if (targetPosition.order_id) {
+          associatedOrders.push({
+            order_id: targetPosition.order_id,
+            id: targetPosition.order_id,
+            status: targetPosition.status || 'open',
+            position_id: positionId
+          });
+        }
+        
+        // If no direct order info, return empty array - position might not have active orders
+        console.log(`📊 GET ORDERS: Found ${associatedOrders.length} associated orders in position data`);
+        return associatedOrders;
+      } else {
+        console.log(`📋 GET ORDERS: Position ${positionId} not found in current positions`);
+      }
+      
+      // If we can't find the position or orders, return empty array
+      const positionOrders: any[] = [];
       
       console.log(`📊 GET ORDERS: Found ${positionOrders.length} active orders for position ${positionId}`);
       
       return positionOrders;
       
     } catch (error: any) {
-      console.error(`❌ GET ORDERS: Failed to fetch orders:`, error.response?.data || error.message);
-      return []; // Return empty array on error
+      console.error(`❌ GET ORDERS: Failed to fetch futures orders:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        responseData: error.response?.data,
+        endpoint: `${this.config.baseUrl}/exchange/v1/derivatives/futures/orders`
+      });
+      // If this fails, try the generic orders endpoint as fallback
+      console.log(`📋 GET ORDERS: Falling back to generic orders endpoint`);
+      try {
+        const fallbackEndpoint = '/exchange/v1/orders/status';
+        const fallbackBody = JSON.stringify({ timestamp: Date.now() });
+        const fallbackHeaders = this.getHeaders(fallbackBody);
+        
+        const fallbackResponse = await axios.post(`${this.config.baseUrl}${fallbackEndpoint}`, fallbackBody, {
+          headers: fallbackHeaders
+        });
+        
+        console.log(`📋 GET ORDERS: Fallback endpoint returned:`, fallbackResponse.data);
+        return []; // Still return empty but with more info
+      } catch (fallbackError: any) {
+        console.log(`📋 GET ORDERS: Fallback also failed:`, fallbackError.response?.data);
+        return []; // Return empty array on error
+      }
     }
   }
 
@@ -228,7 +283,8 @@ export class CoinDCXService {
     try {
       console.log(`🗑️ CANCEL ORDER: Cancelling individual order ${orderId}`);
       
-      const endpoint = `/exchange/v1/orders/cancel/${orderId}`;
+      // Use POST method as per CoinDCX auth pattern, not DELETE
+      const endpoint = `/exchange/v1/orders/cancel`;
       const timestamp = Date.now();
       const requestBody = {
         order_id: orderId,
@@ -238,9 +294,8 @@ export class CoinDCXService {
       const body = JSON.stringify(requestBody);
       const headers = this.getHeaders(body);
       
-      const response = await axios.delete(`${this.config.baseUrl}${endpoint}`, {
-        headers,
-        data: body
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers
       });
       
       console.log(`✅ CANCEL ORDER: Successfully cancelled order ${orderId}`);
