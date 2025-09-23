@@ -132,6 +132,7 @@ export const copyTradingUsers = pgTable("copy_trading_users", {
   apiKey: text("api_key").notNull(), // Encrypted API key
   apiSecret: text("api_secret").notNull(), // Encrypted API secret
   riskPerTrade: decimal("risk_per_trade", { precision: 5, scale: 2 }).notNull().default('2.00'), // Risk % per trade (e.g., 2.00%)
+  tradeFund: decimal("trade_fund", { precision: 12, scale: 2 }).notNull().default('100.00'), // Fixed fund amount per trade in USDT (e.g., 100.00 USDT)
   maxTradesPerDay: integer("max_trades_per_day"), // Max trades per day (optional, e.g., 2 means only first 2 trades copied)
   isActive: boolean("is_active").default(true), // Enable/disable copy trading
   notes: text("notes"), // Optional notes about the user
@@ -171,6 +172,7 @@ export const copyTradingApplications = pgTable("copy_trading_applications", {
   apiKey: text("api_key").notNull(), // API key for verification
   apiSecret: text("api_secret").notNull(), // API secret for verification
   riskPerTrade: decimal("risk_per_trade", { precision: 5, scale: 2 }).notNull().default('2.00'), // Risk % per trade
+  tradeFund: decimal("trade_fund", { precision: 12, scale: 2 }).notNull().default('100.00'), // Fixed fund amount per trade in USDT
   maxTradesPerDay: integer("max_trades_per_day"), // Max trades per day (optional)
   status: varchar("status").notNull().default('pending'), // 'pending', 'approved', 'rejected'
   adminNotes: text("admin_notes"), // Admin notes/comments during review

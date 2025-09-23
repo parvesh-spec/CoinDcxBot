@@ -402,15 +402,15 @@ export class CoinDCXService {
   }
   
   /**
-   * Calculate quantity based on wallet balance, leverage, and entry price
-   * Formula: quantity = (wallet_balance × leverage) ÷ entry_price
-   * Apply 2% safety margin (use 98% of calculated quantity)
+   * Calculate quantity based on fixed trade fund, leverage, and entry price
+   * Formula: quantity = (trade_fund × leverage) ÷ entry_price
+   * No safety margin - use exact calculated quantity
    */
-  calculateQuantity(walletBalance: number, leverage: number, entryPrice: number): number {
+  calculateQuantity(tradeFund: number, leverage: number, entryPrice: number): number {
     try {
       // Validate inputs
-      if (walletBalance <= 0) {
-        throw new Error(`Invalid wallet balance: ${walletBalance}. Must be greater than 0.`);
+      if (tradeFund <= 0) {
+        throw new Error(`Invalid trade fund: ${tradeFund}. Must be greater than 0.`);
       }
       
       if (leverage <= 0) {
@@ -421,16 +421,13 @@ export class CoinDCXService {
         throw new Error(`Invalid entry price: ${entryPrice}. Must be greater than 0.`);
       }
       
-      // Calculate base quantity using the provided formula
-      const baseQuantity = (walletBalance * leverage) / entryPrice;
-      
-      // Apply 2% safety margin (use 98% of calculated quantity)
-      const safeQuantity = baseQuantity * 0.98;
+      // Calculate quantity using the provided formula
+      const quantity = (tradeFund * leverage) / entryPrice;
       
       // Round to appropriate decimal places (6 decimal places for crypto)
-      const finalQuantity = Math.round(safeQuantity * 1000000) / 1000000;
+      const finalQuantity = Math.round(quantity * 1000000) / 1000000;
       
-      console.log(`💰 Quantity calculation: balance: ${walletBalance}, leverage: ${leverage}x, price: ${entryPrice} → ${finalQuantity} (with 2% safety margin)`);
+      console.log(`💰 Quantity calculation: tradeFund: ${tradeFund} USDT, leverage: ${leverage}x, price: ${entryPrice} → ${finalQuantity} (exact quantity)`);
       
       return finalQuantity;
     } catch (error) {

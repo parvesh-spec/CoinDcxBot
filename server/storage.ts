@@ -138,6 +138,12 @@ export interface IStorage {
   }): Promise<{ copyTrades: any[]; total: number }>;
   createCopyTrade(copyTrade: InsertCopyTrade): Promise<CopyTrade>;
   updateCopyTradeStatus(id: string, status: string, errorMessage?: string): Promise<CopyTrade | undefined>;
+  updateCopyTradeExecution(id: string, executionDetails: {
+    executedTradeId?: string;
+    executedPrice?: number;
+    executedQuantity?: number;
+    leverage?: number;
+  }): Promise<CopyTrade | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1220,6 +1226,40 @@ export class DatabaseStorage implements IStorage {
     }
     if (status === 'executed') {
       updateData.executionTime = new Date();
+    }
+
+    const [updatedTrade] = await db
+      .update(copyTrades)
+      .set(updateData)
+      .where(eq(copyTrades.id, id))
+      .returning();
+    return updatedTrade;
+  }
+
+  async updateCopyTradeExecution(id: string, executionDetails: {
+    executedTradeId?: string;
+    executedPrice?: number;
+    executedQuantity?: number;
+    leverage?: number;
+  }): Promise<CopyTrade | undefined> {
+    const updateData: any = { 
+      updatedAt: new Date(),
+      status: 'executed',
+      executionTime: new Date()
+    };
+    
+    // Add execution details if provided
+    if (executionDetails.executedTradeId) {
+      updateData.executedTradeId = executionDetails.executedTradeId;
+    }
+    if (executionDetails.executedPrice) {
+      updateData.executedPrice = executionDetails.executedPrice.toString();
+    }
+    if (executionDetails.executedQuantity) {
+      updateData.executedQuantity = executionDetails.executedQuantity.toString();
+    }
+    if (executionDetails.leverage) {
+      updateData.leverage = executionDetails.leverage;
     }
 
     const [updatedTrade] = await db
