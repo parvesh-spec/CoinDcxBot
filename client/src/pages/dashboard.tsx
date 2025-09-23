@@ -5,6 +5,7 @@ import TemplatesPage from "./templates";
 import ChannelsPage from "./channels";
 import AutomationPage from "./automation";
 import CopyTradingUsersPage from "./copy-trading/users";
+import CopyTradingTradesPage from "./copy-trading/trades";
 
 export default function Dashboard() {
   const [location] = useLocation();
@@ -14,7 +15,7 @@ export default function Dashboard() {
       case "/copy-trading/users":
         return <CopyTradingUsersPage />;
       case "/copy-trading/trades":
-        return <div className="p-6"><h1 className="text-2xl font-bold">Copy Trading Trades</h1><p className="text-muted-foreground">Track and monitor copy trading executions.</p></div>;
+        return <CopyTradingTradesPage />;
       case "/copy-trading/analytics":
         return <div className="p-6"><h1 className="text-2xl font-bold">Copy Trading Analytics</h1><p className="text-muted-foreground">View performance analytics and insights.</p></div>;
       case "/templates":
