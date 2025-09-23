@@ -150,6 +150,43 @@ export class CoinDCXService {
     }
   }
 
+  async cancelAllOrdersForPosition(positionId: string): Promise<void> {
+    try {
+      console.log(`🗑️ CANCEL ORDERS: Cancelling all orders for position ${positionId}`);
+      
+      const endpoint = '/exchange/v1/derivatives/futures/positions/cancel-all-orders';
+      const timestamp = Date.now();
+      const requestBody = {
+        position_id: positionId,
+        timestamp
+      };
+      
+      const body = JSON.stringify(requestBody);
+      const headers = this.getHeaders(body);
+      
+      console.log(`📤 CANCEL ORDERS: Sending cancel request for position ${positionId}`);
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers
+      });
+      
+      console.log(`✅ CANCEL ORDERS: Successfully cancelled orders for position ${positionId}`);
+      console.log(`📊 CANCEL ORDERS: Response:`, response.data);
+      
+    } catch (error: any) {
+      console.error(`❌ CANCEL ORDERS: Failed to cancel orders for position ${positionId}:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        data: error.response?.data
+      });
+      
+      // Don't throw error - continue with exit even if cancellation fails
+      // Some positions might not have active orders
+      console.log(`⚠️ CANCEL ORDERS: Continuing with exit despite cancellation issue`);
+    }
+  }
+
   async exitTrade(tradeId: string, pair: string, tradeType: 'spot' | 'margin' | 'futures' = 'futures'): Promise<{ success: boolean; message: string; data?: any }> {
     try {
       console.log(`🚪 EXIT TRADE: Starting exit for ${pair} (${tradeType}) - Trade ID: ${tradeId}`);
@@ -164,6 +201,13 @@ export class CoinDCXService {
           // Extract position ID from tradeId (format: positionId_timestamp)
           const positionId = tradeId.split('_')[0]; // Get position ID before underscore
           console.log(`🔍 EXIT TRADE: Using saved position ID: ${positionId} for ${pair}`);
+          
+          // Step 1: Cancel all open orders for this position first
+          console.log(`🗑️ EXIT TRADE: Cancelling all open orders for position ${positionId}`);
+          await this.cancelAllOrdersForPosition(positionId);
+          
+          // Step 2: Exit the position after orders are cancelled
+          console.log(`🚪 EXIT TRADE: Proceeding to exit position ${positionId}`);
           
           // Correct CoinDCX Futures exit endpoint - requires actual position ID from database
           endpoint = '/exchange/v1/derivatives/futures/positions/exit';
