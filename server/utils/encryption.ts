@@ -1,11 +1,10 @@
 import crypto from 'crypto';
 
-// Use environment encryption key with safe development fallback
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || (
-  process.env.NODE_ENV !== 'production' 
-    ? 'dev-fallback-key-32-chars-minimum!!' 
-    : (() => { throw new Error('ENCRYPTION_KEY required in production') })()
-);
+// Use environment encryption key (required)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is required. Please set it in Replit secrets.');
+}
 const ALGORITHM = 'aes-256-gcm'; // Use GCM for authenticated encryption
 
 /**
