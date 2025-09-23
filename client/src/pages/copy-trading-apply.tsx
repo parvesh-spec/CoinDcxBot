@@ -13,7 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertCopyTradingApplicationSchema } from "@shared/schema";
 import { z } from "zod";
-import { CheckCircle, ExternalLink, Loader2, Shield, TrendingUp, Users, Zap } from "lucide-react";
+import { CheckCircle, ExternalLink, Loader2, Shield, TrendingUp, Users, Zap, AlertTriangle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import campusLogo from "@assets/6208450096694152058_1758021301213.jpg";
 
 export default function CopyTradingApplyPage() {
@@ -22,18 +23,20 @@ export default function CopyTradingApplyPage() {
   const [isVerifyingCredentials, setIsVerifyingCredentials] = useState(false);
   const [credentialsVerified, setCredentialsVerified] = useState(false);
   const [applicationSubmitted, setApplicationSubmitted] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showRiskWarning, setShowRiskWarning] = useState(false);
 
   const form = useForm<z.infer<typeof insertCopyTradingApplicationSchema>>({
     resolver: zodResolver(insertCopyTradingApplicationSchema),
     defaultValues: {
       name: "",
       email: "",
-      telegramId: "",
-      telegramUsername: "",
+      telegramId: "", // Will be empty string for optional field
+      telegramUsername: "", // Will be empty string for optional field  
       exchange: "coindcx",
       apiKey: "",
       apiSecret: "",
-      riskPerTrade: 2.0,
+      riskPerTrade: 5.0,
       maxTradesPerDay: undefined,
       notes: "",
     },
@@ -127,8 +130,26 @@ export default function CopyTradingApplyPage() {
       return;
     }
 
+    if (!acceptedTerms) {
+      toast({
+        title: "Terms & Conditions Required",
+        description: "Please accept the terms and conditions before submitting",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     submitApplicationMutation.mutate(values);
+  };
+
+  const handleRiskPerTradeChange = (value: number) => {
+    if (value > 10) {
+      setShowRiskWarning(true);
+    } else {
+      setShowRiskWarning(false);
+    }
+    return value;
   };
 
   if (applicationSubmitted) {
@@ -310,38 +331,6 @@ export default function CopyTradingApplyPage() {
                         )}
                       />
                     </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="telegramId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Telegram ID (Optional)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="123456789" {...field} value={field.value || ""} data-testid="input-telegram-id" />
-                            </FormControl>
-                            <FormDescription>Your numeric Telegram user ID</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="telegramUsername"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Telegram Username (Optional)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="johndoe" {...field} value={field.value || ""} data-testid="input-telegram-username" />
-                            </FormControl>
-                            <FormDescription>Without @ symbol</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
                   </div>
 
                   {/* Exchange Information */}
@@ -349,6 +338,16 @@ export default function CopyTradingApplyPage() {
                     <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-200 border-b pb-2">
                       Exchange & API Credentials
                     </h3>
+                    
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Security Notice</span>
+                      </div>
+                      <p className="text-xs text-blue-700 dark:text-blue-400">
+                        Your API credentials are encrypted and stored securely. We never store your funds - only read-only access for trade monitoring.
+                      </p>
+                    </div>
                     
                     <FormField
                       control={form.control}
@@ -463,14 +462,26 @@ export default function CopyTradingApplyPage() {
                               <Input
                                 type="number"
                                 step="0.1"
-                                min="0.1"
-                                max="10"
+                                min="5"
+                                max="50"
                                 {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value);
+                                  field.onChange(value);
+                                  handleRiskPerTradeChange(value);
+                                }}
                                 data-testid="input-risk-per-trade"
                               />
                             </FormControl>
-                            <FormDescription>Percentage of balance to risk per trade (0.1% - 10%)</FormDescription>
+                            <FormDescription>Percentage of balance to risk per trade (5% - 50%)</FormDescription>
+                            {showRiskWarning && (
+                              <div className="flex items-center gap-2 mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+                                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                                <p className="text-xs text-amber-700 dark:text-amber-400">
+                                  <strong>High Risk Warning:</strong> Risk above 10% can lead to significant losses. Please consider lower values for safer trading.
+                                </p>
+                              </div>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -525,10 +536,34 @@ export default function CopyTradingApplyPage() {
                     )}
                   />
 
+                  {/* Terms & Conditions */}
+                  <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg border">
+                    <div className="flex items-start space-x-3">
+                      <Checkbox
+                        id="terms"
+                        checked={acceptedTerms}
+                        onCheckedChange={setAcceptedTerms}
+                        className="mt-1"
+                        data-testid="checkbox-terms"
+                      />
+                      <div className="space-y-1">
+                        <label
+                          htmlFor="terms"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          I accept the Terms & Conditions *
+                        </label>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          I understand that trading involves risks and Campus For Wisdom is not responsible for any trading losses. All investments are subject to market risks.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    disabled={isSubmitting || !credentialsVerified}
+                    disabled={isSubmitting || !credentialsVerified || !acceptedTerms}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-lg shadow-md transition-all duration-200"
                     data-testid="button-submit-application"
                   >
@@ -556,7 +591,7 @@ export default function CopyTradingApplyPage() {
       <div className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-8">
         <div className="container mx-auto px-6 text-center">
           <p className="text-slate-600 dark:text-slate-400">
-            © 2024 Campus For Wisdom. Professional trading education and copy trading platform.
+            © 2025 Campus For Wisdom. Professional trading education and copy trading platform.
           </p>
         </div>
       </div>
