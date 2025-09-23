@@ -1,13 +1,10 @@
 import crypto from 'crypto';
 
-// Auto-generate secure encryption key if not in environment
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || (() => {
-  // Generate deterministic key based on REPL_ID for consistency across restarts
-  const replId = process.env.REPL_ID || 'default-repl';
-  const baseKey = crypto.createHash('sha256').update(`encryption-key-${replId}-2024`).digest('hex');
-  console.log('🔑 Auto-generated encryption key for secure credential storage');
-  return baseKey;
-})();
+// Use encryption key from environment (required)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is required');
+}
 const ALGORITHM = 'aes-256-gcm'; // Use GCM for authenticated encryption
 
 /**
