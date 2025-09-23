@@ -6,6 +6,7 @@ import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
+import { sendApplicationConfirmationEmail } from "./services/email";
 import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, sendOtpSchema, verifyOtpSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
@@ -1353,6 +1354,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       console.log(`✅ Copy trading application created successfully: ${newApplication.id}`);
+      
+      // Send confirmation email to applicant
+      try {
+        const emailSent = await sendApplicationConfirmationEmail(
+          applicationData.email,
+          {
+            name: applicationData.name,
+            applicationId: newApplication.id,
+            exchange: applicationData.exchange,
+            submittedAt: new Date()
+          }
+        );
+        
+        if (emailSent) {
+          console.log(`📧 Confirmation email sent to: ${applicationData.email}`);
+        } else {
+          console.log(`⚠️  Failed to send confirmation email to: ${applicationData.email}`);
+        }
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError);
+        // Don't fail the application submission if email fails
+      }
       
       res.status(201).json({ 
         message: "Application submitted successfully",
