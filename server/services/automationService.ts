@@ -921,15 +921,9 @@ export class AutomationService {
             const walletResult = await coindcxService.getFuturesWalletBalance(apiKey, apiSecret);
             
             if (walletResult.success && walletResult.balance) {
-              // DEBUG: Log the actual API response
-              console.log(`🔍 DEBUG - Wallet API Response for ${user.name}:`, JSON.stringify(walletResult.balance, null, 2));
-              
               // Extract USDT balance
               const usdtWallet = walletResult.balance.find((wallet: any) => wallet.currency_short_name === 'USDT');
               const usdtBalance = usdtWallet ? parseFloat(usdtWallet.balance || '0') : 0;
-              
-              console.log(`🔍 DEBUG - USDT Wallet found for ${user.name}:`, usdtWallet);
-              console.log(`🔍 DEBUG - Parsed USDT Balance for ${user.name}:`, usdtBalance);
               
               // Update wallet balance in database
               await storage.updateCopyTradingUserWalletBalance(user.id, usdtBalance);

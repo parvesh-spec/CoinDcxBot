@@ -324,12 +324,23 @@ export default function CopyTradingUsersPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Futures Wallet:</span>
                     <div className="text-right">
-                      {user.walletBalance ? (
+                      {/* Prioritize database balance over API balance */}
+                      {user.futuresWalletBalance !== null && user.futuresWalletBalance !== undefined ? (
                         <div className="space-y-1">
-                          {/* Show USDT balance prominently */}
-                          {user.walletBalance.find((wallet: any) => wallet.short_name === 'USDT') ? (
+                          {/* Show database USDT balance prominently */}
+                          <div className="font-medium text-green-600">
+                            {parseFloat(user.futuresWalletBalance.toString()).toFixed(2)} USDT
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            From database
+                          </div>
+                        </div>
+                      ) : user.walletBalance ? (
+                        <div className="space-y-1">
+                          {/* Fallback to API USDT balance */}
+                          {user.walletBalance.find((wallet: any) => wallet.currency_short_name === 'USDT') ? (
                             <div className="font-medium text-green-600">
-                              {parseFloat(user.walletBalance.find((wallet: any) => wallet.short_name === 'USDT').balance || '0').toFixed(2)} USDT
+                              {parseFloat(user.walletBalance.find((wallet: any) => wallet.currency_short_name === 'USDT').balance || '0').toFixed(2)} USDT
                             </div>
                           ) : (
                             <div className="font-medium text-muted-foreground">No USDT</div>
