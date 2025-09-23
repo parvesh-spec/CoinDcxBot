@@ -61,7 +61,10 @@ export function decrypt(encryptedData: string): string {
     
     return decrypted;
   } catch (error) {
-    console.error('Decryption error:', error);
+    // Only log if it's not a common authentication failure (legacy data)
+    if (!(error instanceof Error && error.message.includes('unable to authenticate data'))) {
+      console.error('Decryption error:', error);
+    }
     throw new Error('Failed to decrypt data');
   }
 }
@@ -139,7 +142,11 @@ export function safeDecrypt(data: string): string {
     throw new Error(`Unknown encrypted data format: ${parts.length} parts`);
     
   } catch (error) {
-    console.warn('Failed to decrypt data, returning original:', error);
+    // Only log warnings for unexpected errors, not common legacy data issues
+    if (!(error instanceof Error && (error.message.includes('Failed to decrypt data') || 
+                                     error.message.includes('unable to authenticate data')))) {
+      console.warn('Failed to decrypt data, returning original:', error);
+    }
     return data; // Fallback to original if decryption fails
   }
 }
