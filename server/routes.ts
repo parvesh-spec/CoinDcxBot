@@ -1084,9 +1084,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const walletResult = await coindcxService.getFuturesWalletBalance(apiKey, apiSecret);
               
               if (walletResult.success && walletResult.balance) {
+                // DEBUG: Log the actual API response for UI
+                console.log(`🔍 UI DEBUG - Raw API Response for ${user.name}:`, JSON.stringify(walletResult.balance, null, 2));
+                
                 // Extract USDT balance from the wallet response
-                const usdtWallet = walletResult.balance.find((wallet: any) => wallet.short_name === 'USDT');
+                const usdtWallet = walletResult.balance.find((wallet: any) => wallet.currency_short_name === 'USDT');
                 const usdtBalance = usdtWallet ? parseFloat(usdtWallet.balance || '0') : 0;
+                
+                console.log(`🔍 UI DEBUG - USDT Wallet found for ${user.name}:`, usdtWallet);
+                console.log(`🔍 UI DEBUG - Final USDT Balance for ${user.name}:`, usdtBalance);
                 
                 // Save wallet balance to database and update lowFund status
                 try {
