@@ -831,7 +831,7 @@ export default function CopyTradingApplyPage() {
                             <Input
                               type="number"
                               step="10"
-                              min="50"
+                              min="100"
                               max="100000"
                               placeholder="100"
                               {...field}

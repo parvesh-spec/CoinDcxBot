@@ -514,7 +514,7 @@ export const insertCopyTradingUserSchema = createInsertSchema(copyTradingUsers).
   email: z.string().email("Please enter a valid email address"),
   telegramId: z.string().optional(),
   riskPerTrade: z.coerce.number().min(5, "Risk per trade must be at least 5%").max(50, "Risk per trade cannot exceed 50%"),
-  tradeFund: z.coerce.number().min(50, "Trade fund must be at least 50 USDT").max(100000, "Trade fund cannot exceed 100,000 USDT"),
+  tradeFund: z.coerce.number().min(100, "Trade fund must be at least 100 USDT").max(100000, "Trade fund cannot exceed 100,000 USDT"),
   maxTradesPerDay: z.coerce.number().min(1, "Max trades per day must be at least 1").max(20, "Max trades per day cannot exceed 20").optional(),
 });
 
@@ -542,7 +542,7 @@ export const insertCopyTradingApplicationSchema = createInsertSchema(copyTrading
   apiKey: z.string().min(1, "API Key is required"),
   apiSecret: z.string().min(1, "API Secret is required"),
   riskPerTrade: z.coerce.number().min(5, "Risk per trade must be at least 5%").max(50, "Risk per trade cannot exceed 50%"),
-  tradeFund: z.coerce.number().min(50, "Trade fund must be at least 50 USDT").max(100000, "Trade fund cannot exceed 100,000 USDT"),
+  tradeFund: z.coerce.number().min(100, "Trade fund must be at least 100 USDT").max(100000, "Trade fund cannot exceed 100,000 USDT"),
   maxTradesPerDay: z.coerce.number().min(1, "Max trades per day must be at least 1").max(20, "Max trades per day cannot exceed 20").optional(),
 });
 
