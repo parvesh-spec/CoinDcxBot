@@ -183,6 +183,20 @@ export const copyTradingApplications = pgTable("copy_trading_applications", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// OTP Verification table - for email verification during application process
+export const otpVerifications = pgTable("otp_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull(), // Email address for which OTP is generated
+  otp: varchar("otp", { length: 6 }).notNull(), // 6-digit OTP code
+  purpose: varchar("purpose").notNull().default('application_submission'), // 'application_submission', 'password_reset', etc.
+  attempts: integer("attempts").default(0), // Number of verification attempts
+  maxAttempts: integer("max_attempts").default(3), // Maximum allowed attempts
+  isVerified: boolean("is_verified").default(false), // Whether OTP has been verified
+  expiresAt: timestamp("expires_at").notNull(), // When OTP expires (usually 10 minutes)
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations (no circular references)
 
 // Relations
@@ -534,6 +548,30 @@ export const processApplicationSchema = z.object({
   rejectionReason: z.string().optional(),
 });
 
+// OTP Verification Schemas
+export const insertOtpVerificationSchema = createInsertSchema(otpVerifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  attempts: true,
+  isVerified: true,
+}).extend({
+  email: z.string().email("Please enter a valid email address"),
+  otp: z.string().length(6, "OTP must be 6 digits"),
+  purpose: z.string().default('application_submission'),
+});
+
+export const verifyOtpSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  otp: z.string().length(6, "OTP must be 6 digits"),
+  purpose: z.string().default('application_submission'),
+});
+
+export const sendOtpSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  purpose: z.string().default('application_submission'),
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginSchema>;
@@ -557,3 +595,7 @@ export type CopyTradingUser = typeof copyTradingUsers.$inferSelect;
 export type InsertCopyTradingUser = z.infer<typeof insertCopyTradingUserSchema>;
 export type CopyTrade = typeof copyTrades.$inferSelect;
 export type InsertCopyTrade = z.infer<typeof insertCopyTradeSchema>;
+export type OtpVerification = typeof otpVerifications.$inferSelect;
+export type InsertOtpVerification = z.infer<typeof insertOtpVerificationSchema>;
+export type VerifyOtp = z.infer<typeof verifyOtpSchema>;
+export type SendOtp = z.infer<typeof sendOtpSchema>;
