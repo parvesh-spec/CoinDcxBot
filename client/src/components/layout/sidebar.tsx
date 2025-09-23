@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,6 +12,19 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user } = useAuth();
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+
+  const toggleSection = (sectionName: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionName)) {
+        newSet.delete(sectionName);
+      } else {
+        newSet.add(sectionName);
+      }
+      return newSet;
+    });
+  };
 
   const navigation = [
     {
@@ -18,6 +32,32 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/trades",
       icon: "fas fa-chart-line",
       current: location === "/" || location === "/trades",
+    },
+    {
+      name: "Copy Trading",
+      icon: "fas fa-copy",
+      current: location.startsWith("/copy-trading"),
+      hasSubItems: true,
+      subItems: [
+        {
+          name: "Users",
+          href: "/copy-trading/users",
+          icon: "fas fa-users",
+          current: location === "/copy-trading/users",
+        },
+        {
+          name: "Trades",
+          href: "/copy-trading/trades",
+          icon: "fas fa-exchange-alt",
+          current: location === "/copy-trading/trades",
+        },
+        {
+          name: "Analytics",
+          href: "/copy-trading/analytics",
+          icon: "fas fa-chart-bar",
+          current: location === "/copy-trading/analytics",
+        },
+      ],
     },
     {
       name: "Trade Message Template",
@@ -72,21 +112,72 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="mt-8 flex-grow flex flex-col">
             <nav className="flex-1 px-2 space-y-1">
               {navigation.map((item) => (
-                <Link key={item.name} href={item.href}>
-                  <div
-                    className={cn(
-                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer",
-                      item.current
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                    )}
-                    onClick={() => onClose()}
-                    data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
-                  >
-                    <i className={cn(item.icon, "mr-3 flex-shrink-0 h-4 w-4")} />
-                    {item.name}
-                  </div>
-                </Link>
+                <div key={item.name}>
+                  {item.hasSubItems ? (
+                    <>
+                      {/* Main navigation item with dropdown */}
+                      <div
+                        className={cn(
+                          "group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md cursor-pointer",
+                          item.current
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        )}
+                        onClick={() => toggleSection(item.name)}
+                        data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        <div className="flex items-center">
+                          <i className={cn(item.icon, "mr-3 flex-shrink-0 h-4 w-4")} />
+                          {item.name}
+                        </div>
+                        <i className={cn(
+                          "fas fa-chevron-down transform transition-transform duration-200",
+                          expandedSections.has(item.name) || item.current ? "rotate-180" : ""
+                        )} />
+                      </div>
+                      
+                      {/* Sub navigation items */}
+                      {(expandedSections.has(item.name) || item.current) && item.subItems && (
+                        <div className="ml-4 mt-1 space-y-1">
+                          {item.subItems.map((subItem) => (
+                            <Link key={subItem.name} href={subItem.href}>
+                              <div
+                                className={cn(
+                                  "group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer",
+                                  subItem.current
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                                )}
+                                onClick={() => onClose()}
+                                data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}-${subItem.name.toLowerCase().replace(/\s+/g, '-')}`}
+                              >
+                                <i className={cn(subItem.icon, "mr-3 flex-shrink-0 h-4 w-4")} />
+                                {subItem.name}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* Regular navigation item */
+                    <Link href={item.href!}>
+                      <div
+                        className={cn(
+                          "group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer",
+                          item.current
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        )}
+                        onClick={() => onClose()}
+                        data-testid={`nav-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        <i className={cn(item.icon, "mr-3 flex-shrink-0 h-4 w-4")} />
+                        {item.name}
+                      </div>
+                    </Link>
+                  )}
+                </div>
               ))}
             </nav>
 
