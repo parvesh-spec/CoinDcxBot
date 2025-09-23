@@ -7,9 +7,110 @@ const storage = new DatabaseStorage();
 
 export class CopyTradingService {
   private coindcxService: CoinDCXService;
+  private isDryRun: boolean;
+  private maxRetries: number;
+  private retryDelay: number;
+  private lastApiCall: Map<string, number> = new Map(); // Track last API call per user
+  private minApiInterval: number = 2000; // Minimum 2 seconds between API calls per user
 
   constructor() {
     this.coindcxService = new CoinDCXService();
+    // Dry-run mode for safe testing (set COPY_TRADING_DRY_RUN=true to enable)
+    this.isDryRun = process.env.COPY_TRADING_DRY_RUN === 'true';
+    this.maxRetries = parseInt(process.env.COPY_TRADING_MAX_RETRIES || '3');
+    this.retryDelay = parseInt(process.env.COPY_TRADING_RETRY_DELAY || '1000'); // 1 second
+    this.minApiInterval = parseInt(process.env.COPY_TRADING_API_INTERVAL || '2000'); // 2 seconds
+    
+    if (this.isDryRun) {
+      console.log('🧪 Copy Trading Service initialized in DRY-RUN mode - no real trades will be executed');
+    } else {
+      console.log('🚀 Copy Trading Service initialized in LIVE mode - real trades will be executed');
+    }
+  }
+
+  /**
+   * Rate limiting: Wait if needed before making API call for specific user
+   */
+  private async waitForRateLimit(userId: string): Promise<void> {
+    const lastCall = this.lastApiCall.get(userId) || 0;
+    const now = Date.now();
+    const timeSinceLastCall = now - lastCall;
+    
+    if (timeSinceLastCall < this.minApiInterval) {
+      const waitTime = this.minApiInterval - timeSinceLastCall;
+      console.log(`⏳ Rate limiting: waiting ${waitTime}ms for user ${userId}`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastApiCall.set(userId, Date.now());
+  }
+
+  /**
+   * Retry mechanism with exponential backoff
+   */
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    context: string,
+    attempt: number = 1
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error: any) {
+      console.error(`❌ ${context} failed (attempt ${attempt}/${this.maxRetries}):`, error.message);
+      
+      // Check if error is retryable
+      const isRetryable = this.isRetryableError(error);
+      
+      if (!isRetryable || attempt >= this.maxRetries) {
+        console.error(`💥 ${context} permanently failed after ${attempt} attempts`);
+        throw error;
+      }
+      
+      // Calculate exponential backoff delay
+      const delay = this.retryDelay * Math.pow(2, attempt - 1);
+      console.log(`🔄 ${context} retrying in ${delay}ms (attempt ${attempt + 1}/${this.maxRetries})`);
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return this.retryWithBackoff(operation, context, attempt + 1);
+    }
+  }
+
+  /**
+   * Determine if an error is retryable
+   */
+  private isRetryableError(error: any): boolean {
+    // Network errors are retryable
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'ECONNABORTED') {
+      return true;
+    }
+    
+    // Rate limit errors are retryable
+    if (error.response?.status === 429) {
+      return true;
+    }
+    
+    // Server errors (5xx) are retryable
+    if (error.response?.status >= 500 && error.response?.status < 600) {
+      return true;
+    }
+    
+    // Authentication errors (401, 403) are NOT retryable
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      return false;
+    }
+    
+    // Bad requests (400) are usually NOT retryable unless specific cases
+    if (error.response?.status === 400) {
+      const errorMessage = error.response?.data?.message?.toLowerCase() || '';
+      // Some specific 400 errors that might be retryable
+      if (errorMessage.includes('timeout') || errorMessage.includes('temporary')) {
+        return true;
+      }
+      return false;
+    }
+    
+    // Default: assume non-HTTP errors are retryable
+    return true;
   }
 
   /**
@@ -236,6 +337,7 @@ export class CopyTradingService {
 
   /**
    * Execute real trade on CoinDCX exchange using user's trade fund and API credentials
+   * Includes dry-run mode, rate limiting, and retry mechanisms
    */
   private async executeRealTrade(
     copyTrade: CopyTrade, 
@@ -244,7 +346,8 @@ export class CopyTradingService {
     apiSecret: string
   ): Promise<void> {
     try {
-      console.log(`🚀 Executing REAL trade: ${copyTrade.pair} ${copyTrade.type} for user ${user.name}`);
+      const tradeContext = `${copyTrade.pair} ${copyTrade.type} for user ${user.name}`;
+      console.log(`🚀 Executing ${this.isDryRun ? 'DRY-RUN' : 'REAL'} trade: ${tradeContext}`);
       
       // Get original trade data for calculations
       const originalTrade = await storage.getTrade(copyTrade.originalTradeId);
@@ -304,13 +407,30 @@ export class CopyTradingService {
         ...(takeProfitPrice && { take_profit_price: takeProfitPrice })
       };
       
-      console.log(`📤 Placing order on CoinDCX:`, orderData);
+      // Handle dry-run vs real execution
+      if (this.isDryRun) {
+        console.log(`🧪 DRY-RUN: Would place order:`, orderData);
+        
+        // Simulate execution for dry-run
+        await this.simulateDryRunExecution(copyTrade, calculatedQuantity, calculatedLeverage, entryPrice);
+        return;
+      }
       
-      // Execute the trade on CoinDCX exchange
-      const orderResult = await this.coindcxService.createFuturesOrder(
-        apiKey,
-        apiSecret,
-        orderData
+      console.log(`📤 Placing REAL order on CoinDCX:`, orderData);
+      
+      // Apply rate limiting for this user
+      await this.waitForRateLimit(user.id);
+      
+      // Execute the trade with retry mechanism
+      const orderResult = await this.retryWithBackoff(
+        async () => {
+          return await this.coindcxService.createFuturesOrder(
+            apiKey,
+            apiSecret,
+            orderData
+          );
+        },
+        `CoinDCX order creation for ${tradeContext}`
       );
       
       if (orderResult.success && orderResult.orderId) {
@@ -328,17 +448,101 @@ export class CopyTradingService {
       }
       
     } catch (error) {
-      console.error(`❌ Real trade execution failed for ${copyTrade.id}:`, error);
+      console.error(`❌ Trade execution failed for ${copyTrade.id}:`, error);
+      
+      // Classify error for better handling
+      const errorMessage = this.classifyError(error);
       
       // Update copy trade with failure status
       await storage.updateCopyTradeStatus(
         copyTrade.id,
         'failed',
-        `Real execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Execution failed: ${errorMessage}`
       );
       
       throw error; // Re-throw to be caught by caller
     }
+  }
+
+  /**
+   * Simulate dry-run execution for testing purposes
+   */
+  private async simulateDryRunExecution(
+    copyTrade: CopyTrade,
+    quantity: number,
+    leverage: number,
+    price: number
+  ): Promise<void> {
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+    
+    // Simulate 95% success rate for dry-run
+    const isSuccessful = Math.random() > 0.05;
+    
+    if (isSuccessful) {
+      const mockOrderId = `DRY_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      await storage.updateCopyTradeExecution(copyTrade.id, {
+        executedTradeId: mockOrderId,
+        executedPrice: price,
+        executedQuantity: quantity,
+        leverage: leverage
+      });
+      
+      console.log(`🧪 DRY-RUN: Copy trade ${copyTrade.id} simulated successfully! Mock Order ID: ${mockOrderId}`);
+    } else {
+      const mockFailureReasons = [
+        'Simulated network timeout',
+        'Simulated rate limit',
+        'Simulated insufficient balance',
+        'Simulated exchange maintenance'
+      ];
+      const randomReason = mockFailureReasons[Math.floor(Math.random() * mockFailureReasons.length)];
+      
+      await storage.updateCopyTradeStatus(copyTrade.id, 'failed', `DRY-RUN failure: ${randomReason}`);
+      console.log(`🧪 DRY-RUN: Copy trade ${copyTrade.id} simulated failure: ${randomReason}`);
+    }
+  }
+
+  /**
+   * Classify error for better user understanding
+   */
+  private classifyError(error: any): string {
+    if (error.response) {
+      const status = error.response.status;
+      const data = error.response.data;
+      
+      switch (status) {
+        case 401:
+          return 'Invalid API credentials';
+        case 403:
+          return 'API access forbidden - check trading permissions';
+        case 400:
+          return `Bad request: ${data?.message || 'Invalid parameters'}`;
+        case 429:
+          return 'Rate limit exceeded - please wait before retrying';
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return 'Exchange server error - temporary issue';
+        default:
+          return `HTTP ${status}: ${data?.message || error.message}`;
+      }
+    } else if (error.code) {
+      switch (error.code) {
+        case 'ENOTFOUND':
+          return 'Network connection failed - DNS resolution error';
+        case 'ECONNREFUSED':
+          return 'Connection refused - exchange may be down';
+        case 'ECONNABORTED':
+          return 'Request timeout - slow network or exchange response';
+        default:
+          return `Network error: ${error.code}`;
+      }
+    }
+    
+    return error instanceof Error ? error.message : 'Unknown error';
   }
 
   /**
