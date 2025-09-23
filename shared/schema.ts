@@ -497,7 +497,7 @@ export const insertCopyTradingUserSchema = createInsertSchema(copyTradingUsers).
 }).extend({
   email: z.string().email("Please enter a valid email address"),
   telegramId: z.string().optional(),
-  riskPerTrade: z.coerce.number().min(0.1, "Risk per trade must be at least 0.1%").max(10, "Risk per trade cannot exceed 10%"),
+  riskPerTrade: z.coerce.number().min(5, "Risk per trade must be at least 5%").max(50, "Risk per trade cannot exceed 50%"),
   maxTradesPerDay: z.coerce.number().min(1, "Max trades per day must be at least 1").max(20, "Max trades per day cannot exceed 20").optional(),
 });
 
@@ -524,7 +524,7 @@ export const insertCopyTradingApplicationSchema = createInsertSchema(copyTrading
   telegramId: z.string().optional(),
   apiKey: z.string().min(1, "API Key is required"),
   apiSecret: z.string().min(1, "API Secret is required"),
-  riskPerTrade: z.coerce.number().min(0.1, "Risk per trade must be at least 0.1%").max(10, "Risk per trade cannot exceed 10%"),
+  riskPerTrade: z.coerce.number().min(5, "Risk per trade must be at least 5%").max(50, "Risk per trade cannot exceed 50%"),
   maxTradesPerDay: z.coerce.number().min(1, "Max trades per day must be at least 1").max(20, "Max trades per day cannot exceed 20").optional(),
 });
 
