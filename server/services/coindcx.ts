@@ -150,6 +150,58 @@ export class CoinDCXService {
     }
   }
 
+  async getCurrentActivePosition(pair: string): Promise<any> {
+    try {
+      console.log(`📋 CURRENT POSITION: Fetching current active position for ${pair}`);
+      
+      // Use the correct Active Orders API endpoint from user's screenshot
+      const endpoint = '/exchange/v1/orders/active';
+      const timestamp = Date.now();
+      
+      // GET request with timestamp parameter
+      const response = await axios.get(`${this.config.baseUrl}${endpoint}`, {
+        params: { timestamp },
+        headers: this.getHeaders('')
+      });
+      
+      console.log(`📊 CURRENT POSITION: Retrieved active orders/positions`);
+      
+      const activeItems = response.data?.data || response.data || [];
+      
+      // Find position matching the pair
+      const matchingPosition = activeItems.find((item: any) => 
+        (item.pair === pair || item.symbol === pair || item.market === pair) &&
+        (item.type === 'position' || item.position_size || item.active_pos)
+      );
+      
+      if (matchingPosition) {
+        console.log(`✅ CURRENT POSITION: Found matching position:`, {
+          id: matchingPosition.id,
+          pair: matchingPosition.pair || matchingPosition.symbol,
+          size: matchingPosition.position_size || matchingPosition.active_pos,
+          side: matchingPosition.side
+        });
+      } else {
+        console.log(`❌ CURRENT POSITION: No active position found for ${pair}`);
+        console.log(`📋 Available positions:`, activeItems.map((p: any) => ({
+          pair: p.pair || p.symbol,
+          id: p.id,
+          type: p.type
+        })));
+      }
+      
+      return matchingPosition;
+      
+    } catch (error: any) {
+      console.error(`❌ CURRENT POSITION: Failed to fetch current position for ${pair}:`, {
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data
+      });
+      throw new Error(`Failed to fetch current position: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
   async cancelAllOrdersForPosition(positionId: string): Promise<void> {
     try {
       console.log(`🗑️ CANCEL ORDERS: Fetching active orders for position ${positionId}`);
@@ -260,21 +312,27 @@ export class CoinDCXService {
       // Determine the correct endpoint and parameters based on trade type
       switch (tradeType) {
         case 'futures':
-          // Extract position ID from tradeId (format: positionId_timestamp)
-          const positionId = tradeId.split('_')[0]; // Get position ID before underscore
-          console.log(`🔍 EXIT TRADE: Using saved position ID: ${positionId} for ${pair}`);
+          // Step 1: Get current active position from exchange for this pair
+          console.log(`🔍 EXIT TRADE: Finding current active position for ${pair} on exchange`);
+          const currentPosition = await this.getCurrentActivePosition(pair);
           
-          // Step 1: Cancel all open orders for this position first
-          console.log(`🗑️ EXIT TRADE: Cancelling all open orders for position ${positionId}`);
-          await this.cancelAllOrdersForPosition(positionId);
+          if (!currentPosition) {
+            throw new Error(`No active position found for ${pair} on exchange. Position may already be closed.`);
+          }
           
-          // Step 2: Exit the position after orders are cancelled
-          console.log(`🚪 EXIT TRADE: Proceeding to exit position ${positionId}`);
+          console.log(`✅ EXIT TRADE: Found current position ID: ${currentPosition.id} for ${pair}`);
           
-          // Correct CoinDCX Futures exit endpoint - requires actual position ID from database
+          // Step 2: Cancel all open orders for this position first  
+          console.log(`🗑️ EXIT TRADE: Cancelling all open orders for position ${currentPosition.id}`);
+          await this.cancelAllOrdersForPosition(currentPosition.id);
+          
+          // Step 3: Exit the position using current exchange position ID
+          console.log(`🚪 EXIT TRADE: Proceeding to exit position ${currentPosition.id}`);
+          
+          // Correct CoinDCX Futures exit endpoint - requires actual current position ID from exchange
           endpoint = '/exchange/v1/derivatives/futures/positions/exit';
           requestBody = {
-            id: positionId, // Using position ID from our database
+            id: currentPosition.id, // Using current position ID from exchange
             timestamp
           };
           break;
