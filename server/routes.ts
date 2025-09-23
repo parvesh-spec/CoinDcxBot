@@ -7,7 +7,7 @@ import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
 import { sendApplicationConfirmationEmail } from "./services/email";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, sendOtpSchema, verifyOtpSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1395,6 +1395,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to submit application" });
     }
   });
+
+  // Copy Trading Trades Management Routes
+  app.get('/api/copy-trading/trades', isAuthenticated, async (req, res) => {
+    try {
+      const { userId, status, limit, offset } = req.query;
+      
+      const filters: any = {};
+      if (userId) filters.userId = userId as string;
+      if (status) filters.status = status as string;
+      if (limit) filters.limit = parseInt(limit as string);
+      if (offset) filters.offset = parseInt(offset as string);
+      
+      const result = await storage.getCopyTrades(filters);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching copy trades:", error);
+      res.status(500).json({ message: "Failed to fetch copy trades" });
+    }
+  });
+
+  app.post('/api/copy-trading/trades', isAuthenticated, async (req, res) => {
+    try {
+      // Validate request body using Zod schema
+      const copyTradeData = insertCopyTradeSchema.parse(req.body);
+      
+      const newCopyTrade = await storage.createCopyTrade(copyTradeData);
+      
+      console.log(`✅ Copy trade created successfully: ${newCopyTrade.id}`);
+      res.status(201).json(newCopyTrade);
+    } catch (error: any) {
+      console.error("Error creating copy trade:", error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to create copy trade" });
+    }
+  });
+
+  app.patch('/api/copy-trading/trades/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { status, errorMessage } = req.body;
+      
+      const updatedCopyTrade = await storage.updateCopyTradeStatus(
+        req.params.id, 
+        status,
+        errorMessage
+      );
+      
+      if (!updatedCopyTrade) {
+        return res.status(404).json({ message: "Copy trade not found" });
+      }
+      
+      console.log(`✅ Copy trade status updated: ${req.params.id} -> ${status}`);
+      res.json(updatedCopyTrade);
+    } catch (error) {
+      console.error("Error updating copy trade:", error);
+      res.status(500).json({ message: "Failed to update copy trade status" });
+    }
+  });
+
+  // TODO: Implement copy trade stats in future
+  // app.get('/api/copy-trading/trades/stats', isAuthenticated, async (req, res) => {
+  //   try {
+  //     const { userId } = req.query;
+  //     const stats = await storage.getCopyTradeStats(userId as string);
+  //     res.json(stats);
+  //   } catch (error) {
+  //     console.error("Error fetching copy trade stats:", error);
+  //     res.status(500).json({ message: "Failed to fetch copy trade statistics" });
+  //   }
+  // });
 
   // System status routes
   app.get('/api/status', isAuthenticated, async (req, res) => {
