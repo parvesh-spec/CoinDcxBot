@@ -2,10 +2,10 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 
 // SMTP Configuration from Environment Variables
-const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.hostinger.com';
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
 const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
+const SMTP_PASS = process.env.SMTP_PASSWORD || ''; // Fixed: Use SMTP_PASSWORD instead of SMTP_PASS
 const FROM_EMAIL = process.env.FROM_EMAIL || SMTP_USER;
 const FROM_NAME = process.env.FROM_NAME || 'Campus For Wisdom';
 
