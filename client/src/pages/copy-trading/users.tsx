@@ -51,6 +51,7 @@ export default function CopyTradingUsersPage() {
       apiKey: "",
       apiSecret: "",
       riskPerTrade: 2.0,
+      tradeFund: 100.0,
       maxTradesPerDay: undefined,
       isActive: true,
       notes: "",
@@ -207,6 +208,7 @@ export default function CopyTradingUsersPage() {
       apiKey: "", // Don't populate for security
       apiSecret: "", // Don't populate for security
       riskPerTrade: parseFloat(user.riskPerTrade),
+      tradeFund: parseFloat(user.tradeFund),
       maxTradesPerDay: user.maxTradesPerDay ? parseFloat(user.maxTradesPerDay.toString()) : undefined,
       isActive: !!user.isActive,
       notes: user.notes || "",
@@ -312,6 +314,10 @@ export default function CopyTradingUsersPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Risk per Trade:</span>
                     <span className="font-medium">{user.riskPerTrade}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Trade Fund:</span>
+                    <span className="font-medium text-blue-600">{user.tradeFund} USDT</span>
                   </div>
                   
                   {/* Futures Wallet Balance */}
@@ -546,8 +552,8 @@ export default function CopyTradingUsersPage() {
                         <Input
                           type="number"
                           step="0.1"
-                          min="0.1"
-                          max="10"
+                          min="5"
+                          max="50"
                           {...field}
                           onChange={(e) => field.onChange(parseFloat(e.target.value))}
                           data-testid="input-risk-per-trade"
@@ -581,6 +587,32 @@ export default function CopyTradingUsersPage() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="tradeFund"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Trade Fund (USDT) *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="10"
+                        min="50"
+                        max="100000"
+                        placeholder="100"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        data-testid="input-trade-fund"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Fixed amount (USDT) to use per trade. Recommended: 100-1000 USDT
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

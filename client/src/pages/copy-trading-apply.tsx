@@ -820,6 +820,32 @@ export default function CopyTradingApplyPage() {
                         )}
                       />
                     </div>
+
+                    <FormField
+                      control={form.control}
+                      name="tradeFund"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Trade Fund (USDT) *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="10"
+                              min="50"
+                              max="100000"
+                              placeholder="100"
+                              {...field}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                              data-testid="input-trade-fund"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Fixed amount (USDT) to use per trade. This amount will be consistently used for every copied trade. Recommended: 100-1000 USDT
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   {/* Additional Notes */}
