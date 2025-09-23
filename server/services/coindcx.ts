@@ -150,6 +150,50 @@ export class CoinDCXService {
     }
   }
 
+  async findPositionByPair(pair: string): Promise<any> {
+    try {
+      console.log(`🔍 POSITIONS: Fetching active futures positions for ${pair}`);
+      
+      const endpoint = '/exchange/v1/derivatives/futures/positions';
+      const timestamp = Date.now();
+      const body = JSON.stringify({ timestamp });
+      const headers = this.getHeaders(body);
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers
+      });
+      
+      console.log(`📊 POSITIONS: Retrieved ${response.data?.data?.length || 0} positions`);
+      
+      // Find position matching the pair
+      const positions = response.data?.data || [];
+      const matchingPosition = positions.find((pos: any) => 
+        pos.pair === pair || pos.symbol === pair || pos.instrument === pair
+      );
+      
+      if (matchingPosition) {
+        console.log(`✅ POSITIONS: Found matching position:`, {
+          id: matchingPosition.id,
+          pair: matchingPosition.pair || matchingPosition.symbol,
+          size: matchingPosition.size,
+          side: matchingPosition.side
+        });
+      } else {
+        console.log(`❌ POSITIONS: No position found for ${pair} in`, positions.map((p: any) => p.pair || p.symbol));
+      }
+      
+      return matchingPosition;
+      
+    } catch (error: any) {
+      console.error(`❌ POSITIONS: Failed to fetch positions:`, {
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data
+      });
+      throw new Error(`Failed to fetch positions: ${error.response?.data?.message || error.message}`);
+    }
+  }
+
   async exitTrade(tradeId: string, pair: string, tradeType: 'spot' | 'margin' | 'futures' = 'futures'): Promise<{ success: boolean; message: string; data?: any }> {
     try {
       console.log(`🚪 EXIT TRADE: Starting exit for ${pair} (${tradeType}) - Trade ID: ${tradeId}`);
@@ -161,10 +205,20 @@ export class CoinDCXService {
       // Determine the correct endpoint and parameters based on trade type
       switch (tradeType) {
         case 'futures':
-          // Correct CoinDCX Futures exit endpoint - requires position ID
+          // First, get all active positions to find the correct position ID
+          console.log(`🔍 EXIT TRADE: Finding position ID for ${pair}`);
+          const position = await this.findPositionByPair(pair);
+          
+          if (!position) {
+            throw new Error(`No active position found for ${pair}. Position may already be closed or doesn't exist on exchange.`);
+          }
+          
+          console.log(`✅ EXIT TRADE: Found position ID: ${position.id} for ${pair}`);
+          
+          // Correct CoinDCX Futures exit endpoint - requires actual position ID from exchange
           endpoint = '/exchange/v1/derivatives/futures/positions/exit';
           requestBody = {
-            id: tradeId, // Using tradeId as position ID
+            id: position.id, // Using actual position ID from exchange
             timestamp
           };
           break;
