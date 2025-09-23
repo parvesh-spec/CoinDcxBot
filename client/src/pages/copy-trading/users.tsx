@@ -225,7 +225,7 @@ export default function CopyTradingUsersPage() {
       apiSecret: "", // Don't populate for security
       riskPerTrade: parseFloat(user.riskPerTrade),
       tradeFund: parseFloat(user.tradeFund),
-      maxTradesPerDay: user.maxTradesPerDay ? parseInt(user.maxTradesPerDay.toString()) : undefined,
+      maxTradesPerDay: user.maxTradesPerDay ? parseInt(user.maxTradesPerDay.toString()) : "" as any,
       isActive: !!user.isActive,
       notes: user.notes || "",
     });
