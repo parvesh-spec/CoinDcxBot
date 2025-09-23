@@ -1019,22 +1019,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCopyTradingUser(id: string, userData: Partial<InsertCopyTradingUser>): Promise<CopyTradingUser | undefined> {
-    // Convert number fields to strings for decimal columns
-    const dbData: any = { ...userData, updatedAt: new Date() };
-    if (userData.riskPerTrade !== undefined) {
-      dbData.riskPerTrade = userData.riskPerTrade.toString();
+    // Only include fields that are actually provided (not undefined)
+    const dbData: any = { updatedAt: new Date() };
+    
+    // Handle each field individually to avoid overwriting with undefined values
+    if (userData.name !== undefined) dbData.name = userData.name;
+    if (userData.email !== undefined) dbData.email = userData.email;
+    if (userData.telegramId !== undefined) dbData.telegramId = userData.telegramId;
+    if (userData.telegramUsername !== undefined) dbData.telegramUsername = userData.telegramUsername;
+    if (userData.exchange !== undefined) dbData.exchange = userData.exchange;
+    if (userData.riskPerTrade !== undefined) dbData.riskPerTrade = userData.riskPerTrade.toString();
+    if (userData.tradeFund !== undefined) dbData.tradeFund = userData.tradeFund.toString();
+    if (userData.maxTradesPerDay !== undefined) dbData.maxTradesPerDay = userData.maxTradesPerDay || null;
+    if (userData.isActive !== undefined) dbData.isActive = userData.isActive;
+    if (userData.notes !== undefined) dbData.notes = userData.notes;
+    
+    // Handle API credentials - only update if both are provided
+    if (userData.apiKey !== undefined && userData.apiSecret !== undefined) {
+      dbData.apiKey = encrypt(userData.apiKey);
+      dbData.apiSecret = encrypt(userData.apiSecret);
     }
-    if (userData.tradeFund !== undefined) {
-      dbData.tradeFund = userData.tradeFund.toString();
-    }
-    if (userData.maxTradesPerDay !== undefined) {
-      dbData.maxTradesPerDay = userData.maxTradesPerDay || null;
-    }
+    
     const [updatedUser] = await db
       .update(copyTradingUsers)
       .set(dbData)
       .where(eq(copyTradingUsers.id, id))
       .returning();
+      
+    // Decrypt credentials for return value
+    if (updatedUser) {
+      return {
+        ...updatedUser,
+        apiKey: safeDecrypt(updatedUser.apiKey),
+        apiSecret: safeDecrypt(updatedUser.apiSecret)
+      };
+    }
     return updatedUser;
   }
 
