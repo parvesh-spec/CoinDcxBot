@@ -112,6 +112,9 @@ export default function TradesTable({
     tradePair: null,
   });
 
+  // Track exited trades for UI state (independent of database status)
+  const [exitedTrades, setExitedTrades] = useState<Set<string>>(new Set());
+
   // Mutation for updating target status (V2: stop_loss, target_1, target_2, target_3)
   const updateTargetStatusMutation = useMutation({
     mutationFn: async ({ tradeId, targetType }: { tradeId: string; targetType: 'stop_loss' | 'target_1' | 'target_2' | 'target_3' }) => {
@@ -401,15 +404,21 @@ export default function TradesTable({
     mutationFn: async (tradeId: string) => {
       return apiRequest('PATCH', `/api/trades/${tradeId}/exit`, {});
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: any, tradeId: string) => {
+      console.log('🔍 Exit API Response:', data); // Debug log
+      
       // Check if the response indicates actual success
       if (data && data.success === true) {
+        // Add trade to exited trades set for UI state
+        setExitedTrades(prev => new Set([...Array.from(prev), tradeId]));
+        
         // Only invalidate cache and show success toast for true success
         queryClient.invalidateQueries({ queryKey: ['trades'] });
         queryClient.invalidateQueries({ queryKey: ['/api/trades/stats'] });
         toast({ title: "Trade exited successfully on exchange at market price!" });
       } else {
         // Handle partial failure or unexpected response format
+        console.error('❌ Unexpected exit response:', data);
         toast({ 
           title: "Exit may have failed", 
           description: data?.message || "Unexpected response from server", 
@@ -781,13 +790,17 @@ export default function TradesTable({
                       {trade.status === 'active' && (
                         <Button
                           size="sm"
-                          variant="destructive"
+                          variant={exitedTrades.has(trade.id) ? "secondary" : "destructive"}
                           onClick={() => handleExitTrade(trade.id)}
-                          className="text-xs h-7 px-2 bg-orange-600 hover:bg-orange-700"
-                          disabled={exitTradeMutation.isPending}
+                          className={`text-xs h-7 px-2 ${
+                            exitedTrades.has(trade.id) 
+                              ? "bg-gray-500 hover:bg-gray-600 cursor-not-allowed" 
+                              : "bg-orange-600 hover:bg-orange-700"
+                          }`}
+                          disabled={exitTradeMutation.isPending || exitedTrades.has(trade.id)}
                           data-testid={`button-exit-${trade.id}`}
                         >
-                          🚪 Exit
+                          {exitedTrades.has(trade.id) ? "✅ Exited" : "🚪 Exit"}
                         </Button>
                       )}
                       {trade.status === 'completed' && (
