@@ -112,8 +112,6 @@ export default function TradesTable({
     tradePair: null,
   });
 
-  // Track exited trades for UI state (independent of database status)
-  const [exitedTrades, setExitedTrades] = useState<Set<string>>(new Set());
 
   // Mutation for updating target status (V2: stop_loss, target_1, target_2, target_3)
   const updateTargetStatusMutation = useMutation({
@@ -410,9 +408,6 @@ export default function TradesTable({
       
       // Check if the response indicates actual success
       if (data && data.success === true) {
-        // Add trade to exited trades set for UI state
-        setExitedTrades(prev => new Set([...Array.from(prev), tradeId]));
-        
         // Only invalidate cache and show success toast for true success
         queryClient.invalidateQueries({ queryKey: ['trades'] });
         queryClient.invalidateQueries({ queryKey: ['/api/trades/stats'] });
@@ -791,17 +786,17 @@ export default function TradesTable({
                       {trade.status === 'active' && (
                         <Button
                           size="sm"
-                          variant={exitedTrades.has(trade.id) ? "secondary" : "destructive"}
+                          variant={(trade as any).exchangeExited ? "secondary" : "destructive"}
                           onClick={() => handleExitTrade(trade.id)}
                           className={`text-xs h-7 px-2 ${
-                            exitedTrades.has(trade.id) 
+                            (trade as any).exchangeExited 
                               ? "bg-gray-500 hover:bg-gray-600 cursor-not-allowed" 
                               : "bg-orange-600 hover:bg-orange-700"
                           }`}
-                          disabled={exitTradeMutation.isPending || exitedTrades.has(trade.id)}
+                          disabled={exitTradeMutation.isPending || (trade as any).exchangeExited}
                           data-testid={`button-exit-${trade.id}`}
                         >
-                          {exitedTrades.has(trade.id) ? "✅ Exited" : "🚪 Exit"}
+                          {(trade as any).exchangeExited ? "✅ Exited" : "🚪 Exit"}
                         </Button>
                       )}
                       {trade.status === 'completed' && (

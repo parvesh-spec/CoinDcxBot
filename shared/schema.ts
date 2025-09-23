@@ -84,6 +84,7 @@ export const trades = pgTable("trades", {
   targetStatus: jsonb("target_status").default({}), // Track which targets are hit: {t1: true, t2: false, t3: false, safebook: false, stop_loss: false}
   status: varchar("status").notNull().default('active'), // 'active', 'completed'
   completionReason: varchar("completion_reason"), // 'stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book'
+  exchangeExited: boolean("exchange_exited").default(false), // Track if position was exited on exchange
   notes: text("notes"), // User notes when marking as completed
   channelId: varchar("channel_id").references(() => telegramChannels.id),
   createdAt: timestamp("created_at").defaultNow(),

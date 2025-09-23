@@ -186,8 +186,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ API: Trade exited successfully on exchange: ${trade.tradeId}`);
       
       // Exit trade only on exchange - keep database trade status unchanged (active)
-      // Add a note about the exchange exit for record keeping
-      const updatedTrade = await storage.addTradeNote(trade.id, 
+      // Mark as exited on exchange and add note for record keeping
+      const updatedTrade = await storage.markExchangeExited(trade.id, 
         `🚪 Position exited on exchange at market price: ${exitResult.message}`
       );
       
