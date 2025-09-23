@@ -160,6 +160,29 @@ export const copyTrades = pgTable("copy_trades", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Copy Trading Applications table - tracks public applications before approval
+export const copyTradingApplications = pgTable("copy_trading_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(), // Display name for the user
+  email: varchar("email").notNull(), // Email address (mandatory)
+  telegramId: varchar("telegram_id"), // Telegram user ID (optional)
+  telegramUsername: varchar("telegram_username"), // @username for easy identification
+  exchange: varchar("exchange").notNull().default('coindcx'), // 'coindcx', 'binance', 'delta' (future)
+  apiKey: text("api_key").notNull(), // API key for verification
+  apiSecret: text("api_secret").notNull(), // API secret for verification
+  riskPerTrade: decimal("risk_per_trade", { precision: 5, scale: 2 }).notNull().default('2.00'), // Risk % per trade
+  maxTradesPerDay: integer("max_trades_per_day"), // Max trades per day (optional)
+  status: varchar("status").notNull().default('pending'), // 'pending', 'approved', 'rejected'
+  adminNotes: text("admin_notes"), // Admin notes/comments during review
+  rejectionReason: text("rejection_reason"), // Reason for rejection
+  processedBy: varchar("processed_by"), // Admin user ID who processed
+  processedAt: timestamp("processed_at"), // When it was processed
+  notes: text("notes"), // User's additional notes
+  credentialsVerified: boolean("credentials_verified").default(false), // Whether API credentials were verified
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations (no circular references)
 
 // Relations
@@ -483,6 +506,32 @@ export const insertCopyTradeSchema = createInsertSchema(copyTrades).omit({
   createdAt: true,
   updatedAt: true,
   executionTime: true,
+});
+
+// Copy Trading Application Schemas
+export const insertCopyTradingApplicationSchema = createInsertSchema(copyTradingApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  status: true,
+  adminNotes: true,
+  rejectionReason: true,
+  processedBy: true,
+  processedAt: true,
+  credentialsVerified: true,
+}).extend({
+  email: z.string().email("Please enter a valid email address"),
+  telegramId: z.string().optional(),
+  apiKey: z.string().min(1, "API Key is required"),
+  apiSecret: z.string().min(1, "API Secret is required"),
+  riskPerTrade: z.coerce.number().min(0.1, "Risk per trade must be at least 0.1%").max(10, "Risk per trade cannot exceed 10%"),
+  maxTradesPerDay: z.coerce.number().min(1, "Max trades per day must be at least 1").max(20, "Max trades per day cannot exceed 20").optional(),
+});
+
+export const processApplicationSchema = z.object({
+  status: z.enum(['approved', 'rejected']),
+  adminNotes: z.string().optional(),
+  rejectionReason: z.string().optional(),
 });
 
 // Types
