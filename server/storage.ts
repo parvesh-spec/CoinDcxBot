@@ -1001,7 +1001,10 @@ export class DatabaseStorage implements IStorage {
     const dbData = {
       ...userData,
       riskPerTrade: userData.riskPerTrade.toString(),
+      tradeFund: userData.tradeFund?.toString() || '100.00',
       maxTradesPerDay: userData.maxTradesPerDay || null,
+      lowFund: false, // Default to false when creating new user
+      futuresWalletBalance: '0.00', // Default to 0 when creating new user
       apiKey: encrypt(userData.apiKey),
       apiSecret: encrypt(userData.apiSecret),
     };
@@ -1020,6 +1023,9 @@ export class DatabaseStorage implements IStorage {
     const dbData: any = { ...userData, updatedAt: new Date() };
     if (userData.riskPerTrade !== undefined) {
       dbData.riskPerTrade = userData.riskPerTrade.toString();
+    }
+    if (userData.tradeFund !== undefined) {
+      dbData.tradeFund = userData.tradeFund.toString();
     }
     if (userData.maxTradesPerDay !== undefined) {
       dbData.maxTradesPerDay = userData.maxTradesPerDay || null;
@@ -1053,6 +1059,48 @@ export class DatabaseStorage implements IStorage {
   async getCopyTradingUserByEmail(email: string): Promise<CopyTradingUser | undefined> {
     const [user] = await db.select().from(copyTradingUsers).where(eq(copyTradingUsers.email, email));
     return user;
+  }
+
+  async updateCopyTradingUserWalletBalance(id: string, walletBalance: number): Promise<CopyTradingUser | undefined> {
+    // Get current user to check tradeFund for lowFund calculation
+    const currentUser = await this.getCopyTradingUser(id);
+    if (!currentUser) return undefined;
+
+    const tradeFund = parseFloat(currentUser.tradeFund);
+    const lowFund = walletBalance < tradeFund;
+
+    const [updatedUser] = await db
+      .update(copyTradingUsers)
+      .set({ 
+        futuresWalletBalance: walletBalance.toString(),
+        lowFund: lowFund,
+        updatedAt: new Date() 
+      })
+      .where(eq(copyTradingUsers.id, id))
+      .returning();
+    
+    return updatedUser;
+  }
+
+  async updateCopyTradingUserLowFundStatus(id: string): Promise<CopyTradingUser | undefined> {
+    // Get current user data
+    const currentUser = await this.getCopyTradingUser(id);
+    if (!currentUser) return undefined;
+
+    const walletBalance = parseFloat(currentUser.futuresWalletBalance || '0');
+    const tradeFund = parseFloat(currentUser.tradeFund);
+    const lowFund = walletBalance < tradeFund;
+
+    const [updatedUser] = await db
+      .update(copyTradingUsers)
+      .set({ 
+        lowFund: lowFund,
+        updatedAt: new Date() 
+      })
+      .where(eq(copyTradingUsers.id, id))
+      .returning();
+    
+    return updatedUser;
   }
 
   // Copy Trading Application operations

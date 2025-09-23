@@ -136,6 +136,7 @@ export const copyTradingUsers = pgTable("copy_trading_users", {
   maxTradesPerDay: integer("max_trades_per_day"), // Max trades per day (optional, e.g., 2 means only first 2 trades copied)
   isActive: boolean("is_active").default(true), // Enable/disable copy trading
   lowFund: boolean("low_fund").default(false), // True when futures wallet balance < trade fund
+  futuresWalletBalance: decimal("futures_wallet_balance", { precision: 20, scale: 8 }).default('0.00'), // USDT balance from futures wallet
   notes: text("notes"), // Optional notes about the user
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

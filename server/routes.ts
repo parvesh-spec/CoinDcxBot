@@ -1070,7 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const users = await storage.getCopyTradingUsers();
       
-      // Fetch wallet balance for each user asynchronously
+      // Fetch wallet balance for each user asynchronously and save to database
       const usersWithBalance = await Promise.all(
         users.map(async (user) => {
           try {
@@ -1082,6 +1082,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (apiKey && apiSecret) {
               const walletResult = await coindcxService.getFuturesWalletBalance(apiKey, apiSecret);
+              
+              if (walletResult.success && walletResult.balance) {
+                // Extract USDT balance from the wallet response
+                const usdtWallet = walletResult.balance.find((wallet: any) => wallet.short_name === 'USDT');
+                const usdtBalance = usdtWallet ? parseFloat(usdtWallet.balance || '0') : 0;
+                
+                // Save wallet balance to database and update lowFund status
+                try {
+                  await storage.updateCopyTradingUserWalletBalance(user.id, usdtBalance);
+                  console.log(`💾 Wallet balance saved for user ${user.name}: ${usdtBalance} USDT`);
+                } catch (dbError) {
+                  console.error(`❌ Failed to save wallet balance for user ${user.name}:`, dbError);
+                }
+              }
               
               return {
                 ...user,
@@ -1278,6 +1292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         apiKey: application.apiKey,
         apiSecret: application.apiSecret,
         riskPerTrade: parseFloat(application.riskPerTrade),
+        tradeFund: parseFloat(application.tradeFund || '100'),
         maxTradesPerDay: application.maxTradesPerDay,
         isActive: true,
         notes: application.notes
