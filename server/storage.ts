@@ -5,6 +5,8 @@ import {
   trades,
   automations,
   sentMessages,
+  copyTradingUsers,
+  copyTrades,
   type User,
   type InsertUser,
   type TelegramChannel,
@@ -23,6 +25,10 @@ import {
   type InsertAutomation,
   type SentMessage,
   type InsertSentMessage,
+  type CopyTradingUser,
+  type InsertCopyTradingUser,
+  type CopyTrade,
+  type InsertCopyTrade,
   normalizeTargetStatus,
 } from "@shared/schema";
 import { db } from "./db";
@@ -91,6 +97,25 @@ export interface IStorage {
     offset?: number;
   }): Promise<any[]>; // Returns sent messages with automation and trade details
   logSentMessage(message: InsertSentMessage): Promise<SentMessage>;
+
+  // Copy Trading operations
+  getCopyTradingUsers(): Promise<CopyTradingUser[]>;
+  getCopyTradingUser(id: string): Promise<CopyTradingUser | undefined>;
+  createCopyTradingUser(user: InsertCopyTradingUser): Promise<CopyTradingUser>;
+  updateCopyTradingUser(id: string, user: Partial<InsertCopyTradingUser>): Promise<CopyTradingUser | undefined>;
+  toggleCopyTradingUser(id: string, isActive: boolean): Promise<CopyTradingUser | undefined>;
+  deleteCopyTradingUser(id: string): Promise<boolean>;
+  getActiveCopyTradingUsers(): Promise<CopyTradingUser[]>;
+  
+  // Copy Trade operations
+  getCopyTrades(filters?: {
+    userId?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ copyTrades: any[]; total: number }>;
+  createCopyTrade(copyTrade: InsertCopyTrade): Promise<CopyTrade>;
+  updateCopyTradeStatus(id: string, status: string, errorMessage?: string): Promise<CopyTrade | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
