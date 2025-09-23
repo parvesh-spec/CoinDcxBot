@@ -593,16 +593,34 @@ export default function CopyTradingApplyPage() {
 
                     {/* Email Verified Success */}
                     {emailVerified && (
-                      <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center">
-                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
-                        <div>
-                          <p className="text-sm font-semibold text-green-800 dark:text-green-200">
-                            ✅ Email Verified Successfully
-                          </p>
-                          <p className="text-xs text-green-700 dark:text-green-300">
-                            Your email address has been verified
-                          </p>
+                      <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center justify-between">
+                        <div className="flex items-center">
+                          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
+                          <div>
+                            <p className="text-sm font-semibold text-green-800 dark:text-green-200">
+                              ✅ Email Verified Successfully
+                            </p>
+                            <p className="text-xs text-green-700 dark:text-green-300">
+                              Your email address has been verified
+                            </p>
+                          </div>
                         </div>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setEmailVerified(false);
+                            setOtpSent(false);
+                            setOtpCode('');
+                            setOtpTimer(0);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="text-green-700 hover:text-green-800 border-green-300 hover:border-green-400"
+                          data-testid="button-change-email"
+                        >
+                          <i className="fas fa-edit mr-2" />
+                          Change Email
+                        </Button>
                       </div>
                     )}
                   </div>
