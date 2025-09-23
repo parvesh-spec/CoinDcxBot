@@ -188,7 +188,8 @@ export class CoinDCXService {
     try {
       console.log(`📋 GET ORDERS: Fetching active orders for position ${positionId}`);
       
-      const endpoint = '/exchange/v1/derivatives/futures/orders';
+      // Use correct CoinDCX active orders endpoint as per API documentation
+      const endpoint = '/exchange/v1/orders/active';
       const timestamp = Date.now();
       const requestBody = {
         timestamp
@@ -197,11 +198,15 @@ export class CoinDCXService {
       const body = JSON.stringify(requestBody);
       const headers = this.getHeaders(body);
       
-      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
-        headers
+      // Use GET method for active orders endpoint
+      const response = await axios.get(`${this.config.baseUrl}${endpoint}?timestamp=${timestamp}`, {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        }
       });
       
-      const allOrders = response.data?.data || [];
+      const allOrders = response.data?.data || response.data || [];
       
       // Filter orders for this specific position that are still active
       const positionOrders = allOrders.filter((order: any) => 
