@@ -150,6 +150,46 @@ export class CoinDCXService {
     }
   }
 
+  async verifyPositionExists(positionId: string, pair: string): Promise<{ exists: boolean; reason?: string }> {
+    try {
+      console.log(`🔍 VERIFY POSITION: Checking if position ${positionId} exists for ${pair}`);
+      
+      const endpoint = '/exchange/v1/derivatives/futures/positions';
+      const timestamp = Date.now();
+      const requestBody = {
+        timestamp,
+        page: 1,
+        size: 100,
+        status: 'open'
+      };
+      
+      const body = JSON.stringify(requestBody);
+      const headers = this.getHeaders(body);
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers
+      });
+      
+      const allPositions = response.data?.data || response.data || [];
+      console.log(`🔍 VERIFY POSITION: Found ${allPositions.length} open positions`);
+      
+      // Check if our position ID exists in the current open positions
+      const position = allPositions.find((pos: any) => pos.id === positionId);
+      
+      if (position) {
+        console.log(`✅ VERIFY POSITION: Position ${positionId} found and is open`);
+        return { exists: true };
+      } else {
+        console.log(`❌ VERIFY POSITION: Position ${positionId} not found in open positions`);
+        return { exists: false, reason: 'Position not found in current open positions' };
+      }
+      
+    } catch (error: any) {
+      console.error(`❌ VERIFY POSITION: Failed to verify position:`, error.response?.data);
+      return { exists: false, reason: 'Error checking position status' };
+    }
+  }
+
   async cancelAllOrdersForPosition(positionId: string): Promise<void> {
     try {
       console.log(`🗑️ CANCEL ORDERS: Fetching active orders for position ${positionId}`);
@@ -194,15 +234,11 @@ export class CoinDCXService {
     try {
       console.log(`📋 GET ORDERS: Fetching active orders for position ${positionId}`);
       
-      // Try futures positions endpoint first as it's known to work
-      // and may contain order information
-      const endpoint = '/exchange/v1/derivatives/futures/positions';
+      // Use futures orders endpoint to get active orders
+      const endpoint = '/exchange/v1/derivatives/futures/orders';
       const timestamp = Date.now();
       const requestBody = {
-        timestamp,
-        page: 1,
-        size: 100,
-        status: 'open'
+        timestamp
       };
       
       const body = JSON.stringify(requestBody);
@@ -215,37 +251,33 @@ export class CoinDCXService {
         headers
       });
       
-      const allPositions = response.data?.data || response.data || [];
-      console.log(`📋 GET ORDERS: Received ${allPositions.length} total positions from API`);
+      const allOrders = response.data?.data || response.data || [];
+      console.log(`📋 GET ORDERS: Received ${allOrders.length} total orders from API`);
       
-      // Find the specific position and extract any order information
-      const targetPosition = allPositions.find((pos: any) => pos.id === positionId || pos.position_id === positionId);
-      
-      if (targetPosition) {
-        console.log(`📋 GET ORDERS: Found target position:`, JSON.stringify(targetPosition, null, 2));
-        
-        // Check if position has associated orders or order IDs
-        const associatedOrders: any[] = [];
-        
-        // Look for order fields in the position data
-        if (targetPosition.order_id) {
-          associatedOrders.push({
-            order_id: targetPosition.order_id,
-            id: targetPosition.order_id,
-            status: targetPosition.status || 'open',
-            position_id: positionId
-          });
-        }
-        
-        // If no direct order info, return empty array - position might not have active orders
-        console.log(`📊 GET ORDERS: Found ${associatedOrders.length} associated orders in position data`);
-        return associatedOrders;
-      } else {
-        console.log(`📋 GET ORDERS: Position ${positionId} not found in current positions`);
+      // Debug: Log structure of first few orders to understand format
+      if (allOrders.length > 0) {
+        console.log(`📋 GET ORDERS: Sample order structure:`, JSON.stringify(allOrders[0], null, 2));
       }
       
-      // If we can't find the position or orders, return empty array
-      const positionOrders: any[] = [];
+      // Filter orders for this specific position - check multiple matching criteria
+      const positionOrders = allOrders.filter((order: any) => {
+        // Check if order relates to our position ID through various fields
+        const matchesPosition = 
+          order.position_id === positionId ||
+          order.id === positionId ||
+          order.group_id?.includes(positionId.substring(0, 8)) || // Match first part of position ID
+          order.group_id?.includes(positionId) ||
+          order.client_order_id === positionId;
+        
+        // Check for active status - include more potential active statuses
+        const isActive = ['open', 'init', 'partial_entry', 'pending', 'working', 'partially_filled', 'new'].includes(order.status?.toLowerCase());
+        
+        if (matchesPosition) {
+          console.log(`📋 GET ORDERS: Found related order - ID: ${order.id}, Status: ${order.status}, Group: ${order.group_id}`);
+        }
+        
+        return matchesPosition && isActive;
+      });
       
       console.log(`📊 GET ORDERS: Found ${positionOrders.length} active orders for position ${positionId}`);
       
@@ -323,6 +355,13 @@ export class CoinDCXService {
           // Extract position ID from tradeId (format: positionId_timestamp)
           const positionId = tradeId.split('_')[0]; // Get position ID before underscore
           console.log(`🔍 EXIT TRADE: Using saved position ID: ${positionId} for ${pair}`);
+          
+          // Step 0: First verify the position exists
+          const existsCheck = await this.verifyPositionExists(positionId, pair);
+          if (!existsCheck.exists) {
+            console.log(`⚠️ EXIT TRADE: Position ${positionId} not found or already closed`);
+            return { success: false, message: `Position not found or already closed: ${existsCheck.reason}` };
+          }
           
           // Step 1: Cancel all open orders for this position first
           console.log(`🗑️ EXIT TRADE: Cancelling all open orders for position ${positionId}`);
