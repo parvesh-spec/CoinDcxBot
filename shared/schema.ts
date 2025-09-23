@@ -135,6 +135,7 @@ export const copyTradingUsers = pgTable("copy_trading_users", {
   tradeFund: decimal("trade_fund", { precision: 12, scale: 2 }).notNull().default('100.00'), // Fixed fund amount per trade in USDT (e.g., 100.00 USDT)
   maxTradesPerDay: integer("max_trades_per_day"), // Max trades per day (optional, e.g., 2 means only first 2 trades copied)
   isActive: boolean("is_active").default(true), // Enable/disable copy trading
+  lowFund: boolean("low_fund").default(false), // True when futures wallet balance < trade fund
   notes: text("notes"), // Optional notes about the user
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
