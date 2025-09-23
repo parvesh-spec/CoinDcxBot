@@ -7,6 +7,7 @@ import {
   sentMessages,
   copyTradingUsers,
   copyTrades,
+  copyTradingApplications,
   type User,
   type InsertUser,
   type TelegramChannel,
@@ -106,6 +107,11 @@ export interface IStorage {
   toggleCopyTradingUser(id: string, isActive: boolean): Promise<CopyTradingUser | undefined>;
   deleteCopyTradingUser(id: string): Promise<boolean>;
   getActiveCopyTradingUsers(): Promise<CopyTradingUser[]>;
+  getCopyTradingUserByEmail(email: string): Promise<CopyTradingUser | undefined>;
+  
+  // Copy Trading Application operations
+  getCopyTradingApplicationByEmail(email: string): Promise<any | undefined>;
+  createCopyTradingApplication(application: any): Promise<any>;
   
   // Copy Trade operations
   getCopyTrades(filters?: {
@@ -966,7 +972,7 @@ export class DatabaseStorage implements IStorage {
     const dbData = {
       ...userData,
       riskPerTrade: userData.riskPerTrade.toString(),
-      maxDailyLoss: userData.maxDailyLoss?.toString() || null,
+      maxTradesPerDay: userData.maxTradesPerDay || null,
     };
     const [user] = await db.insert(copyTradingUsers).values(dbData).returning();
     return user;
@@ -978,8 +984,8 @@ export class DatabaseStorage implements IStorage {
     if (userData.riskPerTrade !== undefined) {
       dbData.riskPerTrade = userData.riskPerTrade.toString();
     }
-    if (userData.maxDailyLoss !== undefined) {
-      dbData.maxDailyLoss = userData.maxDailyLoss?.toString() || null;
+    if (userData.maxTradesPerDay !== undefined) {
+      dbData.maxTradesPerDay = userData.maxTradesPerDay || null;
     }
     const [updatedUser] = await db
       .update(copyTradingUsers)
@@ -1005,6 +1011,28 @@ export class DatabaseStorage implements IStorage {
 
   async getActiveCopyTradingUsers(): Promise<CopyTradingUser[]> {
     return await db.select().from(copyTradingUsers).where(eq(copyTradingUsers.isActive, true));
+  }
+
+  async getCopyTradingUserByEmail(email: string): Promise<CopyTradingUser | undefined> {
+    const [user] = await db.select().from(copyTradingUsers).where(eq(copyTradingUsers.email, email));
+    return user;
+  }
+
+  // Copy Trading Application operations
+  async getCopyTradingApplicationByEmail(email: string): Promise<any | undefined> {
+    const [application] = await db.select().from(copyTradingApplications).where(eq(copyTradingApplications.email, email));
+    return application;
+  }
+
+  async createCopyTradingApplication(applicationData: any): Promise<any> {
+    // Convert number fields to strings for decimal columns
+    const dbData = {
+      ...applicationData,
+      riskPerTrade: applicationData.riskPerTrade.toString(),
+      maxTradesPerDay: applicationData.maxTradesPerDay || null,
+    };
+    const [application] = await db.insert(copyTradingApplications).values(dbData).returning();
+    return application;
   }
 
   // Copy Trade operations

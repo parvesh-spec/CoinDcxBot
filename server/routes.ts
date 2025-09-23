@@ -6,7 +6,7 @@ import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1194,6 +1194,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public Copy Trading Application Routes  
+  app.post('/api/public/verify-credentials', async (req, res) => {
+    try {
+      const { apiKey, apiSecret } = req.body;
+      
+      if (!apiKey || !apiSecret) {
+        return res.status(400).json({ 
+          valid: false, 
+          message: 'API Key and API Secret are required' 
+        });
+      }
+
+      console.log(`🔐 Public credential verification request for API key: ${apiKey.substring(0, 8)}...`);
+      
+      // Verify credentials using CoinDCX service
+      const result = await coindcxService.validateCustomCredentials(apiKey, apiSecret);
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error in public credential verification:", error);
+      res.status(500).json({ 
+        valid: false,
+        message: "Internal server error during verification" 
+      });
+    }
+  });
+
+  app.post('/api/public/copy-trading/applications', async (req, res) => {
+    try {
+      // Validate request body using Zod schema
+      const applicationData = insertCopyTradingApplicationSchema.parse(req.body);
+      
+      console.log(`📝 New copy trading application received from: ${applicationData.email}`);
+      
+      // Check if email already exists in applications or users
+      const existingApplication = await storage.getCopyTradingApplicationByEmail(applicationData.email);
+      if (existingApplication) {
+        return res.status(400).json({ 
+          message: "An application with this email already exists" 
+        });
+      }
+
+      const existingUser = await storage.getCopyTradingUserByEmail(applicationData.email);
+      if (existingUser) {
+        return res.status(400).json({ 
+          message: "A user with this email already exists in our system" 
+        });
+      }
+
+      // Verify credentials before saving application
+      console.log(`🔐 Verifying credentials for application: ${applicationData.email}`);
+      const credentialCheck = await coindcxService.validateCustomCredentials(applicationData.apiKey, applicationData.apiSecret);
+      
+      if (!credentialCheck.valid) {
+        console.log(`❌ Credential verification failed for application: ${applicationData.email}`);
+        return res.status(400).json({ 
+          message: "Credential verification failed", 
+          error: credentialCheck.message 
+        });
+      }
+
+      console.log(`✅ Credentials verified for application: ${applicationData.email}`);
+      
+      // Create application with verified credentials flag
+      const newApplication = await storage.createCopyTradingApplication({
+        ...applicationData,
+        credentialsVerified: true,
+      });
+      
+      console.log(`✅ Copy trading application created successfully: ${newApplication.id}`);
+      
+      res.status(201).json({ 
+        message: "Application submitted successfully",
+        applicationId: newApplication.id,
+        status: "pending"
+      });
+    } catch (error: any) {
+      console.error("Error creating copy trading application:", error);
+      
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to submit application" });
+    }
+  });
+
   // System status routes
   app.get('/api/status', isAuthenticated, async (req, res) => {
     try {
@@ -1258,7 +1348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/public/*', (req, res, next) => {
     // Allow all origins for public endpoints
     res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     res.header('Access-Control-Max-Age', '86400'); // 24 hours
     res.header('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300'); // Cache for 1 minute
