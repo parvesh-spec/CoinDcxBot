@@ -1194,6 +1194,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin Copy Trading Application Routes (requires authentication)
+  app.get('/api/copy-trading/applications', isAuthenticated, async (req, res) => {
+    try {
+      const { status, limit, offset } = req.query;
+      
+      const filters: any = {};
+      if (status) filters.status = status as string;
+      if (limit) filters.limit = parseInt(limit as string);
+      if (offset) filters.offset = parseInt(offset as string);
+      
+      const result = await storage.getCopyTradingApplications(filters);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching copy trading applications:", error);
+      res.status(500).json({ message: "Failed to fetch copy trading applications" });
+    }
+  });
+
+  app.patch('/api/copy-trading/applications/:id/approve', isAuthenticated, async (req, res) => {
+    try {
+      const { notes } = req.body;
+      
+      // Get application details first
+      const application = await storage.getCopyTradingApplication(req.params.id);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      // Update application status to approved
+      const updatedApplication = await storage.updateCopyTradingApplicationStatus(
+        req.params.id, 
+        'approved', 
+        notes
+      );
+      
+      // Create copy trading user from approved application
+      const userData = {
+        name: application.name,
+        email: application.email,
+        telegramId: application.telegramId || '',
+        telegramUsername: application.telegramUsername || '',
+        exchange: application.exchange,
+        apiKey: application.apiKey,
+        apiSecret: application.apiSecret,
+        riskPerTrade: parseFloat(application.riskPerTrade),
+        maxTradesPerDay: application.maxTradesPerDay,
+        isActive: true,
+        notes: application.notes
+      };
+      
+      const newUser = await storage.createCopyTradingUser(userData);
+      
+      console.log(`✅ Application approved and user created: ${newUser.id} for ${application.email}`);
+      res.json({ 
+        message: "Application approved and user created successfully",
+        application: updatedApplication,
+        user: newUser
+      });
+    } catch (error) {
+      console.error("Error approving copy trading application:", error);
+      res.status(500).json({ message: "Failed to approve application" });
+    }
+  });
+
+  app.patch('/api/copy-trading/applications/:id/reject', isAuthenticated, async (req, res) => {
+    try {
+      const { notes } = req.body;
+      
+      const updatedApplication = await storage.updateCopyTradingApplicationStatus(
+        req.params.id, 
+        'rejected', 
+        notes
+      );
+      
+      if (!updatedApplication) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      
+      console.log(`❌ Application rejected: ${req.params.id}`);
+      res.json({ 
+        message: "Application rejected successfully",
+        application: updatedApplication
+      });
+    } catch (error) {
+      console.error("Error rejecting copy trading application:", error);
+      res.status(500).json({ message: "Failed to reject application" });
+    }
+  });
+
   // Public Copy Trading Application Routes  
   app.post('/api/public/verify-credentials', async (req, res) => {
     try {

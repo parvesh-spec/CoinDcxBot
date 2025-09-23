@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +23,10 @@ export default function CopyTradingUsersPage() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<CopyTradingUser | null>(null);
+  const [activeTab, setActiveTab] = useState("users");
+  const [approvingApplication, setApprovingApplication] = useState<any | null>(null);
+  const [rejectingApplication, setRejectingApplication] = useState<any | null>(null);
+  const [adminNotes, setAdminNotes] = useState("");
 
   // Form schema with validation
   const formSchema = insertCopyTradingUserSchema.extend({
@@ -53,6 +59,17 @@ export default function CopyTradingUsersPage() {
       return response.json() as Promise<CopyTradingUser[]>;
     },
   });
+
+  // Fetch copy trading applications
+  const { data: applicationsData, isLoading: isLoadingApplications } = useQuery({
+    queryKey: ["/api/copy-trading/applications"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/copy-trading/applications");
+      return response.json() as Promise<{ applications: any[]; total: number }>;
+    },
+  });
+
+  const applications = applicationsData?.applications || [];
 
   // Add/Update user mutation
   const saveUserMutation = useMutation({
@@ -122,6 +139,53 @@ export default function CopyTradingUsersPage() {
     },
   });
 
+  // Approve application mutation
+  const approveApplicationMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+      return apiRequest("PATCH", `/api/copy-trading/applications/${id}/approve`, { notes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/copy-trading/applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/copy-trading/users"] });
+      setApprovingApplication(null);
+      setAdminNotes("");
+      toast({
+        title: "Application approved!",
+        description: "User has been created and application approved.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to approve application",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reject application mutation
+  const rejectApplicationMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+      return apiRequest("PATCH", `/api/copy-trading/applications/${id}/reject`, { notes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/copy-trading/applications"] });
+      setRejectingApplication(null);
+      setAdminNotes("");
+      toast({
+        title: "Application rejected",
+        description: "Application has been rejected.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to reject application",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     saveUserMutation.mutate(values);
   };
@@ -165,9 +229,9 @@ export default function CopyTradingUsersPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Copy Trading Users</h1>
+          <h1 className="text-3xl font-bold">Copy Trading Management</h1>
           <p className="text-muted-foreground">
-            Manage user accounts for copy trading. When enabled, trades will be automatically copied to their accounts.
+            Manage user accounts and review applications for copy trading.
           </p>
         </div>
         <Button onClick={handleAddUser} data-testid="button-add-user">
@@ -175,6 +239,19 @@ export default function CopyTradingUsersPage() {
           Add User
         </Button>
       </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="users" data-testid="tab-users">
+            Users ({users.length})
+          </TabsTrigger>
+          <TabsTrigger value="applications" data-testid="tab-applications">
+            Applications ({applications.filter(app => app.status === 'pending').length} pending)
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-6">
 
       {/* Users Grid */}
       {users.length === 0 ? (
@@ -522,6 +599,163 @@ export default function CopyTradingUsersPage() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      </TabsContent>
+
+      <TabsContent value="applications" className="space-y-6">
+        {/* Applications Section */}
+        {applications.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div className="space-y-4">
+                <i className="fas fa-file-alt text-4xl text-muted-foreground" />
+                <div>
+                  <h3 className="text-lg font-semibold">No applications yet</h3>
+                  <p className="text-muted-foreground">
+                    Applications will appear here when users submit them via the public form.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6">
+            {applications.map((application: any) => (
+              <Card key={application.id} className="relative">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{application.name}</CardTitle>
+                    <Badge variant={
+                      application.status === 'pending' ? 'outline' :
+                      application.status === 'approved' ? 'default' : 'destructive'
+                    }>
+                      {application.status}
+                    </Badge>
+                  </div>
+                  <CardDescription>{application.email}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Exchange:</span> {application.exchange}
+                      </div>
+                      <div>
+                        <span className="font-medium">Risk per Trade:</span> {application.riskPerTrade}%
+                      </div>
+                      <div>
+                        <span className="font-medium">Max Trades/Day:</span> {application.maxTradesPerDay || 'Unlimited'}
+                      </div>
+                      <div>
+                        <span className="font-medium">Applied:</span> {new Date(application.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    {application.notes && (
+                      <div>
+                        <span className="font-medium text-sm">Notes:</span>
+                        <p className="text-sm text-muted-foreground mt-1">{application.notes}</p>
+                      </div>
+                    )}
+                    {application.status === 'pending' && (
+                      <div className="flex space-x-2 pt-4">
+                        <Button
+                          onClick={() => setApprovingApplication(application)}
+                          className="bg-green-600 hover:bg-green-700"
+                          data-testid={`button-approve-${application.id}`}
+                        >
+                          <i className="fas fa-check mr-2" />
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => setRejectingApplication(application)}
+                          variant="outline"
+                          className="border-red-300 text-red-700 hover:bg-red-50"
+                          data-testid={`button-reject-${application.id}`}
+                        >
+                          <i className="fas fa-times mr-2" />
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </TabsContent>
+      </Tabs>
+
+      {/* Approval Dialog */}
+      <AlertDialog open={!!approvingApplication} onOpenChange={() => setApprovingApplication(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Application</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve this application? This will create a new copy trading user.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="my-4">
+            <Label htmlFor="admin-notes">Admin Notes (Optional)</Label>
+            <Textarea
+              id="admin-notes"
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              placeholder="Add any notes for the approval..."
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => approvingApplication && approveApplicationMutation.mutate({
+                id: approvingApplication.id,
+                notes: adminNotes
+              })}
+              disabled={approveApplicationMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {approveApplicationMutation.isPending ? "Approving..." : "Approve"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Rejection Dialog */}
+      <AlertDialog open={!!rejectingApplication} onOpenChange={() => setRejectingApplication(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Application</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reject this application? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="my-4">
+            <Label htmlFor="rejection-notes">Rejection Notes (Optional)</Label>
+            <Textarea
+              id="rejection-notes"
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              placeholder="Add reason for rejection..."
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => rejectingApplication && rejectApplicationMutation.mutate({
+                id: rejectingApplication.id,
+                notes: adminNotes
+              })}
+              disabled={rejectApplicationMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {rejectApplicationMutation.isPending ? "Rejecting..." : "Reject"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

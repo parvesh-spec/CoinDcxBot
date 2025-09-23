@@ -34,6 +34,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, ilike } from "drizzle-orm";
+import { encrypt, decrypt, safeDecrypt } from "./utils/encryption";
 
 export interface IStorage {
   // User operations
@@ -110,8 +111,11 @@ export interface IStorage {
   getCopyTradingUserByEmail(email: string): Promise<CopyTradingUser | undefined>;
   
   // Copy Trading Application operations
+  getCopyTradingApplications(filters?: { status?: string; limit?: number; offset?: number }): Promise<{ applications: any[]; total: number }>;
   getCopyTradingApplicationByEmail(email: string): Promise<any | undefined>;
+  getCopyTradingApplication(id: string): Promise<any | undefined>;
   createCopyTradingApplication(application: any): Promise<any>;
+  updateCopyTradingApplicationStatus(id: string, status: string, notes?: string): Promise<any | undefined>;
   
   // Copy Trade operations
   getCopyTrades(filters?: {
@@ -959,7 +963,14 @@ export class DatabaseStorage implements IStorage {
 
   // Copy Trading User operations
   async getCopyTradingUsers(): Promise<CopyTradingUser[]> {
-    return await db.select().from(copyTradingUsers).orderBy(desc(copyTradingUsers.createdAt));
+    const users = await db.select().from(copyTradingUsers).orderBy(desc(copyTradingUsers.createdAt));
+    
+    // Decrypt API credentials for display (for admin use only)
+    return users.map(user => ({
+      ...user,
+      apiKey: safeDecrypt(user.apiKey),
+      apiSecret: safeDecrypt(user.apiSecret)
+    }));
   }
 
   async getCopyTradingUser(id: string): Promise<CopyTradingUser | undefined> {
@@ -968,14 +979,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCopyTradingUser(userData: InsertCopyTradingUser): Promise<CopyTradingUser> {
-    // Convert number fields to strings for decimal columns
+    // Convert number fields to strings for decimal columns and encrypt API credentials
     const dbData = {
       ...userData,
       riskPerTrade: userData.riskPerTrade.toString(),
       maxTradesPerDay: userData.maxTradesPerDay || null,
+      apiKey: encrypt(userData.apiKey),
+      apiSecret: encrypt(userData.apiSecret),
     };
     const [user] = await db.insert(copyTradingUsers).values(dbData).returning();
-    return user;
+    
+    // Decrypt credentials for return value
+    return {
+      ...user,
+      apiKey: safeDecrypt(user.apiKey),
+      apiSecret: safeDecrypt(user.apiSecret)
+    };
   }
 
   async updateCopyTradingUser(id: string, userData: Partial<InsertCopyTradingUser>): Promise<CopyTradingUser | undefined> {
@@ -1021,18 +1040,98 @@ export class DatabaseStorage implements IStorage {
   // Copy Trading Application operations
   async getCopyTradingApplicationByEmail(email: string): Promise<any | undefined> {
     const [application] = await db.select().from(copyTradingApplications).where(eq(copyTradingApplications.email, email));
-    return application;
+    
+    if (!application) return undefined;
+    
+    // Decrypt API credentials
+    return {
+      ...application,
+      apiKey: safeDecrypt(application.apiKey),
+      apiSecret: safeDecrypt(application.apiSecret)
+    };
   }
 
   async createCopyTradingApplication(applicationData: any): Promise<any> {
-    // Convert number fields to strings for decimal columns
+    // Convert number fields to strings for decimal columns and encrypt API credentials
     const dbData = {
       ...applicationData,
       riskPerTrade: applicationData.riskPerTrade.toString(),
       maxTradesPerDay: applicationData.maxTradesPerDay || null,
+      apiKey: encrypt(applicationData.apiKey),
+      apiSecret: encrypt(applicationData.apiSecret),
     };
     const [application] = await db.insert(copyTradingApplications).values(dbData).returning();
-    return application;
+    
+    // Decrypt credentials for return value
+    return {
+      ...application,
+      apiKey: safeDecrypt(application.apiKey),
+      apiSecret: safeDecrypt(application.apiSecret)
+    };
+  }
+
+  async getCopyTradingApplications(filters?: { status?: string; limit?: number; offset?: number }): Promise<{ applications: any[]; total: number }> {
+    const limit = filters?.limit || 50;
+    const offset = filters?.offset || 0;
+
+    let whereClause = sql`1=1`;
+    if (filters?.status) {
+      whereClause = and(whereClause, eq(copyTradingApplications.status, filters.status))!;
+    }
+
+    const applications = await db
+      .select()
+      .from(copyTradingApplications)
+      .where(whereClause)
+      .orderBy(desc(copyTradingApplications.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(copyTradingApplications)
+      .where(whereClause);
+
+    // Decrypt API credentials for admin display
+    const decryptedApplications = applications.map(app => ({
+      ...app,
+      apiKey: safeDecrypt(app.apiKey),
+      apiSecret: safeDecrypt(app.apiSecret)
+    }));
+
+    return { applications: decryptedApplications, total: count };
+  }
+
+  async getCopyTradingApplication(id: string): Promise<any | undefined> {
+    const [application] = await db.select().from(copyTradingApplications).where(eq(copyTradingApplications.id, id));
+    
+    if (!application) return undefined;
+    
+    // Decrypt API credentials
+    return {
+      ...application,
+      apiKey: safeDecrypt(application.apiKey),
+      apiSecret: safeDecrypt(application.apiSecret)
+    };
+  }
+
+  async updateCopyTradingApplicationStatus(id: string, status: string, notes?: string): Promise<any | undefined> {
+    const updateData: any = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    if (notes) {
+      updateData.adminNotes = notes;
+    }
+
+    const [updatedApplication] = await db
+      .update(copyTradingApplications)
+      .set(updateData)
+      .where(eq(copyTradingApplications.id, id))
+      .returning();
+    
+    return updatedApplication;
   }
 
   // Copy Trade operations
