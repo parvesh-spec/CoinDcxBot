@@ -1,5 +1,6 @@
 import { coindcxService } from './coindcx';
 import { automationService } from './automationService';
+import { copyTradingService } from './copyTradingService';
 import { storage } from '../storage';
 import * as cron from 'node-cron';
 
@@ -29,6 +30,9 @@ export class TradeMonitorService {
           
           // Trigger automation for trade registration
           await automationService.triggerAutomations(savedTrade, 'trade_registered');
+          
+          // Process copy trading for this new trade
+          await copyTradingService.processNewTradeForCopyTrading(savedTrade);
         }
       }
     } catch (error) {
@@ -148,6 +152,9 @@ export class TradeMonitorService {
           
           // Trigger automation for trade registration
           await automationService.triggerAutomations(savedTrade, 'trade_registered');
+          
+          // Process copy trading for this new trade
+          await copyTradingService.processNewTradeForCopyTrading(savedTrade);
           processedCount++;
         } else {
           console.log(`✅ Existing position: ${coindcxTrade.pair} (${uniqueTradeId})`);
