@@ -508,24 +508,16 @@ export class CoinDCXService {
       
       console.log(`🔧 Sanitized params: qty:${sanitizedQuantity} leverage:${sanitizedLeverage}x SL:${sanitizedStopLoss} TP:${sanitizedTakeProfit}`);
       
-      // Generate unique client order ID
-      const clientOrderId = `copy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Build request body as per CoinDCX API requirements
+      // Build request body as per CoinDCX Futures API requirements (NOT orders array format)
       const requestBody = {
-        orders: [{
-          side: orderData.side,
-          order_type: "market_order",
-          market: orderData.pair, // Use plain pair name without B- prefix for market field
-          total_quantity: sanitizedQuantity,
-          timestamp: timestamp,
-          ecode: "I", // Required exchange code
-          client_order_id: clientOrderId, // Required unique order ID
-          ...(sanitizedLeverage && { leverage: sanitizedLeverage }),
-          ...(sanitizedStopLoss && { stop_loss_price: sanitizedStopLoss }),
-          ...(sanitizedTakeProfit && { take_profit_price: sanitizedTakeProfit }),
-          ...(orderData.pair.includes('USDT') && { margin_currency_short_name: "USDT" })
-        }]
+        timestamp: timestamp,
+        side: orderData.side,
+        pair: `B-${orderData.pair}`, // Futures requires B- prefix for pair field
+        order_type: "market", // Use "market" not "market_order" for futures
+        total_quantity: sanitizedQuantity,
+        leverage: sanitizedLeverage,
+        ...(sanitizedStopLoss && { stop_loss_price: sanitizedStopLoss }),
+        ...(sanitizedTakeProfit && { take_profit_price: sanitizedTakeProfit })
       };
       
       const body = JSON.stringify(requestBody);
