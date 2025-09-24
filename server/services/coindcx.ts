@@ -456,6 +456,43 @@ export class CoinDCXService {
       throw error;
     }
   }
+
+  /**
+   * Transform CoinDCX trade data to our Trade schema format
+   */
+  transformTradeData(coindcxTrade: any): any {
+    // Determine trade type (buy/sell) based on active position
+    let type = 'unknown';
+    if (coindcxTrade.active_pos !== undefined) {
+      type = (coindcxTrade.active_pos || 0) > 0 ? 'buy' : 'sell';
+    }
+
+    // Calculate total value (price * quantity)
+    const price = parseFloat(coindcxTrade.price || 0);
+    const quantity = Math.abs(parseFloat(coindcxTrade.active_pos || 0));
+    const total = price * quantity;
+
+    return {
+      tradeId: coindcxTrade.id,
+      pair: coindcxTrade.pair,
+      type: type,
+      price: price.toString(),
+      leverage: parseInt(coindcxTrade.leverage || 1),
+      total: total.toString(),
+      fee: coindcxTrade.fee ? parseFloat(coindcxTrade.fee).toString() : null,
+      takeProfitTrigger: null,
+      takeProfit2: null,
+      takeProfit3: null,
+      stopLossTrigger: null,
+      safebookPrice: null,
+      targetStatus: {},
+      status: 'active',
+      completionReason: null,
+      exchangeExited: false,
+      notes: null,
+      channelId: null
+    };
+  }
 }
 
 // Export singleton instance
