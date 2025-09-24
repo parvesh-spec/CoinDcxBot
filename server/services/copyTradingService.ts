@@ -686,6 +686,156 @@ export class CopyTradingService {
       };
     }
   }
+
+  /**
+   * Sync P&L and exit prices for executed copy trades
+   */
+  async syncCopyTradesPnL(): Promise<{ success: number; errors: number; message: string }> {
+    try {
+      console.log('💰 Starting copy trades P&L sync...');
+      
+      // Get all executed copy trades that don't have P&L data yet
+      const { copyTrades } = await storage.getCopyTrades({
+        status: 'executed'
+      });
+
+      const tradesNeedingPnL = copyTrades.filter(trade => 
+        trade.executedTradeId && (!trade.pnl || !trade.exitPrice)
+      );
+
+      if (tradesNeedingPnL.length === 0) {
+        console.log('✅ No executed trades found that need P&L sync');
+        return { success: 0, errors: 0, message: 'No trades need P&L sync' };
+      }
+
+      console.log(`🔍 Found ${tradesNeedingPnL.length} executed trades needing P&L sync`);
+      
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Process each executed trade
+      for (const copyTrade of tradesNeedingPnL) {
+        try {
+          console.log(`📊 Processing P&L for copy trade: ${copyTrade.id} (order: ${copyTrade.executedTradeId})`);
+          
+          // Get user credentials for API call
+          const user = await storage.getCopyTradingUser(copyTrade.copyUserId);
+          if (!user) {
+            console.log(`❌ User not found for copy trade: ${copyTrade.id}`);
+            errorCount++;
+            continue;
+          }
+
+          // Decrypt credentials
+          const apiKey = decrypt(user.apiKey);
+          const apiSecret = decrypt(user.apiSecret);
+
+          // Fetch transactions for this position using the executed trade ID
+          console.log(`🔍 Fetching transactions for position: ${copyTrade.executedTradeId}`);
+          const transactions = await this.coindcxService.getPositionTransactions(copyTrade.executedTradeId!);
+
+          if (transactions.length === 0) {
+            console.log(`⚠️ No transactions found for position: ${copyTrade.executedTradeId}`);
+            continue; // Skip this trade, might not be closed yet
+          }
+
+          // Calculate P&L and exit price from transactions
+          const pnlData = this.calculatePnLFromTransactions(
+            transactions, 
+            copyTrade.executedPrice ? parseFloat(copyTrade.executedPrice) : 0,
+            copyTrade.executedQuantity ? parseFloat(copyTrade.executedQuantity) : 0,
+            copyTrade.type
+          );
+
+          if (pnlData.exitPrice && pnlData.pnl !== undefined) {
+            // Update copy trade with P&L data
+            await storage.updateCopyTradePnL(copyTrade.id, {
+              exitPrice: pnlData.exitPrice,
+              pnl: pnlData.pnl
+            });
+
+            console.log(`✅ Updated P&L for copy trade ${copyTrade.id}: Exit: ${pnlData.exitPrice}, P&L: ${pnlData.pnl}`);
+            successCount++;
+          } else {
+            console.log(`⚠️ Could not calculate P&L for copy trade: ${copyTrade.id}`);
+          }
+
+        } catch (error: any) {
+          console.error(`❌ Error syncing P&L for copy trade ${copyTrade.id}:`, error.message);
+          errorCount++;
+        }
+      }
+
+      const message = `P&L sync completed: ${successCount} successful, ${errorCount} errors`;
+      console.log(`💰 ${message}`);
+
+      return {
+        success: successCount,
+        errors: errorCount,
+        message: message
+      };
+
+    } catch (error: any) {
+      console.error('❌ Error in copy trades P&L sync:', error);
+      return {
+        success: 0,
+        errors: 1,
+        message: `P&L sync failed: ${error.message}`
+      };
+    }
+  }
+
+  /**
+   * Calculate P&L from CoinDCX transaction data
+   */
+  private calculatePnLFromTransactions(
+    transactions: any[], 
+    entryPrice: number, 
+    quantity: number, 
+    tradeType: string
+  ): { exitPrice?: number; pnl?: number } {
+    try {
+      if (transactions.length === 0 || !entryPrice || !quantity) {
+        return {};
+      }
+
+      // Find the latest transaction (exit transaction)
+      const sortedTransactions = transactions.sort((a, b) => b.created_at - a.created_at);
+      const exitTransaction = sortedTransactions[0];
+
+      if (!exitTransaction || !exitTransaction.price_in_usdt) {
+        return {};
+      }
+
+      const exitPrice = parseFloat(exitTransaction.price_in_usdt);
+      let pnl = 0;
+
+      // Calculate P&L based on trade direction
+      if (tradeType.toLowerCase() === 'buy') {
+        // For buy trades: profit if exit price > entry price
+        pnl = (exitPrice - entryPrice) * quantity;
+      } else {
+        // For sell trades: profit if exit price < entry price  
+        pnl = (entryPrice - exitPrice) * quantity;
+      }
+
+      console.log(`📊 P&L Calculation:`);
+      console.log(`   - Trade Type: ${tradeType}`);
+      console.log(`   - Entry Price: ${entryPrice} USDT`);
+      console.log(`   - Exit Price: ${exitPrice} USDT`);
+      console.log(`   - Quantity: ${quantity}`);
+      console.log(`   - P&L: ${pnl} USDT`);
+
+      return {
+        exitPrice: exitPrice,
+        pnl: pnl
+      };
+
+    } catch (error: any) {
+      console.error('❌ Error calculating P&L from transactions:', error);
+      return {};
+    }
+  }
 }
 
 export const copyTradingService = new CopyTradingService();
