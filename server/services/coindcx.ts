@@ -623,7 +623,9 @@ export class CoinDCXService {
         console.log(`🔑 Available Response Keys:`, Object.keys(response.data || {}));
         console.log(`============================================`);
         
-        const orderId = response.data?.id || response.data?.orderId || response.data?.order_id || null;
+        // Handle both array and object response formats
+        const responseData = Array.isArray(response.data) ? response.data[0] : response.data;
+        const orderId = responseData?.id || responseData?.orderId || responseData?.order_id || null;
         
         if (!orderId || orderId === 'unknown') {
           console.log(`❌ Order ID validation failed: Missing or invalid order ID in response`);
