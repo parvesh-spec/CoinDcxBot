@@ -361,29 +361,23 @@ export class CoinDCXService {
    * Calculate leverage based on risk percentage and price difference
    * Formula: leverage = (risk% / 100) * entry_price / (entry_price - stop_loss)
    */
-  calculateLeverage(riskPercentage: number, entryPrice: number, stopLossPrice: number): number {
+  calculateLeverage(quantity: number, entryPrice: number, tradeFund: number): number {
     try {
       // Validate inputs
-      if (riskPercentage <= 0 || riskPercentage > 100) {
-        throw new Error(`Invalid risk percentage: ${riskPercentage}. Must be between 0 and 100.`);
+      if (quantity <= 0) {
+        throw new Error(`Invalid quantity: ${quantity}. Must be greater than 0.`);
       }
       
       if (entryPrice <= 0) {
         throw new Error(`Invalid entry price: ${entryPrice}. Must be greater than 0.`);
       }
       
-      if (stopLossPrice <= 0) {
-        throw new Error(`Invalid stop loss price: ${stopLossPrice}. Must be greater than 0.`);
+      if (tradeFund <= 0) {
+        throw new Error(`Invalid trade fund: ${tradeFund}. Must be greater than 0.`);
       }
       
-      const priceDifference = Math.abs(entryPrice - stopLossPrice);
-      
-      if (priceDifference === 0) {
-        throw new Error('Entry price and stop loss cannot be the same');
-      }
-      
-      // Calculate leverage using the provided formula
-      const leverage = (riskPercentage / 100) * (entryPrice / priceDifference);
+      // NEW FORMULA: (Quantity × Entry Price) ÷ Trade Fund
+      const leverage = (quantity * entryPrice) / tradeFund;
       
       // Clamp leverage to safe ranges (1x to 50x max)
       const clampedLeverage = Math.max(1, Math.min(50, leverage));
@@ -391,7 +385,12 @@ export class CoinDCXService {
       // Round to 2 decimal places for precision
       const finalLeverage = Math.round(clampedLeverage * 100) / 100;
       
-      console.log(`📊 Leverage calculation: ${riskPercentage}% risk, entry: ${entryPrice}, SL: ${stopLossPrice} → ${finalLeverage}x`);
+      console.log(`📊 NEW Leverage calculation:`);
+      console.log(`   - Quantity: ${quantity} coins`);
+      console.log(`   - Entry Price: ${entryPrice} USDT`);
+      console.log(`   - Trade Fund: ${tradeFund} USDT`);
+      console.log(`   - Calculated Leverage: ${leverage.toFixed(2)}x`);
+      console.log(`   - Final Leverage (capped): ${finalLeverage}x`);
       
       return finalLeverage;
     } catch (error) {
@@ -406,28 +405,50 @@ export class CoinDCXService {
    * Formula: quantity = (trade_fund × leverage) ÷ entry_price
    * No safety margin - use exact calculated quantity
    */
-  calculateQuantity(tradeFund: number, leverage: number, entryPrice: number): number {
+  calculateQuantity(tradeFund: number, riskPercent: number, entryPrice: number, stopLossPrice: number): number {
     try {
       // Validate inputs
       if (tradeFund <= 0) {
         throw new Error(`Invalid trade fund: ${tradeFund}. Must be greater than 0.`);
       }
       
-      if (leverage <= 0) {
-        throw new Error(`Invalid leverage: ${leverage}. Must be greater than 0.`);
+      if (riskPercent <= 0 || riskPercent > 100) {
+        throw new Error(`Invalid risk percent: ${riskPercent}. Must be between 0 and 100.`);
       }
       
       if (entryPrice <= 0) {
         throw new Error(`Invalid entry price: ${entryPrice}. Must be greater than 0.`);
       }
       
-      // Calculate quantity using the provided formula
-      const quantity = (tradeFund * leverage) / entryPrice;
+      if (stopLossPrice <= 0) {
+        throw new Error(`Invalid stop loss price: ${stopLossPrice}. Must be greater than 0.`);
+      }
+      
+      // NEW FORMULA: Risk Amount ÷ Risk Per Quantity
+      // Step 1: Calculate Risk Amount = Trade Fund × Risk Percent
+      const riskAmount = tradeFund * (riskPercent / 100);
+      
+      // Step 2: Calculate Risk Per Quantity = Entry Price - Stop Loss
+      const riskPerQuantity = Math.abs(entryPrice - stopLossPrice);
+      
+      if (riskPerQuantity === 0) {
+        throw new Error('Entry price and stop loss cannot be the same');
+      }
+      
+      // Step 3: Calculate Quantity = Risk Amount ÷ Risk Per Quantity
+      const quantity = riskAmount / riskPerQuantity;
       
       // Round to appropriate decimal places (6 decimal places for crypto)
       const finalQuantity = Math.round(quantity * 1000000) / 1000000;
       
-      console.log(`💰 Quantity calculation: tradeFund: ${tradeFund} USDT, leverage: ${leverage}x, price: ${entryPrice} → ${finalQuantity} (exact quantity)`);
+      console.log(`💰 NEW Quantity calculation:`);
+      console.log(`   - Trade Fund: ${tradeFund} USDT`);
+      console.log(`   - Risk Percent: ${riskPercent}%`);
+      console.log(`   - Risk Amount: ${riskAmount} USDT`);
+      console.log(`   - Entry Price: ${entryPrice} USDT`);
+      console.log(`   - Stop Loss: ${stopLossPrice} USDT`);
+      console.log(`   - Risk Per Quantity: ${riskPerQuantity} USDT`);
+      console.log(`   - Final Quantity: ${finalQuantity} coins`);
       
       return finalQuantity;
     } catch (error) {

@@ -390,32 +390,39 @@ export class CopyTradingService {
       console.log(`   - Stop Loss: ${stopLossPrice || 'Not set'} USDT`);
       console.log(`   - Take Profit: ${takeProfitPrice || 'Not set'} USDT`);
       
-      // Calculate leverage using mathematical formula
+      // NEW APPROACH: Calculate quantity FIRST, then leverage
+      let calculatedQuantity = 0;
       let calculatedLeverage = 1;
+      
       if (stopLossPrice) {
+        // Step 1: Calculate quantity using NEW formula
+        calculatedQuantity = this.coindcxService.calculateQuantity(
+          tradeFund,        // Trade Fund from user settings
+          user.riskPerTrade, // Risk percentage from user settings
+          entryPrice,       // Original trade entry price
+          stopLossPrice     // Original trade stop loss
+        );
+        
+        // Step 2: Calculate leverage using NEW formula
         calculatedLeverage = this.coindcxService.calculateLeverage(
-          user.riskPerTrade, // Risk percentage (e.g., 2%)
-          entryPrice,
-          stopLossPrice
+          calculatedQuantity, // Quantity calculated above
+          entryPrice,         // Original trade entry price
+          tradeFund           // Trade Fund from user settings
         );
       } else {
-        // Use default leverage from original trade if no stop loss
+        // Fallback: Use original trade values if no stop loss
         calculatedLeverage = copyTrade.leverage;
-        console.log(`⚠️ No stop loss found, using original leverage: ${calculatedLeverage}x`);
+        calculatedQuantity = (tradeFund * calculatedLeverage) / entryPrice; // Simple fallback
+        console.log(`⚠️ No stop loss found, using fallback calculation with original leverage: ${calculatedLeverage}x`);
       }
       
-      // Calculate quantity using trade fund formula
-      const calculatedQuantity = this.coindcxService.calculateQuantity(
-        tradeFund,
-        calculatedLeverage,
-        entryPrice
-      );
-      
-      console.log(`🧮 Calculation Results:`);
+      console.log(`🧮 NEW CALCULATION RESULTS:`);
       console.log(`   - Input Trade Fund: ${tradeFund} USDT`);
+      console.log(`   - Input Risk Percent: ${user.riskPerTrade}%`);
       console.log(`   - Input Entry Price: ${entryPrice} USDT`);
-      console.log(`   - Calculated Leverage: ${calculatedLeverage}x`);
-      console.log(`   - Calculated Quantity: ${calculatedQuantity} coins`);
+      console.log(`   - Input Stop Loss: ${stopLossPrice || 'Not set'} USDT`);
+      console.log(`   - ✅ STEP 1 - Calculated Quantity: ${calculatedQuantity} coins`);
+      console.log(`   - ✅ STEP 2 - Calculated Leverage: ${calculatedLeverage}x`);
       console.log(`   - Notional Value: ${(calculatedQuantity * entryPrice).toFixed(2)} USDT`);
       console.log(`   - Required Margin: ${((calculatedQuantity * entryPrice) / calculatedLeverage).toFixed(2)} USDT`);
       
