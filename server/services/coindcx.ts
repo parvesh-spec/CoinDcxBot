@@ -523,12 +523,18 @@ export class CoinDCXService {
       // Build request body exactly as per OFFICIAL CoinDCX API documentation
       const requestBody = {
         timestamp: timestamp,
-        side: orderData.side,
-        pair: `B-${orderData.pair}`, // Futures requires B- prefix for pair field
-        order_type: "limit", // Official docs format - NOT "limit_order"
-        price: limitPrice, // Number format as per official docs - NOT string
-        total_quantity: sanitizedQuantity,
-        leverage: sanitizedLeverage
+        order: {
+          side: orderData.side,
+          pair: `B-${orderData.pair}`, // Futures requires B- prefix for pair field
+          order_type: "limit_order", // Official docs: "market_order" OR "limit_order"
+          price: limitPrice, // Number format
+          total_quantity: sanitizedQuantity,
+          leverage: sanitizedLeverage,
+          notification: "email_notification", // Official docs enum
+          time_in_force: "good_till_cancel", // Official docs enum
+          hidden: false, // Official docs boolean
+          post_only: false // Official docs boolean
+        }
       };
       
       console.log(`🚀 FINAL REQUEST BODY TO COINDCX:`);
