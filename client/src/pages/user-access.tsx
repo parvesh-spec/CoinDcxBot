@@ -5,25 +5,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Mail, Shield, ArrowRight } from "lucide-react";
+import { Loader2, Mail, Shield, ArrowRight, BarChart3, User, LogOut, History } from "lucide-react";
 import campusLogo from "@assets/6208450096694152058_1758021301213.jpg";
+import { UserTradeHistory } from "./user-trade-history";
+import { UserAccountSettings } from "./user-account-settings";
+
+interface UserAccount {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  isActive: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
+}
+
+type ViewState = 'login' | 'dashboard' | 'trade-history' | 'account-settings';
 
 export default function UserAccessPage() {
   const { toast } = useToast();
-  const [step, setStep] = useState<'email' | 'otp' | 'success'>('email');
+  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [currentView, setCurrentView] = useState<ViewState>('login');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
-  const [userToken, setUserToken] = useState<string | null>(null);
+  const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
 
   // Check if user is already logged in
   useEffect(() => {
-    const token = localStorage.getItem('userToken');
-    if (token) {
-      setUserToken(token);
-      setStep('success');
+    const savedEmail = localStorage.getItem('userEmail');
+    const savedAccount = localStorage.getItem('userAccount');
+    if (savedEmail && savedAccount) {
+      setEmail(savedEmail);
+      setUserAccount(JSON.parse(savedAccount));
+      setCurrentView('dashboard');
     }
   }, []);
 
@@ -50,25 +68,28 @@ export default function UserAccessPage() {
 
     setIsLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/user/send-otp", {
+      const response = await fetch('/api/user-access/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
-        headers: { 'Content-Type': 'application/json' }
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (data.success) {
         setStep('otp');
-        setOtpTimer(60); // 60 second timer
+        setOtpTimer(120); // 2 minute timer
         toast({
           title: "OTP Sent",
           description: "Please check your email for the verification code",
         });
       } else {
-        throw new Error('Failed to send OTP');
+        throw new Error(data.message || 'Failed to send OTP');
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to send OTP. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to send OTP. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -88,28 +109,30 @@ export default function UserAccessPage() {
 
     setIsVerifying(true);
     try {
-      const response = await apiRequest("POST", "/api/user/verify-otp", {
+      const response = await fetch('/api/user-access/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp }),
-        headers: { 'Content-Type': 'application/json' }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('userToken', data.token);
+      const data = await response.json();
+
+      if (data.success && data.userAccount) {
         localStorage.setItem('userEmail', email);
-        setUserToken(data.token);
-        setStep('success');
+        localStorage.setItem('userAccount', JSON.stringify(data.userAccount));
+        setUserAccount(data.userAccount);
+        setCurrentView('dashboard');
         toast({
           title: "Login Successful",
-          description: "Welcome! You can now access your account.",
+          description: data.message || "Welcome! You can now access your account.",
         });
       } else {
-        throw new Error('Invalid OTP');
+        throw new Error(data.message || 'Invalid OTP');
       }
     } catch (error) {
       toast({
         title: "Verification Failed",
-        description: "Invalid OTP. Please try again.",
+        description: error instanceof Error ? error.message : "Invalid OTP. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -118,12 +141,17 @@ export default function UserAccessPage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('userToken');
     localStorage.removeItem('userEmail');
-    setUserToken(null);
+    localStorage.removeItem('userAccount');
+    setUserAccount(null);
+    setCurrentView('login');
     setStep('email');
     setEmail('');
     setOtp('');
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
   };
 
   const formatTimer = (seconds: number) => {
@@ -132,7 +160,26 @@ export default function UserAccessPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (step === 'success' && userToken) {
+  // Render different views based on current state
+  if (currentView === 'trade-history' && userAccount) {
+    return (
+      <UserTradeHistory 
+        userAccount={userAccount} 
+        onBack={() => setCurrentView('dashboard')} 
+      />
+    );
+  }
+
+  if (currentView === 'account-settings' && userAccount) {
+    return (
+      <UserAccountSettings 
+        userAccount={userAccount} 
+        onBack={() => setCurrentView('dashboard')} 
+      />
+    );
+  }
+
+  if (currentView === 'dashboard' && userAccount) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
         <div className="max-w-md mx-auto pt-8">
@@ -143,13 +190,17 @@ export default function UserAccessPage() {
                 src={campusLogo} 
                 alt="Campus For Wisdom" 
                 className="h-16 w-16 mx-auto rounded-full object-cover"
+                data-testid="img-logo"
               />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-welcome">
               Welcome Back!
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-2">
-              {localStorage.getItem('userEmail')}
+            <p className="text-gray-600 dark:text-gray-300 mt-2" data-testid="text-user-email">
+              {userAccount.email}
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1" data-testid="text-brand">
+              Campus For Wisdom Trading Community
             </p>
           </div>
 
@@ -161,16 +212,16 @@ export default function UserAccessPage() {
                   <Button 
                     size="lg" 
                     className="w-full justify-start text-left h-auto p-4"
-                    onClick={() => window.location.href = '/user/trades'}
+                    onClick={() => setCurrentView('trade-history')}
                     data-testid="button-view-trades"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="bg-primary/10 p-2 rounded-lg">
-                        <i className="fas fa-chart-line text-primary" />
+                      <div className="bg-blue-100 dark:bg-blue-900/20 p-2 rounded-lg">
+                        <History className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div className="text-left">
                         <div className="font-semibold">View Trade History</div>
-                        <div className="text-sm text-muted-foreground">Check your trading activity</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Check your trading activity</div>
                       </div>
                       <ArrowRight className="h-5 w-5 ml-auto" />
                     </div>
@@ -180,16 +231,16 @@ export default function UserAccessPage() {
                     variant="outline" 
                     size="lg" 
                     className="w-full justify-start text-left h-auto p-4"
-                    onClick={() => window.location.href = '/user/settings'}
+                    onClick={() => setCurrentView('account-settings')}
                     data-testid="button-account-settings"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="bg-secondary/50 p-2 rounded-lg">
-                        <i className="fas fa-cog text-secondary-foreground" />
+                      <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg">
+                        <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                       </div>
                       <div className="text-left">
                         <div className="font-semibold">Account Settings</div>
-                        <div className="text-sm text-muted-foreground">Manage your profile</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Manage your profile</div>
                       </div>
                       <ArrowRight className="h-5 w-5 ml-auto" />
                     </div>
@@ -205,7 +256,7 @@ export default function UserAccessPage() {
               className="w-full"
               data-testid="button-logout-user"
             >
-              <i className="fas fa-sign-out-alt mr-2" />
+              <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
           </div>
@@ -363,7 +414,7 @@ export default function UserAccessPage() {
                   className="w-full"
                   data-testid="button-back-to-email"
                 >
-                  <i className="fas fa-arrow-left mr-2" />
+                  <ArrowLeft className="h-4 w-4 mr-2" />
                   Change Email
                 </Button>
               </>

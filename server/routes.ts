@@ -7,7 +7,7 @@ import { telegramService } from "./services/telegram";
 import { coindcxService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
 import { sendApplicationConfirmationEmail } from "./services/email";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema, sendUserAccessOtpSchema, verifyUserAccessOtpSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { safeDecrypt } from "./utils/encryption";
 
@@ -1603,6 +1603,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     next();
+  });
+
+  // User Access routes (for end-users with email OTP authentication)
+  app.post('/api/user-access/send-otp', async (req, res) => {
+    try {
+      const data = sendUserAccessOtpSchema.parse(req.body);
+      const result = await storage.sendUserAccessOtp(data);
+      res.json(result);
+    } catch (error) {
+      console.error("Error sending user access OTP:", error);
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Validation failed", 
+          errors: error 
+        });
+      }
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to send OTP. Please try again." 
+      });
+    }
+  });
+
+  app.post('/api/user-access/verify-otp', async (req, res) => {
+    try {
+      const data = verifyUserAccessOtpSchema.parse(req.body);
+      const result = await storage.verifyUserAccessOtp(data);
+      res.json(result);
+    } catch (error) {
+      console.error("Error verifying user access OTP:", error);
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Validation failed", 
+          errors: error 
+        });
+      }
+      res.status(500).json({ 
+        success: false,
+        message: "Verification failed. Please try again." 
+      });
+    }
+  });
+
+  // User authenticated routes (for end-users after OTP verification)
+  app.get('/api/user-access/trades/:email', async (req, res) => {
+    try {
+      const { email } = req.params;
+      const { page = '1', limit = '20' } = req.query;
+      
+      // Verify user account exists (basic validation)
+      const userAccount = await storage.getUserAccountByEmail(email);
+      if (!userAccount) {
+        return res.status(404).json({ 
+          success: false,
+          message: "User account not found" 
+        });
+      }
+
+      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+      
+      // For now, return all trades - later we can filter by user-specific trades
+      const result = await storage.getTrades({
+        status: 'completed', // Only show completed trades to end users
+        limit: parseInt(limit as string),
+        offset,
+      });
+
+      res.json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      console.error("Error fetching user trades:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch trade history" 
+      });
+    }
+  });
+
+  app.get('/api/user-access/profile/:email', async (req, res) => {
+    try {
+      const { email } = req.params;
+      
+      const userAccount = await storage.getUserAccountByEmail(email);
+      if (!userAccount) {
+        return res.status(404).json({ 
+          success: false,
+          message: "User account not found" 
+        });
+      }
+
+      // Don't expose sensitive information
+      const safeProfile = {
+        id: userAccount.id,
+        email: userAccount.email,
+        firstName: userAccount.firstName,
+        lastName: userAccount.lastName,
+        phone: userAccount.phone,
+        isActive: userAccount.isActive,
+        lastLoginAt: userAccount.lastLoginAt,
+        createdAt: userAccount.createdAt,
+      };
+
+      res.json({
+        success: true,
+        profile: safeProfile
+      });
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to fetch profile" 
+      });
+    }
   });
 
   // Public routes (no authentication required)
