@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { type CopyTrade, type CopyTradingUser } from "@shared/schema";
+import { AlertCircle, CheckCircle, Clock, XCircle, TrendingUp, TrendingDown } from "lucide-react";
 
 // Status badge variants for copy trades
 const getStatusBadge = (status: string) => {
@@ -27,16 +28,37 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-// Format P&L with colors
-const formatPnl = (pnl: string | null) => {
-  if (!pnl) return <span className="text-muted-foreground">-</span>;
-  const pnlNum = parseFloat(pnl);
-  const isPositive = pnlNum >= 0;
-  return (
-    <span className={isPositive ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-      {isPositive ? '+' : ''}{pnlNum.toFixed(4)}
-    </span>
-  );
+// Format execution status with better context
+const getExecutionDetails = (trade: any) => {
+  if (trade.status === 'executed') {
+    return {
+      icon: '✅',
+      text: 'Trade Executed Successfully',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+    };
+  } else if (trade.status === 'failed') {
+    return {
+      icon: '❌',
+      text: 'Trade Execution Failed',
+      color: 'text-red-600',
+      bgColor: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+    };
+  } else if (trade.status === 'pending') {
+    return {
+      icon: '⏳',
+      text: 'Trade Execution Pending',
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+    };
+  } else {
+    return {
+      icon: '⚫',
+      text: 'Trade Cancelled',
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800'
+    };
+  }
 };
 
 export default function CopyTradingTradesPage() {
@@ -269,87 +291,124 @@ export default function CopyTradingTradesPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {copyTrades.map((trade) => (
-                <div
-                  key={trade.id}
-                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  data-testid={`trade-${trade.id}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div>
-                        <div className="font-semibold">
-                          {trade.originalTrade?.pair || 'Unknown Pair'}
+              {copyTrades.map((trade) => {
+                const executionDetails = getExecutionDetails(trade);
+                return (
+                  <div
+                    key={trade.id}
+                    className="border rounded-lg overflow-hidden hover:shadow-md transition-all duration-200"
+                    data-testid={`trade-${trade.id}`}
+                  >
+                    {/* Status Header */}
+                    <div className={`px-4 py-3 border-b ${executionDetails.bgColor}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-lg">{executionDetails.icon}</span>
+                          <div>
+                            <div className={`font-medium ${executionDetails.color}`}>
+                              {executionDetails.text}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {trade.createdAt 
+                                ? format(new Date(trade.createdAt), 'MMM dd, yyyy HH:mm')
+                                : 'Unknown time'
+                              }
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-right">
+                          {getStatusBadge(trade.status)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Trade Details */}
+                    <div className="p-4 space-y-4">
+                      {/* Main Trade Information */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            {trade.originalTrade?.type?.toLowerCase() === 'buy' ? (
+                              <TrendingUp className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <TrendingDown className="h-5 w-5 text-red-600" />
+                            )}
+                            <div>
+                              <div className="font-semibold text-lg">
+                                {trade.originalTrade?.pair || 'Unknown Pair'}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {trade.originalTrade?.type?.toUpperCase() || 'UNKNOWN'} Order
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="text-sm text-muted-foreground">Entry Price</div>
+                          <div className="text-lg font-bold">
+                            ${trade.executedPrice || trade.originalPrice}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* User Information */}
+                      <div className="bg-muted/30 rounded-lg p-3">
+                        <div className="text-sm text-muted-foreground mb-1">Copy Trader</div>
+                        <div className="font-medium">
                           {trade.copyUser?.name || 'Unknown User'}
                           {trade.copyUser?.telegramUsername && (
-                            <span className="ml-1">(@{trade.copyUser.telegramUsername})</span>
+                            <span className="ml-2 text-muted-foreground">(@{trade.copyUser.telegramUsername})</span>
                           )}
                         </div>
                       </div>
-                      <div className="text-sm">
-                        <Badge variant="outline" className="mr-2">
-                          {trade.originalTrade?.type?.toUpperCase() || 'UNKNOWN'}
-                        </Badge>
-                        {getStatusBadge(trade.status)}
+                      
+                      {/* Trade Details Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">Original Quantity</div>
+                          <div className="font-medium">{trade.originalQuantity}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">Executed Quantity</div>
+                          <div className="font-medium">
+                            {trade.executedQuantity || (
+                              <span className="text-yellow-600">Pending</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">Leverage</div>
+                          <div className="font-medium">{trade.leverage}x</div>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="text-right space-y-1">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Price: </span>
-                        <span className="font-medium">
-                          {trade.executedPrice || trade.originalPrice}
-                        </span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">P&L: </span>
-                        {formatPnl(trade.pnl)}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Additional details */}
-                  <div className="mt-3 pt-3 border-t grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Original Qty:</span>
-                      <div className="font-medium">{trade.originalQuantity}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Executed Qty:</span>
-                      <div className="font-medium">{trade.executedQuantity || 'Pending'}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Leverage:</span>
-                      <div className="font-medium">{trade.leverage}x</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Created:</span>
-                      <div className="font-medium">
-                        {trade.createdAt 
-                          ? format(new Date(trade.createdAt), 'MMM dd, yyyy HH:mm')
-                          : 'Unknown'
-                        }
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Error message for failed trades */}
-                  {trade.status === 'failed' && trade.errorMessage && (
-                    <div className="mt-3 pt-3 border-t">
-                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
-                        <div className="text-sm font-medium text-red-800 dark:text-red-200">
-                          Failure Reason:
+                      {/* Order ID for executed trades */}
+                      {trade.status === 'executed' && trade.executedTradeId && (
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
+                          <div className="text-sm text-muted-foreground mb-1">Exchange Order ID</div>
+                          <div className="font-mono text-sm text-green-700 dark:text-green-300">
+                            {trade.executedTradeId}
+                          </div>
                         </div>
-                        <div className="text-sm text-red-700 dark:text-red-300 mt-1">
-                          {trade.errorMessage}
+                      )}
+
+                      {/* Error message for failed trades */}
+                      {trade.status === 'failed' && trade.errorMessage && (
+                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                          <div className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                            <AlertCircle className="h-4 w-4 inline mr-2" />
+                            Failure Reason
+                          </div>
+                          <div className="text-sm text-red-700 dark:text-red-300">
+                            {trade.errorMessage}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
