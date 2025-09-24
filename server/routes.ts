@@ -1528,6 +1528,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // });
 
+  // P&L tracking routes
+  app.post('/api/copy-trading/trades/sync-pnl', isAuthenticated, async (req, res) => {
+    try {
+      const { pnlTrackingService } = await import('./services/pnlTrackingService');
+      const result = await pnlTrackingService.updateAllCopyTradesPnL();
+      
+      res.json({
+        success: true,
+        message: `P&L sync completed: ${result.success} success, ${result.errors} errors`,
+        data: result
+      });
+    } catch (error) {
+      console.error("Error syncing P&L for all copy trades:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to sync P&L data",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/copy-trading/trades/:id/sync-pnl', isAuthenticated, async (req, res) => {
+    try {
+      const { pnlTrackingService } = await import('./services/pnlTrackingService');
+      const result = await pnlTrackingService.updateCopyTradePnLById(req.params.id);
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          data: result.data
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    } catch (error) {
+      console.error(`Error syncing P&L for copy trade ${req.params.id}:`, error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to sync P&L data for copy trade",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // System status routes
   app.get('/api/status', isAuthenticated, async (req, res) => {
     try {
