@@ -615,30 +615,21 @@ export class CoinDCXService {
       });
 
       if (response.status === 200 || response.status === 201) {
-        // Enhanced logging for API response analysis
-        console.log(`📥 ===== COINDCX API RESPONSE ANALYSIS =====`);
-        console.log(`🔍 Response Status: ${response.status}`);
-        console.log(`📊 Response Headers:`, response.headers);
-        console.log(`📋 Full Response Data:`, JSON.stringify(response.data, null, 2));
-        console.log(`🔑 Available Response Keys:`, Object.keys(response.data || {}));
-        console.log(`============================================`);
-        
         // Handle both array and object response formats
         const responseData = Array.isArray(response.data) ? response.data[0] : response.data;
         const orderId = responseData?.id || responseData?.orderId || responseData?.order_id || null;
         
         if (!orderId || orderId === 'unknown') {
-          console.log(`❌ Order ID validation failed: Missing or invalid order ID in response`);
-          console.log(`📋 Response data for debugging:`, response.data);
+          console.log(`❌ Order placement failed: No valid order ID received from exchange`);
           
           return { 
             success: false, 
-            message: `Order placement failed: No valid order ID received from exchange. Response: ${JSON.stringify(response.data)}`,
+            message: `Order placement failed: No valid order ID received from exchange`,
             data: response.data
           };
         }
         
-        console.log(`✅ Futures order created successfully with ID: ${orderId}`);
+        console.log(`✅ Futures order created successfully: ${orderId}`);
         
         return { 
           success: true, 
