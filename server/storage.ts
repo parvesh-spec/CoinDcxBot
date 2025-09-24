@@ -144,6 +144,10 @@ export interface IStorage {
     executedQuantity?: number;
     leverage?: number;
   }): Promise<CopyTrade | undefined>;
+  updateCopyTradePnL(id: string, pnlData: {
+    pnl?: number;
+    exitPrice?: number;
+  }): Promise<CopyTrade | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1327,6 +1331,35 @@ export class DatabaseStorage implements IStorage {
     }
     if (executionDetails.leverage) {
       updateData.leverage = executionDetails.leverage;
+    }
+
+    const [updatedTrade] = await db
+      .update(copyTrades)
+      .set(updateData)
+      .where(eq(copyTrades.id, id))
+      .returning();
+    return updatedTrade;
+  }
+
+  async updateCopyTradePnL(id: string, pnlData: {
+    pnl?: number;
+    exitPrice?: number;
+  }): Promise<CopyTrade | undefined> {
+    const updateData: any = { 
+      updatedAt: new Date()
+    };
+    
+    // Add P&L and exit price if provided
+    if (pnlData.pnl !== undefined) {
+      updateData.pnl = pnlData.pnl.toString();
+    }
+    if (pnlData.exitPrice !== undefined) {
+      updateData.exitPrice = pnlData.exitPrice.toString();
+    }
+    
+    // If we have both P&L and exit price, mark as complete
+    if (pnlData.pnl !== undefined && pnlData.exitPrice !== undefined) {
+      updateData.status = 'complete';
     }
 
     const [updatedTrade] = await db

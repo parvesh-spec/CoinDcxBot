@@ -27,6 +27,22 @@ interface CoinDCXTrade {
   updated_at?: number;
 }
 
+interface CoinDCXTransaction {
+  pair: string;
+  stage: string;
+  amount: number; // P&L amount
+  fee_amount: number;
+  price_in_inr: number;
+  price_in_btc: number;
+  price_in_usdt: number;
+  source: string;
+  parent_type: string;
+  parent_id: string; // Order ID this transaction belongs to
+  position_id: string;
+  created_at: number;
+  updated_at: number;
+}
+
 interface CoinDCXConfig {
   apiKey: string;
   apiSecret: string;
@@ -719,6 +735,81 @@ export class CoinDCXService {
       stopLossTrigger: coindcxTrade.stop_loss_trigger?.toString() || null,
       status: 'active' as const,
     };
+  }
+
+  /**
+   * Fetch futures position transactions with P&L data using custom API credentials
+   */
+  async getFuturesTransactions(apiKey: string, apiSecret: string, orderId?: string): Promise<CoinDCXTransaction[]> {
+    try {
+      const endpoint = '/exchange/v1/derivatives/futures/positions/transactions';
+      const timestamp = Date.now();
+      
+      // Build request body
+      const requestBody: any = { 
+        timestamp: timestamp 
+      };
+      
+      // Add order ID filter if provided
+      if (orderId) {
+        requestBody.parent_id = orderId;
+      }
+      
+      const body = JSON.stringify(requestBody);
+      
+      // Generate headers with custom credentials
+      const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('hex');
+      const headers = {
+        'X-AUTH-APIKEY': apiKey,
+        'X-AUTH-SIGNATURE': signature,
+        'Content-Type': 'application/json',
+      };
+      
+      console.log(`📊 Fetching futures transactions${orderId ? ` for order ${orderId}` : ''}`);
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers,
+        timeout: 30000,
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        const transactions = Array.isArray(response.data) ? response.data : [];
+        console.log(`✅ Futures transactions fetched: ${transactions.length} records`);
+        return transactions;
+      } else {
+        console.log(`⚠️ Unexpected response status: ${response.status}`);
+        return [];
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching futures transactions:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        data: error.response?.data
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Calculate exit price from P&L data
+   */
+  calculateExitPrice(entryPrice: number, quantity: number, pnl: number, leverage: number, side: 'buy' | 'sell'): number {
+    try {
+      // For futures, P&L = (Exit Price - Entry Price) * Quantity for BUY
+      // For SELL: P&L = (Entry Price - Exit Price) * Quantity
+      
+      if (side.toLowerCase() === 'buy') {
+        // BUY: Exit Price = Entry Price + (P&L / Quantity)
+        return entryPrice + (pnl / quantity);
+      } else {
+        // SELL: Exit Price = Entry Price - (P&L / Quantity)  
+        return entryPrice - (pnl / quantity);
+      }
+    } catch (error) {
+      console.error('❌ Error calculating exit price:', error);
+      return entryPrice; // Fallback to entry price
+    }
   }
 }
 
