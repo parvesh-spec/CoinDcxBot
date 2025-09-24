@@ -429,6 +429,19 @@ export class CopyTradingService {
       
       console.log(`📤 Placing REAL order on CoinDCX:`, orderData);
       
+      // Pre-order balance verification to catch insufficient funds early
+      const requiredMargin = (calculatedQuantity * entryPrice) / calculatedLeverage; // Basic margin calculation
+      console.log(`💰 Pre-order check: Required margin ≈ ${requiredMargin.toFixed(2)} USDT, Wallet balance: ${user.walletBalance} USDT`);
+      
+      if (user.walletBalance < requiredMargin * 1.1) { // 10% buffer for fees
+        const insufficientMsg = `💰 Insufficient Funds: Required margin ≈ ${requiredMargin.toFixed(2)} USDT (+ fees), but wallet balance is only ${user.walletBalance} USDT. Please add more funds to your futures wallet.`;
+        console.log(`⚠️ ${insufficientMsg}`);
+        
+        // Update copy trade status with detailed insufficient funds message
+        await storage.updateCopyTradeStatus(copyTrade.id, 'failed', insufficientMsg);
+        return;
+      }
+      
       // Apply rate limiting for this user
       await this.waitForRateLimit(user.id);
       
@@ -516,7 +529,7 @@ export class CopyTradingService {
   }
 
   /**
-   * Classify error for better user understanding
+   * Classify error for better user understanding with enhanced insufficient fund handling
    */
   private classifyError(error: any): string {
     if (error.response) {
@@ -529,7 +542,20 @@ export class CopyTradingService {
         case 403:
           return 'API access forbidden - check trading permissions';
         case 400:
-          return `Bad request: ${data?.message || 'Invalid parameters'}`;
+          // Enhanced handling for 400 errors with specific fund-related messages
+          const message = data?.message || 'Invalid parameters';
+          
+          if (message.toLowerCase().includes('insufficient fund')) {
+            return `💰 Insufficient Funds: Your futures wallet doesn't have enough balance for this trade. Current balance may be lower than required margin.`;
+          } else if (message.toLowerCase().includes('quantity')) {
+            return `📊 Quantity Error: ${message}. Our system automatically adjusts quantity precision.`;
+          } else if (message.toLowerCase().includes('price')) {
+            return `💵 Price Error: ${message}. Market conditions may have changed.`;
+          } else if (message.toLowerCase().includes('leverage')) {
+            return `⚡ Leverage Error: ${message}. Maximum allowed leverage may be lower for this pair.`;
+          } else {
+            return `Bad request: ${message}`;
+          }
         case 429:
           return 'Rate limit exceeded - please wait before retrying';
         case 500:
