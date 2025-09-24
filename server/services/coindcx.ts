@@ -516,6 +516,13 @@ export class CoinDCXService {
         160; // Default fallback price
       const limitPrice = Math.round(currentPrice * priceAdjustment * 100) / 100;
       
+      console.log(`💰 PRICE CALCULATION DEBUG:`);
+      console.log(`   Original orderData:`, JSON.stringify(orderData, null, 2));
+      console.log(`   Stop Loss Price: ${orderData.stop_loss_price}`);
+      console.log(`   Current Price Estimate: ${currentPrice}`);
+      console.log(`   Price Adjustment: ${priceAdjustment}`);
+      console.log(`   Final Limit Price: ${limitPrice}`);
+      
       // Build request body exactly as per working sample format
       const requestBody = {
         timestamp: timestamp,
@@ -531,6 +538,12 @@ export class CoinDCXService {
         hidden: false, // As per working sample
         post_only: false // As per working sample
       };
+      
+      console.log(`🚀 FINAL REQUEST BODY TO COINDCX:`);
+      console.log(JSON.stringify(requestBody, null, 2));
+      console.log(`📡 API Endpoint: ${this.config.baseUrl}${endpoint}`);
+      console.log(`🔐 Using API Key: ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length-4)}`);
+      console.log(`📝 Request Body Size: ${JSON.stringify(requestBody).length} bytes`);
       
       const body = JSON.stringify(requestBody);
       
