@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Mail, Shield, ArrowRight, BarChart3, User, LogOut, History } from "lucide-react";
+import { Loader2, Mail, Shield, ArrowRight, ArrowLeft, BarChart3, User, LogOut, History } from "lucide-react";
 import campusLogo from "@assets/6208450096694152058_1758021301213.jpg";
 import { UserTradeHistory } from "./user-trade-history";
 import { UserAccountSettings } from "./user-account-settings";
