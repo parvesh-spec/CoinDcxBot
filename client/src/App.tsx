@@ -8,6 +8,7 @@ import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard";
 import TradeHistoryPage from "@/pages/trade-history";
 import CopyTradingApplyPage from "@/pages/copy-trading-apply";
+import UserAccessPage from "@/pages/user-access";
 import NotFound from "@/pages/not-found";
 import { useEffect } from "react";
 import EmbedHeatmapPage from "@/pages/embed/heatmap";
@@ -20,6 +21,7 @@ function Router() {
       {/* Public routes - no authentication required */}
       <Route path="/trade-history" component={TradeHistoryPage} />
       <Route path="/copy-trading/apply" component={CopyTradingApplyPage} />
+      <Route path="/user" component={UserAccessPage} />
       
       {/* Embed routes - lightweight for external embedding */}
       <Route path="/embed/heatmap" component={EmbedHeatmapPage} />
