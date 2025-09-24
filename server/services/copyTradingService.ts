@@ -195,7 +195,7 @@ export class CopyTradingService {
       executedPrice: null,
       originalQuantity: originalTrade.total, // Store original quantity for reference
       executedQuantity: adjustedQuantity, // Adjusted quantity based on risk %
-      leverage: originalTrade.leverage,
+      leverage: originalTrade.leverage.toString(),
       status: 'pending',
       executionTime: null,
       errorMessage: null,
@@ -411,7 +411,7 @@ export class CopyTradingService {
         );
       } else {
         // Fallback: Use original trade values if no stop loss
-        calculatedLeverage = copyTrade.leverage;
+        calculatedLeverage = parseFloat(copyTrade.leverage);
         calculatedQuantity = (tradeFund * calculatedLeverage) / entryPrice; // Simple fallback
         console.log(`⚠️ No stop loss found, using fallback calculation with original leverage: ${calculatedLeverage}x`);
       }
