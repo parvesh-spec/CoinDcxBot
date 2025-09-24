@@ -501,7 +501,15 @@ export class CopyTradingService {
         `CoinDCX order creation for ${tradeContext}`
       );
       
-      if (orderResult.success && orderResult.orderId) {
+      // Enhanced order result validation and logging
+      console.log(`📋 ===== ORDER EXECUTION RESULT ANALYSIS =====`);
+      console.log(`🔍 Success Status: ${orderResult.success}`);
+      console.log(`🆔 Order ID: ${orderResult.orderId}`);
+      console.log(`💬 Message: ${orderResult.message}`);
+      console.log(`📊 Full Result Data:`, JSON.stringify(orderResult, null, 2));
+      console.log(`============================================`);
+      
+      if (orderResult.success && orderResult.orderId && orderResult.orderId !== 'unknown') {
         // Update copy trade with execution details
         await storage.updateCopyTradeExecution(copyTrade.id, {
           executedTradeId: orderResult.orderId,
@@ -512,7 +520,19 @@ export class CopyTradingService {
         
         console.log(`✅ Copy trade ${copyTrade.id} executed successfully! Order ID: ${orderResult.orderId}`);
       } else {
-        throw new Error(orderResult.message || 'Order execution failed');
+        // Enhanced error message with all available details
+        const errorDetails = {
+          success: orderResult.success,
+          orderId: orderResult.orderId,
+          message: orderResult.message,
+          data: orderResult.data,
+          tradeContext: `${copyTrade.pair} ${copyTrade.type} for user ${user.name}`
+        };
+        
+        const enhancedErrorMsg = `Order execution failed: ${orderResult.message || 'Unknown error'}. Details: ${JSON.stringify(errorDetails)}`;
+        console.log(`❌ Enhanced error logging: ${enhancedErrorMsg}`);
+        
+        throw new Error(enhancedErrorMsg);
       }
       
     } catch (error) {
