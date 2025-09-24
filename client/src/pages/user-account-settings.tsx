@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, User, Mail, Phone, Calendar, CheckCircle, Edit, Save, X } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Calendar, CheckCircle, Edit, Save, Shield, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface CopyTradingUser {
@@ -258,77 +258,128 @@ export function UserAccountSettings({ copyTradingUser, onBack }: UserAccountSett
                   </p>
                 </div>
 
-                {/* First Name */}
+                {/* Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="name">Full Name</Label>
                   {isEditing ? (
                     <Input
-                      id="firstName"
+                      id="name"
                       type="text"
                       value={editForm.name}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
-                      placeholder="Enter your first name"
-                      data-testid="input-first-name"
+                      onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter your full name"
+                      data-testid="input-name"
                     />
                   ) : (
                     <Input
-                      id="firstName"
+                      id="name"
                       type="text"
-                      value={profile?.firstName || 'Not set'}
+                      value={copyTradingUser?.name || 'Not set'}
                       disabled
                       className="bg-gray-50 dark:bg-gray-800"
-                      data-testid="display-first-name"
+                      data-testid="display-name"
                     />
                   )}
                 </div>
 
-                {/* Last Name */}
+                {/* Exchange */}
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="exchange">Trading Exchange</Label>
+                  <Input
+                    id="exchange"
+                    type="text"
+                    value={copyTradingUser?.exchange || 'Not set'}
+                    disabled
+                    className="bg-gray-50 dark:bg-gray-800"
+                    data-testid="display-exchange"
+                  />
+                </div>
+
+                {/* Trading Settings */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="riskPerTrade">Risk Per Trade (%)</Label>
+                    <Input
+                      id="riskPerTrade"
+                      type="text"
+                      value={copyTradingUser?.riskPerTrade ? `${copyTradingUser.riskPerTrade}%` : 'Not set'}
+                      disabled
+                      className="bg-gray-50 dark:bg-gray-800"
+                      data-testid="display-risk-per-trade"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tradeFund">Trade Fund (USDT)</Label>
+                    <Input
+                      id="tradeFund"
+                      type="text"
+                      value={copyTradingUser?.tradeFund ? `$${copyTradingUser.tradeFund}` : 'Not set'}
+                      disabled
+                      className="bg-gray-50 dark:bg-gray-800"
+                      data-testid="display-trade-fund"
+                    />
+                  </div>
+                </div>
+
+                {/* Max Trades Per Day */}
+                <div className="space-y-2">
+                  <Label htmlFor="maxTrades">Max Trades Per Day</Label>
+                  <Input
+                    id="maxTrades"
+                    type="text"
+                    value={copyTradingUser?.maxTradesPerDay || 'No limit'}
+                    disabled
+                    className="bg-gray-50 dark:bg-gray-800"
+                    data-testid="display-max-trades"
+                  />
+                </div>
+
+                {/* Status & Verification */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Application Status</Label>
+                    <Input
+                      id="status"
+                      type="text"
+                      value={'Active'}
+                      disabled
+                      className="bg-gray-50 dark:bg-gray-800"
+                      data-testid="display-status"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="credentialsVerified">API Credentials Verified</Label>
+                    <Input
+                      id="credentialsVerified"
+                      type="text"
+                      value={'Yes'}
+                      disabled
+                      className="bg-gray-50 dark:bg-gray-800"
+                      data-testid="display-credentials-verified"
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Additional Notes</Label>
                   {isEditing ? (
                     <Input
-                      id="lastName"
+                      id="notes"
                       type="text"
                       value={editForm.notes}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
-                      placeholder="Enter your last name"
-                      data-testid="input-last-name"
+                      onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Enter any additional notes"
+                      data-testid="input-notes"
                     />
                   ) : (
                     <Input
-                      id="lastName"
+                      id="notes"
                       type="text"
-                      value={profile?.lastName || 'Not set'}
+                      value={copyTradingUser?.notes || 'No notes'}
                       disabled
                       className="bg-gray-50 dark:bg-gray-800"
-                      data-testid="display-last-name"
-                    />
-                  )}
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4" />
-                    <span>Phone Number</span>
-                  </Label>
-                  {isEditing ? (
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={copyTradingUser.exchange || 'Not set'} readOnly
-                      onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="Enter your phone number"
-                      data-testid="input-phone"
-                    />
-                  ) : (
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={profile?.phone || 'Not set'}
-                      disabled
-                      className="bg-gray-50 dark:bg-gray-800"
-                      data-testid="display-phone"
+                      data-testid="display-notes"
                     />
                   )}
                 </div>
@@ -350,20 +401,63 @@ export function UserAccountSettings({ copyTradingUser, onBack }: UserAccountSett
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Last Login</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-white" data-testid="text-last-login">
-                  {profile?.lastLoginAt 
-                    ? format(new Date(profile.lastLoginAt), 'MMM dd, yyyy HH:mm')
-                    : 'Never'
-                  }
+                  Never
                 </span>
               </div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Account Created</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-white" data-testid="text-account-created">
-                  {profile?.createdAt 
-                    ? format(new Date(profile.createdAt), 'MMM dd, yyyy HH:mm')
+                  {copyTradingUser?.createdAt 
+                    ? format(new Date(copyTradingUser.createdAt), 'MMM dd, yyyy HH:mm')
                     : 'Unknown'
                   }
                 </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Admin Information */}
+        <Card data-testid="card-admin">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Shield className="h-5 w-5" />
+              <span>Admin Information</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Application Status</span>
+                <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400" data-testid="badge-application-status">
+                  Approved
+                </Badge>
+              </div>
+              
+              {/* Admin Notes */}
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-600 dark:text-gray-400">Admin Notes</Label>
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md min-h-[60px]" data-testid="display-admin-notes">
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {'No admin notes available'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Processed Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Processed By</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white" data-testid="text-processed-by">
+                    {'System'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Processed At</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white" data-testid="text-processed-at">
+                    {'Auto Approved'}
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
