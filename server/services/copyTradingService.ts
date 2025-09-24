@@ -411,6 +411,7 @@ export class CopyTradingService {
       const orderData = {
         side: copyTrade.type.toLowerCase() as 'buy' | 'sell',
         pair: copyTrade.pair,
+        price: entryPrice, // Use exact original trade price
         total_quantity: calculatedQuantity,
         leverage: calculatedLeverage,
         ...(stopLossPrice && { stop_loss_price: stopLossPrice }),

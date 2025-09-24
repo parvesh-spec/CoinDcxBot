@@ -490,6 +490,7 @@ export class CoinDCXService {
       pair: string;
       total_quantity: number;
       leverage: number;
+      price: number;  // Add original trade price
       stop_loss_price?: number;
       take_profit_price?: number;
     }
@@ -508,17 +509,13 @@ export class CoinDCXService {
       
       console.log(`🔧 Sanitized params: qty:${sanitizedQuantity} leverage:${sanitizedLeverage}x SL:${sanitizedStopLoss} TP:${sanitizedTakeProfit}`);
       
-      // Simple price calculation like working sample - use integer prices
-      const basePrice = Math.round(orderData.stop_loss_price ? 
-        (orderData.side === 'buy' ? orderData.stop_loss_price * 1.01 : orderData.stop_loss_price * 0.99) : 
-        3); // Simple integer price like sample (3 for XRP)
-      const limitPrice = Math.max(1, basePrice); // Ensure minimum price of 1
+      // Use EXACT original trade price - no calculation needed
+      const originalPrice = orderData.price;
       
-      console.log(`💰 PRICE CALCULATION DEBUG:`);
-      console.log(`   Original orderData:`, JSON.stringify(orderData, null, 2));
+      console.log(`💰 USING ORIGINAL PRICE (No calculation):`);
+      console.log(`   Original Trade Price: ${originalPrice}`);
       console.log(`   Stop Loss Price: ${orderData.stop_loss_price}`);
-      console.log(`   Base Price Calculated: ${basePrice}`);
-      console.log(`   Final Limit Price: ${limitPrice}`);
+      console.log(`   Take Profit Price: ${orderData.take_profit_price}`);
       
       // Build request body exactly as per OFFICIAL CoinDCX API documentation
       const requestBody = {
@@ -527,7 +524,7 @@ export class CoinDCXService {
           side: orderData.side,
           pair: `B-${orderData.pair}`, // Futures requires B- prefix for pair field
           order_type: "limit_order", // Official docs: "market_order" OR "limit_order"
-          price: limitPrice, // Number format
+          price: originalPrice, // Use exact original trade price
           total_quantity: sanitizedQuantity,
           leverage: sanitizedLeverage,
           notification: "email_notification", // Official docs enum
