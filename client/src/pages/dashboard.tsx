@@ -16,8 +16,6 @@ export default function Dashboard() {
         return <CopyTradingUsersPage />;
       case "/copy-trading/trades":
         return <CopyTradingTradesPage />;
-      case "/copy-trading/analytics":
-        return <div className="p-6"><h1 className="text-2xl font-bold">Copy Trading Analytics</h1><p className="text-muted-foreground">View performance analytics and insights.</p></div>;
       case "/templates":
         return <TemplatesPage />;
       case "/channels":

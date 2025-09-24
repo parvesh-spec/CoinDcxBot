@@ -32,7 +32,6 @@ function Router() {
           <Route path="/trades" component={Dashboard} />
           <Route path="/copy-trading/users" component={Dashboard} />
           <Route path="/copy-trading/trades" component={Dashboard} />
-          <Route path="/copy-trading/analytics" component={Dashboard} />
           <Route path="/templates" component={Dashboard} />
           <Route path="/channels" component={Dashboard} />
           <Route path="/automation" component={Dashboard} />

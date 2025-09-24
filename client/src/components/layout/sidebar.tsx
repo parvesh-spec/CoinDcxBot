@@ -51,12 +51,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           icon: "fas fa-exchange-alt",
           current: location === "/copy-trading/trades",
         },
-        {
-          name: "Analytics",
-          href: "/copy-trading/analytics",
-          icon: "fas fa-chart-bar",
-          current: location === "/copy-trading/analytics",
-        },
       ],
     },
     {
