@@ -159,6 +159,7 @@ export const copyTrades = pgTable("copy_trades", {
   executionTime: timestamp("execution_time"), // When trade was executed
   errorMessage: text("error_message"), // Error details if failed
   pnl: decimal("pnl", { precision: 20, scale: 8 }), // P&L if trade is closed
+  exitPrice: decimal("exit_price", { precision: 20, scale: 8 }), // Exit price if trade is closed
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

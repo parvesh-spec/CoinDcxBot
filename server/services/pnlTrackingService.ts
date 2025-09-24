@@ -91,11 +91,16 @@ export class PnLTrackingService {
     }
 
     // Fetch transactions for this specific order
+    console.log(`📡 Fetching transactions for copy trade ${copyTradeId}, order ID: ${copyTrade.executedTradeId}`);
     const transactions = await coindcxService.getFuturesTransactions(
       apiKey, 
       apiSecret, 
       copyTrade.executedTradeId
     );
+
+    console.log(`📊 CoinDCX API Response for order ${copyTrade.executedTradeId}:`);
+    console.log(`   - Total transactions found: ${transactions.length}`);
+    console.log(`   - Raw transaction data:`, JSON.stringify(transactions, null, 2));
 
     if (transactions.length === 0) {
       console.log(`⚠️ No transactions found for copy trade ${copyTradeId} with order ID ${copyTrade.executedTradeId}`);
@@ -103,23 +108,49 @@ export class PnLTrackingService {
     }
 
     // Calculate total P&L from all transactions for this order
-    const totalPnL = transactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+    console.log(`💰 P&L Calculation for copy trade ${copyTradeId}:`);
+    console.log(`   - Processing ${transactions.length} transactions...`);
+    
+    let totalPnL = 0;
+    transactions.forEach((transaction, index) => {
+      console.log(`   - Transaction ${index + 1}: amount = ${transaction.amount} USDT`);
+      totalPnL += transaction.amount;
+    });
+    
+    console.log(`   - Total P&L = ${totalPnL} USDT`);
 
     // Calculate exit price if we have the required data
     let exitPrice: number | undefined;
+    
+    console.log(`🎯 Exit Price Calculation for copy trade ${copyTradeId}:`);
+    console.log(`   - Entry Price: ${copyTrade.executedPrice}`);
+    console.log(`   - Executed Quantity: ${copyTrade.executedQuantity}`);
+    console.log(`   - Trade Type: ${copyTrade.type}`);
+    console.log(`   - Leverage: ${copyTrade.leverage}`);
+    console.log(`   - Total P&L: ${totalPnL} USDT`);
     
     if (copyTrade.executedPrice && copyTrade.executedQuantity && totalPnL !== 0) {
       const entryPrice = parseFloat(copyTrade.executedPrice);
       const quantity = parseFloat(copyTrade.executedQuantity);
       const side = copyTrade.type.toLowerCase() as 'buy' | 'sell';
+      const leverage = parseFloat(copyTrade.leverage.toString());
+      
+      console.log(`   - Parsed values: entryPrice=${entryPrice}, quantity=${quantity}, side=${side}, leverage=${leverage}`);
       
       exitPrice = coindcxService.calculateExitPrice(
         entryPrice,
         quantity,
         totalPnL,
-        parseFloat(copyTrade.leverage.toString()),
+        leverage,
         side
       );
+      
+      console.log(`   - Calculated Exit Price: ${exitPrice}`);
+    } else {
+      console.log(`   - Cannot calculate exit price: missing data or zero P&L`);
+      console.log(`     - executedPrice: ${copyTrade.executedPrice || 'MISSING'}`);
+      console.log(`     - executedQuantity: ${copyTrade.executedQuantity || 'MISSING'}`);
+      console.log(`     - totalPnL: ${totalPnL} (${totalPnL === 0 ? 'ZERO' : 'OK'})`);
     }
 
     // Update the copy trade with P&L and exit price
