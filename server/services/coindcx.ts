@@ -500,18 +500,32 @@ export class CoinDCXService {
       const endpoint = '/exchange/v1/derivatives/futures/orders/create';
       const timestamp = Date.now();
       
+      // Sanitize parameters for CoinDCX API requirements
+      const sanitizedQuantity = Math.round(orderData.total_quantity * 1000000) / 1000000; // 6 decimal precision
+      const sanitizedLeverage = Math.min(orderData.leverage, 25); // Cap leverage at 25x for safety
+      const sanitizedStopLoss = orderData.stop_loss_price ? Math.round(orderData.stop_loss_price * 100) / 100 : undefined; // 2 decimal precision
+      const sanitizedTakeProfit = orderData.take_profit_price ? Math.round(orderData.take_profit_price * 100) / 100 : undefined; // 2 decimal precision
+      
+      console.log(`🔧 Sanitized params: qty:${sanitizedQuantity} leverage:${sanitizedLeverage}x SL:${sanitizedStopLoss} TP:${sanitizedTakeProfit}`);
+      
+      // Generate unique client order ID
+      const clientOrderId = `copy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       // Build request body as per CoinDCX API requirements
       const requestBody = {
-        timestamp,
-        side: orderData.side,
-        pair: `B-${orderData.pair}`, // Add B- prefix as required by CoinDCX
-        order_type: "market_order",
-        total_quantity: orderData.total_quantity,
-        leverage: orderData.leverage,
-        ...(orderData.stop_loss_price && { stop_loss_price: orderData.stop_loss_price }),
-        ...(orderData.take_profit_price && { take_profit_price: orderData.take_profit_price }),
-        notification: "email_notification",
-        margin_currency_short_name: "USDT"
+        orders: [{
+          side: orderData.side,
+          order_type: "market_order",
+          market: orderData.pair, // Use plain pair name without B- prefix for market field
+          total_quantity: sanitizedQuantity,
+          timestamp: timestamp,
+          ecode: "I", // Required exchange code
+          client_order_id: clientOrderId, // Required unique order ID
+          ...(sanitizedLeverage && { leverage: sanitizedLeverage }),
+          ...(sanitizedStopLoss && { stop_loss_price: sanitizedStopLoss }),
+          ...(sanitizedTakeProfit && { take_profit_price: sanitizedTakeProfit }),
+          ...(orderData.pair.includes('USDT') && { margin_currency_short_name: "USDT" })
+        }]
       };
       
       const body = JSON.stringify(requestBody);
@@ -526,6 +540,7 @@ export class CoinDCXService {
       };
       
       console.log(`📤 Sending futures order to CoinDCX: ${orderData.side} ${orderData.pair}`);
+      console.log(`📋 Request body:`, JSON.stringify(requestBody, null, 2));
       
       const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
         headers,
