@@ -500,27 +500,24 @@ export class CoinDCXService {
       const endpoint = '/exchange/v1/derivatives/futures/orders/create';
       const timestamp = Date.now();
       
-      // Sanitize parameters for CoinDCX API requirements
-      const sanitizedQuantity = Math.round(orderData.total_quantity * 1000000) / 1000000; // 6 decimal precision
-      const sanitizedLeverage = Math.min(orderData.leverage, 25); // Cap leverage at 25x for safety
+      // Sanitize parameters for CoinDCX API requirements - VERY conservative
+      const sanitizedQuantity = Math.round(orderData.total_quantity * 100) / 100; // 2 decimal precision like sample
+      const sanitizedLeverage = Math.min(orderData.leverage, 5); // Cap leverage at 5x like working sample
       const sanitizedStopLoss = orderData.stop_loss_price ? Math.round(orderData.stop_loss_price * 100) / 100 : undefined; // 2 decimal precision
       const sanitizedTakeProfit = orderData.take_profit_price ? Math.round(orderData.take_profit_price * 100) / 100 : undefined; // 2 decimal precision
       
       console.log(`🔧 Sanitized params: qty:${sanitizedQuantity} leverage:${sanitizedLeverage}x SL:${sanitizedStopLoss} TP:${sanitizedTakeProfit}`);
       
-      // Get current market price for limit order (slightly above current price for buy orders)
-      const priceAdjustment = orderData.side === 'buy' ? 1.002 : 0.998; // 0.2% adjustment for quick execution
-      // Use stop loss price as reference for current market price (more accurate than quantity)
-      const currentPrice = orderData.stop_loss_price ? 
-        (orderData.side === 'buy' ? orderData.stop_loss_price * 1.005 : orderData.stop_loss_price * 0.995) : 
-        160; // Default fallback price
-      const limitPrice = Math.round(currentPrice * priceAdjustment * 100) / 100;
+      // Simple price calculation like working sample - use integer prices
+      const basePrice = Math.round(orderData.stop_loss_price ? 
+        (orderData.side === 'buy' ? orderData.stop_loss_price * 1.01 : orderData.stop_loss_price * 0.99) : 
+        3); // Simple integer price like sample (3 for XRP)
+      const limitPrice = Math.max(1, basePrice); // Ensure minimum price of 1
       
       console.log(`💰 PRICE CALCULATION DEBUG:`);
       console.log(`   Original orderData:`, JSON.stringify(orderData, null, 2));
       console.log(`   Stop Loss Price: ${orderData.stop_loss_price}`);
-      console.log(`   Current Price Estimate: ${currentPrice}`);
-      console.log(`   Price Adjustment: ${priceAdjustment}`);
+      console.log(`   Base Price Calculated: ${basePrice}`);
       console.log(`   Final Limit Price: ${limitPrice}`);
       
       // Build request body exactly as per working sample format
