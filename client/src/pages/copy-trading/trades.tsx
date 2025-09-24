@@ -74,7 +74,6 @@ export default function CopyTradingTradesPage() {
       return response.json() as Promise<{ copyTrades: (CopyTrade & { 
         copyUser: { name: string; telegramUsername?: string; };
         originalTrade: { pair: string; type: string; price: string; };
-        exitPrice?: string;
       })[]; total: number }>;
     },
   });
@@ -99,22 +98,6 @@ export default function CopyTradingTradesPage() {
     }
   };
 
-  // Manual P&L sync function
-  const handlePnLSync = async () => {
-    try {
-      const response = await apiRequest("POST", "/api/copy-trading/trades/sync-pnl");
-      const result = await response.json();
-      
-      if (result.success) {
-        // Refetch trades after successful P&L sync
-        refetch();
-        console.log("P&L sync completed:", result.message);
-      }
-    } catch (error) {
-      console.error("P&L sync failed:", error);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="p-6">
@@ -136,7 +119,7 @@ export default function CopyTradingTradesPage() {
               Track and monitor copy trading executions across all users
             </p>
           </div>
-          <div className="text-right flex space-x-2">
+          <div className="text-right">
             <Button 
               onClick={handleManualSync}
               variant="outline"
@@ -145,15 +128,6 @@ export default function CopyTradingTradesPage() {
             >
               <i className="fas fa-sync mr-2" />
               Sync Trades
-            </Button>
-            <Button 
-              onClick={handlePnLSync}
-              variant="outline"
-              size="sm"
-              data-testid="button-pnl-sync"
-            >
-              <i className="fas fa-calculator mr-2" />
-              Sync P&L
             </Button>
           </div>
         </div>
@@ -324,19 +298,11 @@ export default function CopyTradingTradesPage() {
                     
                     <div className="text-right space-y-1">
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Entry: </span>
+                        <span className="text-muted-foreground">Price: </span>
                         <span className="font-medium">
                           {trade.executedPrice || trade.originalPrice}
                         </span>
                       </div>
-                      {trade.exitPrice && (
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">Exit: </span>
-                          <span className="font-medium">
-                            {parseFloat(trade.exitPrice).toFixed(4)}
-                          </span>
-                        </div>
-                      )}
                       <div className="text-sm">
                         <span className="text-muted-foreground">P&L: </span>
                         {formatPnl(trade.pnl)}

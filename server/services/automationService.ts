@@ -2,7 +2,6 @@ import { storage } from '../storage';
 import { telegramService } from './telegram';
 import { Trade, Automation, TelegramChannel, MessageTemplate, InsertSentMessage } from '../../shared/schema';
 import * as cron from 'node-cron';
-import { pnlTrackingService } from './pnlTrackingService';
 
 export type AutomationTrigger = 
   | 'trade_registered' 
@@ -15,7 +14,6 @@ export type AutomationTrigger =
 export class AutomationService {
   private cronTask?: any; // Store cron task for management
   private walletBalanceCron?: any; // Store wallet balance cron task
-  private pnlTrackingCron?: any; // Store P&L tracking cron task
   
   /**
    * Get validated public base URL for image hosting
@@ -721,23 +719,6 @@ export class AutomationService {
       // Start the wallet balance update cron
       this.walletBalanceCron.start();
       console.log('💰 60-second wallet balance auto-update initialized and started');
-
-      // Add P&L tracking cron job - runs every 5 minutes
-      this.pnlTrackingCron = cron.schedule('*/5 * * * *', async () => {
-        try {
-          console.log('📊 Starting scheduled P&L update...');
-          const result = await pnlTrackingService.updateAllCopyTradesPnL();
-          console.log(`✅ Scheduled P&L update completed: ${result.success} success, ${result.errors} errors`);
-        } catch (error) {
-          console.error('❌ Error in automatic P&L update:', error);
-        }
-      }, {
-        timezone: 'Asia/Kolkata'
-      });
-
-      // Start the P&L tracking cron
-      this.pnlTrackingCron.start();
-      console.log('📊 5-minute P&L tracking auto-update initialized and started');
       
     } catch (error) {
       console.error('❌ Error initializing scheduler:', error);
