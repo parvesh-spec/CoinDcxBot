@@ -145,7 +145,7 @@ export const copyTradingUsers = pgTable("copy_trading_users", {
 // Copy Trades table - tracks trades executed for copy trading users
 export const copyTrades = pgTable("copy_trades", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  originalTradeId: varchar("original_trade_id").notNull().references(() => trades.id), // Reference to original trade
+  originalTradeId: varchar("original_trade_id").notNull().references(() => trades.id, { onDelete: "cascade" }), // Reference to original trade
   copyUserId: varchar("copy_user_id").notNull().references(() => copyTradingUsers.id), // Which copy user
   executedTradeId: varchar("executed_trade_id"), // Exchange trade ID after execution
   pair: varchar("pair").notNull(), // Trading pair (same as original)
