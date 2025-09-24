@@ -9,6 +9,8 @@ import {
   copyTrades,
   copyTradingApplications,
   otpVerifications,
+  userAccounts,
+  otpCodes,
   type User,
   type InsertUser,
   type TelegramChannel,
@@ -35,6 +37,13 @@ import {
   type InsertOtpVerification,
   type VerifyOtp,
   type SendOtp,
+  type UserAccount,
+  type InsertUserAccount,
+  type UpdateUserAccount,
+  type OtpCode,
+  type InsertOtpCode,
+  type SendUserOtp,
+  type VerifyUserOtp,
   normalizeTargetStatus,
 } from "@shared/schema";
 import { db } from "./db";
@@ -128,6 +137,18 @@ export interface IStorage {
   isEmailVerified(email: string, purpose?: string): Promise<boolean>;
   cleanupExpiredOTPs(): Promise<number>;
   getOTPStats(): Promise<{ total: number; active: number; expired: number; verified: number }>;
+
+  // User Account operations
+  getUserAccount(id: string): Promise<UserAccount | undefined>;
+  getUserAccountByEmail(email: string): Promise<UserAccount | undefined>;
+  createUserAccount(userAccount: InsertUserAccount): Promise<UserAccount>;
+  updateUserAccount(id: string, userAccount: UpdateUserAccount): Promise<UserAccount | undefined>;
+  updateUserLastLogin(email: string): Promise<UserAccount | undefined>;
+
+  // User OTP operations
+  createOtpCode(otpData: InsertOtpCode): Promise<OtpCode>;
+  verifyUserOtp(email: string, code: string): Promise<{ success: boolean; userAccount?: UserAccount }>;
+  cleanupExpiredUserOtps(): Promise<number>;
   
   // Copy Trade operations
   getCopyTrades(filters?: {
@@ -1361,6 +1382,91 @@ export class DatabaseStorage implements IStorage {
   async getOTPStats(): Promise<{ total: number; active: number; expired: number; verified: number }> {
     const { getOTPStats } = await import('./services/otp');
     return getOTPStats();
+  }
+
+  // User Account operations
+  async getUserAccount(id: string): Promise<UserAccount | undefined> {
+    const [userAccount] = await db.select().from(userAccounts).where(eq(userAccounts.id, id));
+    return userAccount;
+  }
+
+  async getUserAccountByEmail(email: string): Promise<UserAccount | undefined> {
+    const [userAccount] = await db.select().from(userAccounts).where(eq(userAccounts.email, email));
+    return userAccount;
+  }
+
+  async createUserAccount(userAccountData: InsertUserAccount): Promise<UserAccount> {
+    const [userAccount] = await db.insert(userAccounts).values(userAccountData).returning();
+    return userAccount;
+  }
+
+  async updateUserAccount(id: string, userAccountData: UpdateUserAccount): Promise<UserAccount | undefined> {
+    const [updatedUserAccount] = await db
+      .update(userAccounts)
+      .set({ ...userAccountData, updatedAt: new Date() })
+      .where(eq(userAccounts.id, id))
+      .returning();
+    return updatedUserAccount;
+  }
+
+  async updateUserLastLogin(email: string): Promise<UserAccount | undefined> {
+    const [updatedUserAccount] = await db
+      .update(userAccounts)
+      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(userAccounts.email, email))
+      .returning();
+    return updatedUserAccount;
+  }
+
+  // User OTP operations
+  async createOtpCode(otpData: InsertOtpCode): Promise<OtpCode> {
+    const [otpCode] = await db.insert(otpCodes).values(otpData).returning();
+    return otpCode;
+  }
+
+  async verifyUserOtp(email: string, code: string): Promise<{ success: boolean; userAccount?: UserAccount }> {
+    // Check if OTP is valid and not expired
+    const [otpCode] = await db
+      .select()
+      .from(otpCodes)
+      .where(
+        and(
+          eq(otpCodes.email, email),
+          eq(otpCodes.code, code),
+          eq(otpCodes.isUsed, false),
+          sql`${otpCodes.expiresAt} > NOW()`
+        )
+      )
+      .orderBy(desc(otpCodes.createdAt))
+      .limit(1);
+
+    if (!otpCode) {
+      return { success: false };
+    }
+
+    // Mark OTP as used
+    await db
+      .update(otpCodes)
+      .set({ isUsed: true })
+      .where(eq(otpCodes.id, otpCode.id));
+
+    // Get or create user account
+    let userAccount = await this.getUserAccountByEmail(email);
+    if (!userAccount) {
+      userAccount = await this.createUserAccount({ email });
+    }
+
+    // Update last login
+    userAccount = await this.updateUserLastLogin(email);
+
+    return { success: true, userAccount };
+  }
+
+  async cleanupExpiredUserOtps(): Promise<number> {
+    const result = await db
+      .delete(otpCodes)
+      .where(sql`${otpCodes.expiresAt} < NOW()`);
+    return result.rowCount || 0;
   }
 }
 

@@ -25,7 +25,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for simple auth
+// User storage table for simple auth (admin users)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: varchar("username").unique().notNull(),
@@ -35,6 +35,29 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User accounts table for end-user email + OTP authentication
+export const userAccounts = pgTable("user_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").unique().notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  phone: varchar("phone"),
+  isActive: boolean("is_active").default(true),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// OTP verification codes table
+export const otpCodes = pgTable("otp_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull(),
+  code: varchar("code", { length: 6 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isUsed: boolean("is_used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Message templates table (define first to avoid circular reference)
@@ -605,3 +628,42 @@ export type OtpVerification = typeof otpVerifications.$inferSelect;
 export type InsertOtpVerification = z.infer<typeof insertOtpVerificationSchema>;
 export type VerifyOtp = z.infer<typeof verifyOtpSchema>;
 export type SendOtp = z.infer<typeof sendOtpSchema>;
+
+// User accounts schemas
+export const insertUserAccountSchema = createInsertSchema(userAccounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+}).extend({
+  email: z.string().email("Please enter a valid email address"),
+  firstName: z.string().min(1, "First name is required").optional(),
+  lastName: z.string().min(1, "Last name is required").optional(),
+  phone: z.string().optional(),
+});
+
+export const updateUserAccountSchema = insertUserAccountSchema.partial();
+
+// OTP codes schemas  
+export const insertOtpCodeSchema = createInsertSchema(otpCodes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const sendUserOtpSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
+export const verifyUserOtpSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  otp: z.string().length(6, "OTP must be 6 digits"),
+});
+
+// User account types
+export type UserAccount = typeof userAccounts.$inferSelect;
+export type InsertUserAccount = z.infer<typeof insertUserAccountSchema>;
+export type UpdateUserAccount = z.infer<typeof updateUserAccountSchema>;
+export type OtpCode = typeof otpCodes.$inferSelect;
+export type InsertOtpCode = z.infer<typeof insertOtpCodeSchema>;
+export type SendUserOtp = z.infer<typeof sendUserOtpSchema>;
+export type VerifyUserOtp = z.infer<typeof verifyUserOtpSchema>;
