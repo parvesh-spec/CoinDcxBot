@@ -1,0 +1,54 @@
+✅ Futures order created successfully: unknown
+❌ Trade execution failed for 3168e555-f343-44f2-8827-35aabc0de40f: error: invalid input syntax for type integer: "7.44"
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.updateCopyTradeExecution (/home/runner/workspace/server/storage.ts:1332:28)
+    at async CopyTradingService.executeRealTrade (/home/runner/workspace/server/services/copyTradingService.ts:506:9)
+    at async CopyTradingService.executeCopyTrade (/home/runner/workspace/server/services/copyTradingService.ts:291:7)
+    at async Promise.all (index 0) {
+  length: 147,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $4 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'numutils.c',
+  line: '617',
+  routine: 'pg_strtoint32_safe'
+}
+❌ Failed to execute copy trade 3168e555-f343-44f2-8827-35aabc0de40f: error: invalid input syntax for type integer: "7.44"
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.updateCopyTradeExecution (/home/runner/workspace/server/storage.ts:1332:28)
+    at async CopyTradingService.executeRealTrade (/home/runner/workspace/server/services/copyTradingService.ts:506:9)
+    at async CopyTradingService.executeCopyTrade (/home/runner/workspace/server/services/copyTradingService.ts:291:7)
+    at async Promise.all (index 0) {
+  length: 147,
+  severity: 'ERROR',
+  code: '22P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $4 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'numutils.c',
+  line: '617',
+  routine: 'pg_strtoint32_safe'
+}
+🏁 Finished executing 1 copy trades
