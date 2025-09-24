@@ -1516,6 +1516,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Copy Trading P&L Sync endpoint
+  app.post('/api/copy-trading/trades/sync-pnl', isAuthenticated, async (req, res) => {
+    try {
+      const { copyTradingService } = await import('./services/copyTradingService');
+      const result = await copyTradingService.syncCopyTradesPnL();
+      res.json(result);
+    } catch (error) {
+      console.error("Error during copy trading P&L sync:", error);
+      res.status(500).json({ 
+        success: 0, 
+        errors: 1, 
+        message: "Failed to sync copy trading P&L" 
+      });
+    }
+  });
+
   // TODO: Implement copy trade stats in future
   // app.get('/api/copy-trading/trades/stats', isAuthenticated, async (req, res) => {
   //   try {

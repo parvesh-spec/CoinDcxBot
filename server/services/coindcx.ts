@@ -459,4 +459,4 @@ export class CoinDCXService {
 }
 
 // Export singleton instance
-export const coinDCXService = new CoinDCXService();
+export const coindcxService = new CoinDCXService();

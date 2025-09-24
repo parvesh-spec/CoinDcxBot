@@ -82,16 +82,26 @@ export default function CopyTradingTradesPage() {
   const totalTrades = tradesData?.total || 0;
   const totalPages = Math.ceil(totalTrades / limit);
 
-  // Manual sync function (trigger real-time sync)
+  // Manual sync function (trigger real-time sync and P&L sync)
   const handleManualSync = async () => {
     try {
-      const response = await apiRequest("POST", "/api/trades/sync");
-      const result = await response.json();
+      console.log('🔄 Starting comprehensive sync...');
       
-      if (result.success) {
+      // First sync regular trades from CoinDCX
+      const syncResponse = await apiRequest("POST", "/api/trades/sync");
+      const syncResult = await syncResponse.json();
+      
+      // Then sync P&L for executed copy trades
+      const pnlResponse = await apiRequest("POST", "/api/copy-trading/trades/sync-pnl");
+      const pnlResult = await pnlResponse.json();
+      
+      console.log('✅ Trade sync result:', syncResult);
+      console.log('💰 P&L sync result:', pnlResult);
+      
+      if (syncResult.success || pnlResult.success > 0) {
         // Refetch trades after successful sync
         refetch();
-        // Could add toast notification here
+        console.log(`📊 Sync completed: ${pnlResult.success} P&L updates, ${pnlResult.errors} errors`);
       }
     } catch (error) {
       console.error("Manual sync failed:", error);
