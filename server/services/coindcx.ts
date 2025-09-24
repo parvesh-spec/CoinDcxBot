@@ -545,6 +545,8 @@ export class CoinDCXService {
           price: originalPrice, // Use exact original trade price
           total_quantity: sanitizedQuantity,
           leverage: sanitizedLeverage,
+          ...(sanitizedStopLoss && { stop_loss_price: sanitizedStopLoss }), // Include stop loss if available
+          ...(sanitizedTakeProfit && { take_profit_price: sanitizedTakeProfit }), // Include take profit if available
           notification: "email_notification", // Official docs enum
           time_in_force: "good_till_cancel", // Official docs enum
           hidden: false, // Official docs boolean
