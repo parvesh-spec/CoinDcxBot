@@ -37,18 +37,6 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// User accounts table for end-user email + OTP authentication
-export const userAccounts = pgTable("user_accounts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique().notNull(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  phone: varchar("phone"),
-  isActive: boolean("is_active").default(true),
-  lastLoginAt: timestamp("last_login_at"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
 
 
 // Message templates table (define first to avoid circular reference)
@@ -620,22 +608,7 @@ export type InsertOtpVerification = z.infer<typeof insertOtpVerificationSchema>;
 export type VerifyOtp = z.infer<typeof verifyOtpSchema>;
 export type SendOtp = z.infer<typeof sendOtpSchema>;
 
-// User accounts schemas
-export const insertUserAccountSchema = createInsertSchema(userAccounts).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  lastLoginAt: true,
-}).extend({
-  email: z.string().email("Please enter a valid email address"),
-  firstName: z.string().min(1, "First name is required").optional(),
-  lastName: z.string().min(1, "Last name is required").optional(),
-  phone: z.string().optional(),
-});
-
-export const updateUserAccountSchema = insertUserAccountSchema.partial();
-
-// User access OTP schemas for end-user authentication
+// Copy Trading User Access OTP schemas for authentication
 export const sendUserAccessOtpSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
@@ -645,9 +618,6 @@ export const verifyUserAccessOtpSchema = z.object({
   otp: z.string().length(6, "OTP must be 6 digits"),
 });
 
-// User account types
-export type UserAccount = typeof userAccounts.$inferSelect;
-export type InsertUserAccount = z.infer<typeof insertUserAccountSchema>;
-export type UpdateUserAccount = z.infer<typeof updateUserAccountSchema>;
+// Copy Trading User Access types
 export type SendUserAccessOtp = z.infer<typeof sendUserAccessOtpSchema>;
 export type VerifyUserAccessOtp = z.infer<typeof verifyUserAccessOtpSchema>;

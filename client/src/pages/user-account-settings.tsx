@@ -10,47 +10,50 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, User, Mail, Phone, Calendar, CheckCircle, Edit, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface UserAccount {
+interface CopyTradingUser {
   id: string;
+  name: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
+  exchange: string;
+  riskPerTrade: string;
+  tradeFund: string;
+  maxTradesPerDay?: number;
   isActive: boolean;
-  lastLoginAt?: string;
+  lowFund: boolean;
+  futuresWalletBalance: string;
+  notes?: string;
   createdAt: string;
 }
 
 interface UserAccountSettingsProps {
-  userAccount: UserAccount;
+  copyTradingUser: CopyTradingUser;
   onBack: () => void;
 }
 
-export function UserAccountSettings({ userAccount, onBack }: UserAccountSettingsProps) {
+export function UserAccountSettings({ copyTradingUser, onBack }: UserAccountSettingsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    firstName: userAccount.firstName || '',
-    lastName: userAccount.lastName || '',
-    phone: userAccount.phone || '',
+    name: copyTradingUser.name || '',
+    notes: copyTradingUser.notes || '',
   });
 
   const { data: profileData, isLoading, error } = useQuery({
-    queryKey: ['user-profile', userAccount.email],
+    queryKey: ['copy-trading-profile', copyTradingUser.email],
     queryFn: async () => {
-      const response = await fetch(`/api/user-access/profile/${encodeURIComponent(userAccount.email)}`);
+      const response = await fetch(`/api/user-access/profile/${encodeURIComponent(copyTradingUser.email)}`);
       if (!response.ok) {
         throw new Error('Failed to fetch profile');
       }
       return response.json();
     },
-    initialData: { success: true, profile: userAccount },
+    initialData: { success: true, profile: copyTradingUser },
   });
 
   const updateProfileMutation = useMutation({
     mutationFn: async (updatedData: typeof editForm) => {
-      const response = await fetch(`/api/user-access/profile/${encodeURIComponent(userAccount.email)}`, {
+      const response = await fetch(`/api/user-access/profile/${encodeURIComponent(copyTradingUser.email)}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +72,7 @@ export function UserAccountSettings({ userAccount, onBack }: UserAccountSettings
         duration: 3000,
       });
       setIsEditing(false);
-      queryClient.invalidateQueries({ queryKey: ['user-profile', userAccount.email] });
+      queryClient.invalidateQueries({ queryKey: ['copy-trading-profile', copyTradingUser.email] });
     },
     onError: () => {
       toast({
@@ -87,9 +90,8 @@ export function UserAccountSettings({ userAccount, onBack }: UserAccountSettings
 
   const handleCancel = () => {
     setEditForm({
-      firstName: profileData?.profile?.firstName || '',
-      lastName: profileData?.profile?.lastName || '',
-      phone: profileData?.profile?.phone || '',
+      name: profileData?.profile?.name || '',
+      notes: profileData?.profile?.notes || '',
     });
     setIsEditing(false);
   };
@@ -263,7 +265,7 @@ export function UserAccountSettings({ userAccount, onBack }: UserAccountSettings
                     <Input
                       id="firstName"
                       type="text"
-                      value={editForm.firstName}
+                      value={editForm.name}
                       onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
                       placeholder="Enter your first name"
                       data-testid="input-first-name"
@@ -287,7 +289,7 @@ export function UserAccountSettings({ userAccount, onBack }: UserAccountSettings
                     <Input
                       id="lastName"
                       type="text"
-                      value={editForm.lastName}
+                      value={editForm.notes}
                       onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
                       placeholder="Enter your last name"
                       data-testid="input-last-name"
@@ -314,7 +316,7 @@ export function UserAccountSettings({ userAccount, onBack }: UserAccountSettings
                     <Input
                       id="phone"
                       type="tel"
-                      value={editForm.phone}
+                      value={copyTradingUser.exchange || 'Not set'} readOnly
                       onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
                       placeholder="Enter your phone number"
                       data-testid="input-phone"

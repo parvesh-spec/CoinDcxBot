@@ -10,14 +10,18 @@ import campusLogo from "@assets/6208450096694152058_1758021301213.jpg";
 import { UserTradeHistory } from "./user-trade-history";
 import { UserAccountSettings } from "./user-account-settings";
 
-interface UserAccount {
+interface CopyTradingUser {
   id: string;
+  name: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
+  exchange: string;
+  riskPerTrade: string;
+  tradeFund: string;
+  maxTradesPerDay?: number;
   isActive: boolean;
-  lastLoginAt?: string;
+  lowFund: boolean;
+  futuresWalletBalance: string;
+  notes?: string;
   createdAt: string;
 }
 
@@ -32,15 +36,15 @@ export default function UserAccessPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
-  const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
+  const [copyTradingUser, setCopyTradingUser] = useState<CopyTradingUser | null>(null);
 
   // Check if user is already logged in
   useEffect(() => {
     const savedEmail = localStorage.getItem('userEmail');
-    const savedAccount = localStorage.getItem('userAccount');
+    const savedAccount = localStorage.getItem('copyTradingUser');
     if (savedEmail && savedAccount) {
       setEmail(savedEmail);
-      setUserAccount(JSON.parse(savedAccount));
+      setCopyTradingUser(JSON.parse(savedAccount));
       setCurrentView('dashboard');
     }
   }, []);
@@ -117,10 +121,10 @@ export default function UserAccessPage() {
 
       const data = await response.json();
 
-      if (data.success && data.userAccount) {
+      if (data.success && data.copyTradingUser) {
         localStorage.setItem('userEmail', email);
-        localStorage.setItem('userAccount', JSON.stringify(data.userAccount));
-        setUserAccount(data.userAccount);
+        localStorage.setItem('copyTradingUser', JSON.stringify(data.copyTradingUser));
+        setCopyTradingUser(data.copyTradingUser);
         setCurrentView('dashboard');
         toast({
           title: "Login Successful",
@@ -142,8 +146,8 @@ export default function UserAccessPage() {
 
   const handleLogout = () => {
     localStorage.removeItem('userEmail');
-    localStorage.removeItem('userAccount');
-    setUserAccount(null);
+    localStorage.removeItem('copyTradingUser');
+    setCopyTradingUser(null);
     setCurrentView('login');
     setStep('email');
     setEmail('');
@@ -161,25 +165,25 @@ export default function UserAccessPage() {
   };
 
   // Render different views based on current state
-  if (currentView === 'trade-history' && userAccount) {
+  if (currentView === 'trade-history' && copyTradingUser) {
     return (
       <UserTradeHistory 
-        userAccount={userAccount} 
+        copyTradingUser={copyTradingUser} 
         onBack={() => setCurrentView('dashboard')} 
       />
     );
   }
 
-  if (currentView === 'account-settings' && userAccount) {
+  if (currentView === 'account-settings' && copyTradingUser) {
     return (
       <UserAccountSettings 
-        userAccount={userAccount} 
+        copyTradingUser={copyTradingUser} 
         onBack={() => setCurrentView('dashboard')} 
       />
     );
   }
 
-  if (currentView === 'dashboard' && userAccount) {
+  if (currentView === 'dashboard' && copyTradingUser) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
         <div className="max-w-md mx-auto pt-8">
@@ -197,7 +201,7 @@ export default function UserAccessPage() {
               Welcome Back!
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-2" data-testid="text-user-email">
-              {userAccount.email}
+              {copyTradingUser.name || copyTradingUser.email}
             </p>
             <p className="text-sm text-blue-600 dark:text-blue-400 mt-1" data-testid="text-brand">
               Campus For Wisdom Trading Community

@@ -7,49 +7,56 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, TrendingUp, TrendingDown, Clock, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface UserAccount {
+interface CopyTradingUser {
   id: string;
+  name: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
+  exchange: string;
+  riskPerTrade: string;
+  tradeFund: string;
+  maxTradesPerDay?: number;
   isActive: boolean;
-  lastLoginAt?: string;
+  lowFund: boolean;
+  futuresWalletBalance: string;
+  notes?: string;
   createdAt: string;
 }
 
-interface Trade {
+interface CopyTrade {
   id: string;
-  tradeId: string;
+  originalTradeId: string;
+  copyUserId: string;
+  executedTradeId?: string;
   pair: string;
   type: 'buy' | 'sell';
-  price: string;
-  leverage: number;
-  quantity: string;
+  originalPrice: string;
+  executedPrice?: string;
+  originalQuantity: string;
+  executedQuantity?: string;
+  leverage: string;
   status: string;
-  entryPrice?: string;
-  exitPrice?: string;
+  executionTime?: string;
+  errorMessage?: string;
   pnl?: string;
   createdAt: string;
   updatedAt: string;
-  completedAt?: string;
 }
 
 interface UserTradeHistoryProps {
-  userAccount: UserAccount;
+  copyTradingUser: CopyTradingUser;
   onBack: () => void;
 }
 
-export function UserTradeHistory({ userAccount, onBack }: UserTradeHistoryProps) {
+export function UserTradeHistory({ copyTradingUser, onBack }: UserTradeHistoryProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
   const { data: tradesData, isLoading, error } = useQuery({
-    queryKey: ['user-trades', userAccount.email, currentPage],
+    queryKey: ['user-copy-trades', copyTradingUser.email, currentPage],
     queryFn: async () => {
-      const response = await fetch(`/api/user-access/trades/${encodeURIComponent(userAccount.email)}?page=${currentPage}&limit=${pageSize}`);
+      const response = await fetch(`/api/user-access/trades/${encodeURIComponent(copyTradingUser.email)}?page=${currentPage}&limit=${pageSize}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch trade history');
+        throw new Error('Failed to fetch copy trade history');
       }
       return response.json();
     },
@@ -110,7 +117,7 @@ export function UserTradeHistory({ userAccount, onBack }: UserTradeHistoryProps)
                   Trade History
                 </h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400" data-testid="text-user-email">
-                  {userAccount.email}
+                  {copyTradingUser.name || copyTradingUser.email}
                 </p>
               </div>
             </div>
@@ -157,13 +164,13 @@ export function UserTradeHistory({ userAccount, onBack }: UserTradeHistoryProps)
                 </div>
                 <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="text-completed-trades">
-                    {tradesData.trades?.filter((t: Trade) => t.status === 'completed').length || 0}
+                    {tradesData.copyTrades?.filter((t: CopyTrade) => t.status === 'executed').length || 0}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Completed</p>
                 </div>
                 <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                   <p className="text-2xl font-bold text-purple-600 dark:text-purple-400" data-testid="text-recent-trades">
-                    {tradesData.trades?.filter((t: Trade) => {
+                    {tradesData.copyTrades?.filter((t: CopyTrade) => {
                       const tradeDate = new Date(t.createdAt);
                       const weekAgo = new Date();
                       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -204,7 +211,7 @@ export function UserTradeHistory({ userAccount, onBack }: UserTradeHistoryProps)
               </div>
             ) : tradesData?.trades?.length > 0 ? (
               <div className="space-y-3">
-                {tradesData.trades.map((trade: Trade) => (
+                {tradesData.copyTrades.map((trade: CopyTrade) => (
                   <div
                     key={trade.id}
                     className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -236,10 +243,10 @@ export function UserTradeHistory({ userAccount, onBack }: UserTradeHistoryProps)
                     </div>
                     <div className="text-right">
                       <p className={`text-sm font-medium ${trade.type === 'buy' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} data-testid={`text-price-${trade.id}`}>
-                        ${formatPrice(trade.price)}
+                        ${formatPrice(trade.executedPrice || trade.originalPrice)}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400" data-testid={`text-quantity-${trade.id}`}>
-                        Qty: {formatPrice(trade.quantity)}
+                        Qty: {formatPrice(trade.executedQuantity || trade.originalQuantity)}
                       </p>
                     </div>
                   </div>

@@ -1648,26 +1648,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User authenticated routes (for end-users after OTP verification)
+  // Copy Trading User authenticated routes (for copy trading users after OTP verification)
   app.get('/api/user-access/trades/:email', async (req, res) => {
     try {
       const { email } = req.params;
       const { page = '1', limit = '20' } = req.query;
       
-      // Verify user account exists (basic validation)
-      const userAccount = await storage.getUserAccountByEmail(email);
-      if (!userAccount) {
+      // Verify copy trading user exists
+      const copyTradingUser = await storage.getCopyTradingUserByEmail(email);
+      if (!copyTradingUser) {
         return res.status(404).json({ 
           success: false,
-          message: "User account not found" 
+          message: "Copy trading user not found" 
         });
       }
 
       const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
       
-      // For now, return all trades - later we can filter by user-specific trades
-      const result = await storage.getTrades({
-        status: 'completed', // Only show completed trades to end users
+      // Get copy trades for this specific user
+      const result = await storage.getCopyTrades({
+        userId: copyTradingUser.id,
         limit: parseInt(limit as string),
         offset,
       });
@@ -1677,7 +1677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...result
       });
     } catch (error) {
-      console.error("Error fetching user trades:", error);
+      console.error("Error fetching user copy trades:", error);
       res.status(500).json({ 
         success: false,
         message: "Failed to fetch trade history" 
@@ -1689,24 +1689,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email } = req.params;
       
-      const userAccount = await storage.getUserAccountByEmail(email);
-      if (!userAccount) {
+      const copyTradingUser = await storage.getCopyTradingUserByEmail(email);
+      if (!copyTradingUser) {
         return res.status(404).json({ 
           success: false,
-          message: "User account not found" 
+          message: "Copy trading user not found" 
         });
       }
 
-      // Don't expose sensitive information
+      // Don't expose sensitive information (API keys, etc.)
       const safeProfile = {
-        id: userAccount.id,
-        email: userAccount.email,
-        firstName: userAccount.firstName,
-        lastName: userAccount.lastName,
-        phone: userAccount.phone,
-        isActive: userAccount.isActive,
-        lastLoginAt: userAccount.lastLoginAt,
-        createdAt: userAccount.createdAt,
+        id: copyTradingUser.id,
+        name: copyTradingUser.name,
+        email: copyTradingUser.email,
+        exchange: copyTradingUser.exchange,
+        riskPerTrade: copyTradingUser.riskPerTrade,
+        tradeFund: copyTradingUser.tradeFund,
+        maxTradesPerDay: copyTradingUser.maxTradesPerDay,
+        isActive: copyTradingUser.isActive,
+        lowFund: copyTradingUser.lowFund,
+        futuresWalletBalance: copyTradingUser.futuresWalletBalance,
+        notes: copyTradingUser.notes,
+        createdAt: copyTradingUser.createdAt,
       };
 
       res.json({
@@ -1714,7 +1718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profile: safeProfile
       });
     } catch (error) {
-      console.error("Error fetching user profile:", error);
+      console.error("Error fetching copy trading user profile:", error);
       res.status(500).json({ 
         success: false,
         message: "Failed to fetch profile" 

@@ -9,7 +9,6 @@ import {
   copyTrades,
   copyTradingApplications,
   otpVerifications,
-  userAccounts,
   type User,
   type InsertUser,
   type TelegramChannel,
@@ -36,9 +35,6 @@ import {
   type InsertOtpVerification,
   type VerifyOtp,
   type SendOtp,
-  type UserAccount,
-  type InsertUserAccount,
-  type UpdateUserAccount,
   type SendUserAccessOtp,
   type VerifyUserAccessOtp,
   normalizeTargetStatus,
@@ -135,16 +131,9 @@ export interface IStorage {
   cleanupExpiredOTPs(): Promise<number>;
   getOTPStats(): Promise<{ total: number; active: number; expired: number; verified: number }>;
 
-  // User Account operations
-  getUserAccount(id: string): Promise<UserAccount | undefined>;
-  getUserAccountByEmail(email: string): Promise<UserAccount | undefined>;
-  createUserAccount(userAccount: InsertUserAccount): Promise<UserAccount>;
-  updateUserAccount(id: string, userAccount: UpdateUserAccount): Promise<UserAccount | undefined>;
-  updateUserLastLogin(email: string): Promise<UserAccount | undefined>;
-
-  // User OTP operations  
+  // Copy Trading User Access operations (for user portal)
   sendUserAccessOtp(data: SendUserAccessOtp): Promise<{ success: boolean; message: string }>;
-  verifyUserAccessOtp(data: VerifyUserAccessOtp): Promise<{ success: boolean; userAccount?: UserAccount; message: string }>;
+  verifyUserAccessOtp(data: VerifyUserAccessOtp): Promise<{ success: boolean; copyTradingUser?: CopyTradingUser; message: string }>;
   cleanupExpiredUserOtps(): Promise<number>;
   
   // Copy Trade operations
@@ -1381,43 +1370,18 @@ export class DatabaseStorage implements IStorage {
     return getOTPStats();
   }
 
-  // User Account operations
-  async getUserAccount(id: string): Promise<UserAccount | undefined> {
-    const [userAccount] = await db.select().from(userAccounts).where(eq(userAccounts.id, id));
-    return userAccount;
-  }
-
-  async getUserAccountByEmail(email: string): Promise<UserAccount | undefined> {
-    const [userAccount] = await db.select().from(userAccounts).where(eq(userAccounts.email, email));
-    return userAccount;
-  }
-
-  async createUserAccount(userAccountData: InsertUserAccount): Promise<UserAccount> {
-    const [userAccount] = await db.insert(userAccounts).values(userAccountData).returning();
-    return userAccount;
-  }
-
-  async updateUserAccount(id: string, userAccountData: UpdateUserAccount): Promise<UserAccount | undefined> {
-    const [updatedUserAccount] = await db
-      .update(userAccounts)
-      .set({ ...userAccountData, updatedAt: new Date() })
-      .where(eq(userAccounts.id, id))
-      .returning();
-    return updatedUserAccount;
-  }
-
-  async updateUserLastLogin(email: string): Promise<UserAccount | undefined> {
-    const [updatedUserAccount] = await db
-      .update(userAccounts)
-      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
-      .where(eq(userAccounts.email, email))
-      .returning();
-    return updatedUserAccount;
-  }
-
-  // User OTP operations using existing otpVerifications table
+  // Copy Trading User Access operations (for user portal)
   async sendUserAccessOtp(data: SendUserAccessOtp): Promise<{ success: boolean; message: string }> {
     try {
+      // First check if email exists in copyTradingUsers
+      const copyTradingUser = await this.getCopyTradingUserByEmail(data.email);
+      if (!copyTradingUser) {
+        return { 
+          success: false, 
+          message: 'You are not registered for copy trading. Please contact admin for registration.' 
+        };
+      }
+
       // Use existing OTP service with purpose "user_access"
       const result = await this.generateAndSendOTP({ 
         email: data.email, 
@@ -1430,8 +1394,17 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async verifyUserAccessOtp(data: VerifyUserAccessOtp): Promise<{ success: boolean; userAccount?: UserAccount; message: string }> {
+  async verifyUserAccessOtp(data: VerifyUserAccessOtp): Promise<{ success: boolean; copyTradingUser?: CopyTradingUser; message: string }> {
     try {
+      // First check if email exists in copyTradingUsers
+      const copyTradingUser = await this.getCopyTradingUserByEmail(data.email);
+      if (!copyTradingUser) {
+        return { 
+          success: false, 
+          message: 'You are not registered for copy trading. Please contact admin for registration.' 
+        };
+      }
+
       // Check if OTP is valid and not expired using existing otpVerifications table
       const [otpRecord] = await db
         .select()
@@ -1453,7 +1426,9 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Check attempts limit
-      if (otpRecord.attempts >= otpRecord.maxAttempts) {
+      const attempts = otpRecord.attempts || 0;
+      const maxAttempts = otpRecord.maxAttempts || 3;
+      if (attempts >= maxAttempts) {
         return { success: false, message: 'Too many verification attempts. Please request a new OTP.' };
       }
 
@@ -1462,23 +1437,14 @@ export class DatabaseStorage implements IStorage {
         .update(otpVerifications)
         .set({ 
           isVerified: true, 
-          attempts: otpRecord.attempts + 1,
+          attempts: attempts + 1,
           updatedAt: new Date()
         })
         .where(eq(otpVerifications.id, otpRecord.id));
 
-      // Get or create user account
-      let userAccount = await this.getUserAccountByEmail(data.email);
-      if (!userAccount) {
-        userAccount = await this.createUserAccount({ email: data.email });
-      }
-
-      // Update last login
-      userAccount = await this.updateUserLastLogin(data.email);
-
       return { 
         success: true, 
-        userAccount, 
+        copyTradingUser, 
         message: 'Login successful!' 
       };
     } catch (error) {
