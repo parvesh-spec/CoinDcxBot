@@ -22,6 +22,7 @@ function Router() {
       <Route path="/trade-history" component={TradeHistoryPage} />
       <Route path="/copy-trading/apply" component={CopyTradingApplyPage} />
       <Route path="/user" component={UserAccessPage} />
+      <Route path="/user-access" component={UserAccessPage} />
       
       {/* Embed routes - lightweight for external embedding */}
       <Route path="/embed/heatmap" component={EmbedHeatmapPage} />
