@@ -371,7 +371,24 @@ export class CopyTradingService {
       const stopLossPrice = originalTrade.stopLossTrigger ? parseFloat(originalTrade.stopLossTrigger) : null;
       const takeProfitPrice = originalTrade.takeProfitTrigger ? parseFloat(originalTrade.takeProfitTrigger) : null;
       
-      console.log(`💰 Using trade fund: ${tradeFund} USDT for ${copyTrade.pair}`);
+      console.log(`\n🔍 ===== COPY TRADE PARAMETERS VERIFICATION =====`);
+      console.log(`📊 Original Trade Data:`);
+      console.log(`   - Trade ID: ${copyTrade.originalTradeId}`);
+      console.log(`   - Pair: ${copyTrade.pair}`);
+      console.log(`   - Side: ${copyTrade.type}`);
+      console.log(`   - Original Price: ${copyTrade.originalPrice} USDT`);
+      console.log(`   - Original Leverage: ${copyTrade.leverage}x`);
+      
+      console.log(`👤 User Settings:`);
+      console.log(`   - User Name: ${user.name}`);
+      console.log(`   - Trade Fund: ${tradeFund} USDT`);
+      console.log(`   - Risk Per Trade: ${user.riskPerTrade}%`);
+      console.log(`   - Wallet Balance: ${user.walletBalance} USDT`);
+      
+      console.log(`💰 Price Points:`);
+      console.log(`   - Entry Price: ${entryPrice} USDT`);
+      console.log(`   - Stop Loss: ${stopLossPrice || 'Not set'} USDT`);
+      console.log(`   - Take Profit: ${takeProfitPrice || 'Not set'} USDT`);
       
       // Calculate leverage using mathematical formula
       let calculatedLeverage = 1;
@@ -394,7 +411,13 @@ export class CopyTradingService {
         entryPrice
       );
       
-      console.log(`📊 Calculated: leverage=${calculatedLeverage}x, quantity=${calculatedQuantity}`);
+      console.log(`🧮 Calculation Results:`);
+      console.log(`   - Input Trade Fund: ${tradeFund} USDT`);
+      console.log(`   - Input Entry Price: ${entryPrice} USDT`);
+      console.log(`   - Calculated Leverage: ${calculatedLeverage}x`);
+      console.log(`   - Calculated Quantity: ${calculatedQuantity} coins`);
+      console.log(`   - Notional Value: ${(calculatedQuantity * entryPrice).toFixed(2)} USDT`);
+      console.log(`   - Required Margin: ${((calculatedQuantity * entryPrice) / calculatedLeverage).toFixed(2)} USDT`);
       
       // Validate order parameters
       const validation = this.coindcxService.validateOrderParameters(
@@ -417,6 +440,20 @@ export class CopyTradingService {
         ...(stopLossPrice && { stop_loss_price: stopLossPrice }),
         ...(takeProfitPrice && { take_profit_price: takeProfitPrice })
       };
+      
+      console.log(`\n📤 FINAL ORDER DATA TO COINDCX API:`);
+      console.log(`   - Side: ${orderData.side.toUpperCase()}`);
+      console.log(`   - Pair: ${orderData.pair}`);
+      console.log(`   - Price: ${orderData.price} USDT`);
+      console.log(`   - Total Quantity: ${orderData.total_quantity} coins`);
+      console.log(`   - Leverage: ${orderData.leverage}x`);
+      if (orderData.stop_loss_price) {
+        console.log(`   - Stop Loss Price: ${orderData.stop_loss_price} USDT`);
+      }
+      if (orderData.take_profit_price) {
+        console.log(`   - Take Profit Price: ${orderData.take_profit_price} USDT`);
+      }
+      console.log(`========================================\n`);
       
       // Handle dry-run vs real execution
       if (this.isDryRun) {

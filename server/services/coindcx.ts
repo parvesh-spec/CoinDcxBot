@@ -496,7 +496,19 @@ export class CoinDCXService {
     }
   ): Promise<{ success: boolean; orderId?: string; message: string; data?: any }> {
     try {
-      console.log(`🚀 Creating futures order: ${orderData.side.toUpperCase()} ${orderData.pair} qty:${orderData.total_quantity} leverage:${orderData.leverage}x`);
+      console.log(`\n🎯 ===== COINDCX API SERVICE PARAMETERS =====`);
+      console.log(`📥 Received Order Data from Copy Trading Service:`);
+      console.log(`   - Side: ${orderData.side.toUpperCase()}`);
+      console.log(`   - Pair: ${orderData.pair}`);
+      console.log(`   - Price: ${orderData.price} USDT`);
+      console.log(`   - Total Quantity: ${orderData.total_quantity} coins`);
+      console.log(`   - Leverage: ${orderData.leverage}x`);
+      if (orderData.stop_loss_price) {
+        console.log(`   - Stop Loss: ${orderData.stop_loss_price} USDT`);
+      }
+      if (orderData.take_profit_price) {
+        console.log(`   - Take Profit: ${orderData.take_profit_price} USDT`);
+      }
       
       const endpoint = '/exchange/v1/derivatives/futures/orders/create';
       const timestamp = Date.now();
@@ -507,15 +519,21 @@ export class CoinDCXService {
       const sanitizedStopLoss = orderData.stop_loss_price ? Math.round(orderData.stop_loss_price * 100) / 100 : undefined; // 2 decimal precision
       const sanitizedTakeProfit = orderData.take_profit_price ? Math.round(orderData.take_profit_price * 100) / 100 : undefined; // 2 decimal precision
       
-      console.log(`🔧 Sanitized params: qty:${sanitizedQuantity} leverage:${sanitizedLeverage}x SL:${sanitizedStopLoss} TP:${sanitizedTakeProfit}`);
+      console.log(`\n🔧 Parameter Sanitization for CoinDCX API Requirements:`);
+      console.log(`   - Original Quantity: ${orderData.total_quantity} → Sanitized: ${sanitizedQuantity} (rounded to 0.1)`);
+      console.log(`   - Original Leverage: ${orderData.leverage}x → Sanitized: ${sanitizedLeverage}x (capped at 5x)`);
+      if (orderData.stop_loss_price) {
+        console.log(`   - Original Stop Loss: ${orderData.stop_loss_price} → Sanitized: ${sanitizedStopLoss} (2 decimals)`);
+      }
+      if (orderData.take_profit_price) {
+        console.log(`   - Original Take Profit: ${orderData.take_profit_price} → Sanitized: ${sanitizedTakeProfit} (2 decimals)`);
+      }
       
       // Use EXACT original trade price - no calculation needed
       const originalPrice = orderData.price;
       
-      console.log(`💰 USING ORIGINAL PRICE (No calculation):`);
-      console.log(`   Original Trade Price: ${originalPrice}`);
-      console.log(`   Stop Loss Price: ${orderData.stop_loss_price}`);
-      console.log(`   Take Profit Price: ${orderData.take_profit_price}`);
+      console.log(`\n💰 Price Verification:`);
+      console.log(`   - Using Exact Original Trade Price: ${originalPrice} USDT`);
       
       // Build request body exactly as per OFFICIAL CoinDCX API documentation
       const requestBody = {
@@ -534,11 +552,25 @@ export class CoinDCXService {
         }
       };
       
-      console.log(`🚀 FINAL REQUEST BODY TO COINDCX:`);
+      console.log(`\n🚀 ===== FINAL API REQUEST TO COINDCX =====`);
+      console.log(`📡 Endpoint: ${this.config.baseUrl}${endpoint}`);
+      console.log(`🔐 API Key: ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length-4)}`);
+      console.log(`⏰ Timestamp: ${timestamp}`);
+      console.log(`\n📋 Complete Request Body JSON:`);
       console.log(JSON.stringify(requestBody, null, 2));
-      console.log(`📡 API Endpoint: ${this.config.baseUrl}${endpoint}`);
-      console.log(`🔐 Using API Key: ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length-4)}`);
-      console.log(`📝 Request Body Size: ${JSON.stringify(requestBody).length} bytes`);
+      console.log(`\n📊 Request Summary:`);
+      console.log(`   - Order Type: ${requestBody.order.order_type}`);
+      console.log(`   - Trading Pair: ${requestBody.order.pair}`);
+      console.log(`   - Direction: ${requestBody.order.side.toUpperCase()}`);
+      console.log(`   - Entry Price: ${requestBody.order.price} USDT`);
+      console.log(`   - Quantity: ${requestBody.order.total_quantity} coins`);
+      console.log(`   - Leverage: ${requestBody.order.leverage}x`);
+      console.log(`   - Stop Loss: ${(requestBody.order as any).stop_loss_price ? `${(requestBody.order as any).stop_loss_price} USDT` : 'Not included'}`);
+      console.log(`   - Take Profit: ${(requestBody.order as any).take_profit_price ? `${(requestBody.order as any).take_profit_price} USDT` : 'Not included'}`);
+      console.log(`   - Notification: ${requestBody.order.notification}`);
+      console.log(`   - Time in Force: ${requestBody.order.time_in_force}`);
+      console.log(`📝 Total Request Size: ${JSON.stringify(requestBody).length} bytes`);
+      console.log(`=============================================\n`);
       
       const body = JSON.stringify(requestBody);
       
