@@ -127,134 +127,103 @@ export class CoinDCXService {
     }
   }
 
-  // Fetch position transactions for P&L and exit price calculation
-  async getPositionTransactions(positionIds: string | string[]): Promise<any[]> {
+  async validateApiConnection(): Promise<boolean> {
     try {
-      const endpoint = '/exchange/v1/derivatives/futures/positions/transactions';
+      const endpoint = '/exchange/v1/users/balances';
       const timestamp = Date.now();
-      
-      // Convert array to comma-separated string if needed
-      const positionIdsStr = Array.isArray(positionIds) ? positionIds.join(',') : positionIds;
-      
-      const body = JSON.stringify({
-        timestamp: timestamp,
-        position_ids: positionIdsStr,
-        stage: "all", // all OR default OR funding
-        page: "1",
-        size: "100"
-      });
-      
+      const body = JSON.stringify({ timestamp });
       const headers = this.getHeaders(body);
-      
-      console.log(`🔍 Fetching transactions for position(s): ${positionIdsStr}`);
       
       const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
         headers
       });
 
-      if (response.status === 200 || response.status === 201) {
-        const transactions = Array.isArray(response.data) ? response.data : [];
-        console.log(`✅ Fetched ${transactions.length} transactions for position(s): ${positionIdsStr}`);
-        return transactions;
+      return response.status === 200;
+    } catch (error: any) {
+      console.error('CoinDCX API connection validation failed:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        endpoint: '/exchange/v1/users/balances'
+      });
+      return false;
+    }
+  }
+
+  // Method to validate custom API credentials for copy trading users
+  // Get futures wallet balance with custom credentials
+  async getFuturesWalletBalance(apiKey: string, apiSecret: string): Promise<{ success: boolean; balance?: any; message: string }> {
+    try {
+      // Removed API key logging for production security
+      
+      // Use the actual futures wallet endpoint as per CoinDCX documentation - GET request with body
+      const endpoint = '/exchange/v1/derivatives/futures/wallets';
+      const timestamp = Date.now();
+      const body = JSON.stringify({ timestamp });
+      
+      // Generate signature for GET request - sign the JSON body
+      const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('hex');
+      
+      const headers = {
+        'X-AUTH-APIKEY': apiKey,
+        'X-AUTH-SIGNATURE': signature,
+        'Content-Type': 'application/json',
+      };
+      
+      const response = await axios.get(`${this.config.baseUrl}${endpoint}`, {
+        headers,
+        data: body, // Send body with GET request (CoinDCX requirement)
+        timeout: 10000, // 10 second timeout
+      });
+
+      if (response.status === 200) {
+        console.log(`✅ Futures wallet balance fetched successfully`);
+        return { 
+          success: true, 
+          balance: response.data,
+          message: 'Balance fetched successfully' 
+        };
       } else {
-        console.log(`⚠️ No transactions found for position(s): ${positionIdsStr}`);
-        return [];
+        console.log(`❌ Unexpected response status: ${response.status}`);
+        return { 
+          success: false, 
+          message: 'Failed to fetch balance' 
+        };
       }
     } catch (error: any) {
-      console.error(`❌ Error fetching transactions for position(s) ${positionIds}:`, {
+      console.error(`❌ Futures wallet balance fetch failed`, {
         status: error.response?.status,
         statusText: error.response?.statusText,
         message: error.message,
         responseData: error.response?.data
       });
-      return [];
-    }
-  }
-
-  async validateApiConnection(): Promise<boolean> {
-    try {
-      const endpoint = '/exchange/v1/orders/active_orders';
-      const timestamp = Date.now();
-      const body = JSON.stringify({ timestamp });
-      const headers = this.getHeaders(body);
       
-      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
-        headers
-      });
-      
-      return response.status === 200;
-    } catch (error: any) {
-      return false;
-    }
-  }
-
-  async getFuturesWalletBalance(apiKey: string, apiSecret: string): Promise<{ success: boolean; balance: number; message: string }> {
-    try {
-      const endpoint = '/exchange/v1/derivatives/futures/balance';
-      const timestamp = Date.now();
-      const body = JSON.stringify({ timestamp });
-      
-      // Use provided credentials instead of instance credentials
-      const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('hex');
-      const headers = {
-        'X-AUTH-APIKEY': apiKey,
-        'X-AUTH-SIGNATURE': signature,
-        'Content-Type': 'application/json',
-      };
-      
-      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
-        headers
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        // Handle array response format from CoinDCX
-        const balanceData = Array.isArray(response.data) ? response.data : [response.data];
-        
-        // Find USDT balance
-        const usdtBalance = balanceData.find((item: any) => 
-          item.currency === 'USDT' || 
-          item.currency_short_name === 'USDT' ||
-          item.margin_currency_short_name === 'USDT'
-        );
-        
-        if (usdtBalance) {
-          const balance = parseFloat(usdtBalance.balance || usdtBalance.available_balance || '0');
-          return { 
-            success: true, 
-            balance: balance,
-            message: 'Balance fetched successfully'
-          };
-        } else {
-          return { 
-            success: false, 
-            balance: 0,
-            message: 'USDT balance not found in response'
-          };
-        }
+      // Provide specific error messages
+      if (error.response?.status === 401) {
+        return { success: false, message: 'Invalid API credentials' };
+      } else if (error.response?.status === 403) {
+        return { success: false, message: 'API access forbidden' };
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        return { success: false, message: 'Connection failed' };
+      } else if (error.code === 'ECONNABORTED') {
+        return { success: false, message: 'Connection timeout' };
       } else {
-        return { 
-          success: false, 
-          balance: 0,
-          message: `API returned status ${response.status}`
-        };
+        return { success: false, message: `Balance fetch failed: ${error.message}` };
       }
-    } catch (error: any) {
-      console.error('Error fetching futures wallet balance:', error.response?.data || error.message);
-      return { 
-        success: false, 
-        balance: 0,
-        message: error.response?.data?.message || error.message || 'Failed to fetch balance'
-      };
     }
   }
 
   async validateCustomCredentials(apiKey: string, apiSecret: string): Promise<{ valid: boolean; message: string }> {
     try {
-      const endpoint = '/exchange/v1/derivatives/futures/balance';
+      // Removed API key logging for production security
+      
+      const endpoint = '/exchange/v1/users/balances';
       const timestamp = Date.now();
       const body = JSON.stringify({ timestamp });
       
+      // Generate signature with custom secret
       const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('hex');
+      
       const headers = {
         'X-AUTH-APIKEY': apiKey,
         'X-AUTH-SIGNATURE': signature,
@@ -262,126 +231,387 @@ export class CoinDCXService {
       };
       
       const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
-        headers
+        headers,
+        timeout: 10000, // 10 second timeout
       });
 
-      if (response.status === 200 || response.status === 201) {
-        return { valid: true, message: 'API credentials are valid' };
+      if (response.status === 200) {
+        console.log(`✅ Credentials validated successfully`);
+        return { valid: true, message: 'Credentials verified successfully' };
       } else {
-        return { valid: false, message: `API returned status ${response.status}` };
+        console.log(`❌ Unexpected response status: ${response.status}`);
+        return { valid: false, message: 'Invalid API response' };
       }
     } catch (error: any) {
+      console.error(`❌ Credential validation failed`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        responseData: error.response?.data
+      });
+      
+      // Provide specific error messages based on response
       if (error.response?.status === 401) {
-        return { valid: false, message: 'Invalid API credentials' };
+        return { valid: false, message: 'Invalid API key or secret. Please check your CoinDCX credentials.' };
       } else if (error.response?.status === 403) {
-        return { valid: false, message: 'API access forbidden - check permissions' };
+        return { valid: false, message: 'API access forbidden. Please ensure your API key has trading permissions.' };
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        return { valid: false, message: 'Unable to connect to CoinDCX API. Please check your internet connection.' };
+      } else if (error.code === 'ECONNABORTED') {
+        return { valid: false, message: 'Connection timeout. Please try again.' };
       } else {
-        return { valid: false, message: error.response?.data?.message || 'API validation failed' };
+        return { valid: false, message: `Verification failed: ${error.message}` };
       }
     }
   }
 
-  // Helper function to sanitize and validate futures order parameters
-  private sanitizeOrderParams(params: any) {
-    const {
-      side,
-      pair,
-      price,
-      total_quantity,
-      leverage,
-      stop_loss_price,
-      take_profit_price
-    } = params;
-
-    // CoinDCX specific parameter sanitization
-    const sanitized = {
-      side: side?.toLowerCase(),
-      pair: pair.startsWith('B-') ? pair : `B-${pair}`, // Add B- prefix for futures
-      price: Math.round(parseFloat(price) * 100) / 100, // Round to 2 decimals
-      total_quantity: Math.round(parseFloat(total_quantity) * 10) / 10, // Round to 0.1
-      leverage: Math.min(Math.floor(parseFloat(leverage)), 5), // Cap at 5x and floor
-      stop_loss_price: Math.round(parseFloat(stop_loss_price) * 100) / 100,
-      take_profit_price: Math.round(parseFloat(take_profit_price) * 100) / 100,
-    };
-
-    console.log(`🔧 Parameter Sanitization for CoinDCX API Requirements:`);
-    console.log(`   - Original Quantity: ${total_quantity} → Sanitized: ${sanitized.total_quantity} (rounded to 0.1)`);
-    console.log(`   - Original Leverage: ${leverage}x → Sanitized: ${sanitized.leverage}x (capped at 5x)`);
-    console.log(`   - Original Stop Loss: ${stop_loss_price} → Sanitized: ${sanitized.stop_loss_price} (2 decimals)`);
-    console.log(`   - Original Take Profit: ${take_profit_price} → Sanitized: ${sanitized.take_profit_price} (2 decimals)`);
-
-    return sanitized;
+  async exitTrade(tradeId: string, pair: string, tradeType: 'spot' | 'margin' | 'futures' = 'futures'): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      console.log(`🚪 EXIT TRADE: Starting exit for ${pair} (${tradeType}) - Trade ID: ${tradeId}`);
+      
+      let endpoint: string;
+      let requestBody: any;
+      const timestamp = Date.now();
+      
+      // Determine the correct endpoint and parameters based on trade type
+      switch (tradeType) {
+        case 'futures':
+          // Extract position ID from tradeId (format: positionId_timestamp)
+          const positionId = tradeId.split('_')[0]; // Get position ID before underscore
+          console.log(`🔍 EXIT TRADE: Using saved position ID: ${positionId} for ${pair}`);
+          
+          // Correct CoinDCX Futures exit endpoint - requires actual position ID from database
+          endpoint = '/exchange/v1/derivatives/futures/positions/exit';
+          requestBody = {
+            id: positionId, // Using position ID from our database
+            timestamp
+          };
+          break;
+        
+        case 'margin':
+          // CoinDCX Margin exit endpoint - may need similar position-based approach
+          endpoint = '/exchange/v1/margin/exit';
+          requestBody = {
+            timestamp,
+            market: pair
+          };
+          break;
+        
+        case 'spot':
+          // For spot trades, we can't exit automatically without knowing current holdings
+          // This is a limitation - spot trades require manual intervention
+          throw new Error('Spot trade exit not supported - requires manual order placement with specific quantity and side');
+          break;
+        
+        default:
+          throw new Error(`Unsupported trade type: ${tradeType}`);
+      }
+      
+      const body = JSON.stringify(requestBody);
+      const headers = this.getHeaders(body);
+      
+      console.log(`📤 EXIT TRADE: Sending ${tradeType} exit request to ${endpoint}`);
+      console.log(`📋 EXIT TRADE: Request body:`, requestBody);
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers
+      });
+      
+      console.log(`✅ EXIT TRADE: Successfully exited ${pair} at market price`);
+      console.log(`📊 EXIT TRADE: Response:`, response.data);
+      
+      return {
+        success: true,
+        message: `Trade ${pair} successfully exited at market price`,
+        data: response.data
+      };
+      
+    } catch (error: any) {
+      console.error(`❌ EXIT TRADE: Failed to exit ${pair}:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        responseData: error.response?.data,
+        endpoint: error.config?.url
+      });
+      
+      let errorMessage = 'Failed to exit trade on exchange';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed - check API credentials';
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Invalid request - trade may not exist or already closed';
+      } else if (error.response?.status === 429) {
+        errorMessage = 'Rate limit exceeded - please try again later';
+      }
+      
+      return {
+        success: false,
+        message: errorMessage,
+        data: error.response?.data
+      };
+    }
   }
 
-  async createFuturesOrder(orderData: any): Promise<{ success: boolean; orderId: string | null; message: string; data?: any }> {
+  // Mathematical helper functions for copy trading calculations
+  
+  /**
+   * Calculate leverage based on risk percentage and price difference
+   * Formula: leverage = (risk% / 100) * entry_price / (entry_price - stop_loss)
+   */
+  calculateLeverage(quantity: number, entryPrice: number, tradeFund: number): number {
     try {
-      console.log(`🎯 ===== COINDCX API SERVICE PARAMETERS =====`);
+      // Validate inputs
+      if (quantity <= 0) {
+        throw new Error(`Invalid quantity: ${quantity}. Must be greater than 0.`);
+      }
+      
+      if (entryPrice <= 0) {
+        throw new Error(`Invalid entry price: ${entryPrice}. Must be greater than 0.`);
+      }
+      
+      if (tradeFund <= 0) {
+        throw new Error(`Invalid trade fund: ${tradeFund}. Must be greater than 0.`);
+      }
+      
+      // NEW FORMULA: (Quantity × Entry Price) ÷ Trade Fund
+      const leverage = (quantity * entryPrice) / tradeFund;
+      
+      // Clamp leverage to safe ranges (1x to 50x max)
+      const clampedLeverage = Math.max(1, Math.min(50, leverage));
+      
+      // Round to 2 decimal places for precision
+      const finalLeverage = Math.round(clampedLeverage * 100) / 100;
+      
+      console.log(`📊 NEW Leverage calculation:`);
+      console.log(`   - Quantity: ${quantity} coins`);
+      console.log(`   - Entry Price: ${entryPrice} USDT`);
+      console.log(`   - Trade Fund: ${tradeFund} USDT`);
+      console.log(`   - Calculated Leverage: ${leverage.toFixed(2)}x`);
+      console.log(`   - Final Leverage (capped): ${finalLeverage}x`);
+      
+      return finalLeverage;
+    } catch (error) {
+      console.error('❌ Leverage calculation failed:', error);
+      // Return safe default leverage if calculation fails
+      return 1;
+    }
+  }
+  
+  /**
+   * Calculate quantity based on fixed trade fund, leverage, and entry price
+   * Formula: quantity = (trade_fund × leverage) ÷ entry_price
+   * No safety margin - use exact calculated quantity
+   */
+  calculateQuantity(tradeFund: number, riskPercent: number, entryPrice: number, stopLossPrice: number): number {
+    try {
+      // Validate inputs
+      if (tradeFund <= 0) {
+        throw new Error(`Invalid trade fund: ${tradeFund}. Must be greater than 0.`);
+      }
+      
+      if (riskPercent <= 0 || riskPercent > 100) {
+        throw new Error(`Invalid risk percent: ${riskPercent}. Must be between 0 and 100.`);
+      }
+      
+      if (entryPrice <= 0) {
+        throw new Error(`Invalid entry price: ${entryPrice}. Must be greater than 0.`);
+      }
+      
+      if (stopLossPrice <= 0) {
+        throw new Error(`Invalid stop loss price: ${stopLossPrice}. Must be greater than 0.`);
+      }
+      
+      // NEW FORMULA: Risk Amount ÷ Risk Per Quantity
+      // Step 1: Calculate Risk Amount = Trade Fund × Risk Percent
+      const riskAmount = tradeFund * (riskPercent / 100);
+      
+      // Step 2: Calculate Risk Per Quantity = Entry Price - Stop Loss
+      const riskPerQuantity = Math.abs(entryPrice - stopLossPrice);
+      
+      if (riskPerQuantity === 0) {
+        throw new Error('Entry price and stop loss cannot be the same');
+      }
+      
+      // Step 3: Calculate Quantity = Risk Amount ÷ Risk Per Quantity
+      const quantity = riskAmount / riskPerQuantity;
+      
+      // Round to appropriate decimal places (6 decimal places for crypto)
+      const finalQuantity = Math.round(quantity * 1000000) / 1000000;
+      
+      console.log(`💰 NEW Quantity calculation:`);
+      console.log(`   - Trade Fund: ${tradeFund} USDT`);
+      console.log(`   - Risk Percent: ${riskPercent}%`);
+      console.log(`   - Risk Amount: ${riskAmount} USDT`);
+      console.log(`   - Entry Price: ${entryPrice} USDT`);
+      console.log(`   - Stop Loss: ${stopLossPrice} USDT`);
+      console.log(`   - Risk Per Quantity: ${riskPerQuantity} USDT`);
+      console.log(`   - Final Quantity: ${finalQuantity} coins`);
+      
+      return finalQuantity;
+    } catch (error) {
+      console.error('❌ Quantity calculation failed:', error);
+      // Return 0 if calculation fails to prevent invalid orders
+      return 0;
+    }
+  }
+  
+  /**
+   * Validate minimum order requirements
+   */
+  validateOrderParameters(pair: string, quantity: number, price: number): { valid: boolean; message: string } {
+    try {
+      // Basic validation
+      if (quantity <= 0) {
+        return { valid: false, message: 'Quantity must be greater than 0' };
+      }
+      
+      if (price <= 0) {
+        return { valid: false, message: 'Price must be greater than 0' };
+      }
+      
+      // Calculate notional value (quantity * price)
+      const notionalValue = quantity * price;
+      
+      // Minimum notional value for most pairs is around 5 USDT
+      const minNotional = 5;
+      
+      if (notionalValue < minNotional) {
+        return { 
+          valid: false, 
+          message: `Order notional value ${notionalValue.toFixed(2)} USDT is below minimum ${minNotional} USDT` 
+        };
+      }
+      
+      // Check for very small quantities (exchange precision limits)
+      if (quantity < 0.000001) {
+        return { 
+          valid: false, 
+          message: `Quantity ${quantity} is too small (minimum 0.000001)` 
+        };
+      }
+      
+      console.log(`✅ Order validation passed: ${pair} qty:${quantity} notional:${notionalValue.toFixed(2)} USDT`);
+      
+      return { valid: true, message: 'Order parameters validated successfully' };
+    } catch (error) {
+      console.error('❌ Order validation failed:', error);
+      return { valid: false, message: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    }
+  }
+
+  // Create futures order with custom credentials for copy trading
+  async createFuturesOrder(
+    apiKey: string, 
+    apiSecret: string, 
+    orderData: {
+      side: 'buy' | 'sell';
+      pair: string;
+      total_quantity: number;
+      leverage: number;
+      price: number;  // Add original trade price
+      stop_loss_price?: number;
+      take_profit_price?: number;
+    }
+  ): Promise<{ success: boolean; orderId?: string; message: string; data?: any }> {
+    try {
+      console.log(`\n🎯 ===== COINDCX API SERVICE PARAMETERS =====`);
       console.log(`📥 Received Order Data from Copy Trading Service:`);
-      console.log(`   - Side: ${orderData.side?.toUpperCase()}`);
+      console.log(`   - Side: ${orderData.side.toUpperCase()}`);
       console.log(`   - Pair: ${orderData.pair}`);
       console.log(`   - Price: ${orderData.price} USDT`);
       console.log(`   - Total Quantity: ${orderData.total_quantity} coins`);
       console.log(`   - Leverage: ${orderData.leverage}x`);
-      console.log(`   - Stop Loss: ${orderData.stop_loss_price} USDT`);
-      console.log(`   - Take Profit: ${orderData.take_profit_price} USDT`);
-
-      // Sanitize parameters for CoinDCX API requirements
-      const sanitizedParams = this.sanitizeOrderParams(orderData);
-
-      console.log(`💰 Price Verification:`);
-      console.log(`   - Using Exact Original Trade Price: ${sanitizedParams.price} USDT`);
-
+      if (orderData.stop_loss_price) {
+        console.log(`   - Stop Loss: ${orderData.stop_loss_price} USDT`);
+      }
+      if (orderData.take_profit_price) {
+        console.log(`   - Take Profit: ${orderData.take_profit_price} USDT`);
+      }
+      
       const endpoint = '/exchange/v1/derivatives/futures/orders/create';
       const timestamp = Date.now();
-
-      const orderBody = {
-        side: sanitizedParams.side,
-        pair: sanitizedParams.pair,
-        order_type: "limit_order",
-        price: sanitizedParams.price,
-        total_quantity: sanitizedParams.total_quantity,
-        leverage: sanitizedParams.leverage,
-        stop_loss_price: sanitizedParams.stop_loss_price,
-        take_profit_price: sanitizedParams.take_profit_price,
-        notification: "email_notification",
-        time_in_force: "good_till_cancel",
-        hidden: false,
-        post_only: false
-      };
-
+      
+      // Sanitize parameters for CoinDCX API requirements - must be divisible by 0.1
+      const sanitizedQuantity = Math.round(orderData.total_quantity * 10) / 10; // Round to nearest 0.1
+      const sanitizedLeverage = Math.min(orderData.leverage, 5); // Cap leverage at 5x like working sample
+      const sanitizedStopLoss = orderData.stop_loss_price ? Math.round(orderData.stop_loss_price * 100) / 100 : undefined; // 2 decimal precision
+      const sanitizedTakeProfit = orderData.take_profit_price ? Math.round(orderData.take_profit_price * 100) / 100 : undefined; // 2 decimal precision
+      
+      console.log(`\n🔧 Parameter Sanitization for CoinDCX API Requirements:`);
+      console.log(`   - Original Quantity: ${orderData.total_quantity} → Sanitized: ${sanitizedQuantity} (rounded to 0.1)`);
+      console.log(`   - Original Leverage: ${orderData.leverage}x → Sanitized: ${sanitizedLeverage}x (capped at 5x)`);
+      if (orderData.stop_loss_price) {
+        console.log(`   - Original Stop Loss: ${orderData.stop_loss_price} → Sanitized: ${sanitizedStopLoss} (2 decimals)`);
+      }
+      if (orderData.take_profit_price) {
+        console.log(`   - Original Take Profit: ${orderData.take_profit_price} → Sanitized: ${sanitizedTakeProfit} (2 decimals)`);
+      }
+      
+      // Use EXACT original trade price - no calculation needed
+      const originalPrice = orderData.price;
+      
+      console.log(`\n💰 Price Verification:`);
+      console.log(`   - Using Exact Original Trade Price: ${originalPrice} USDT`);
+      
+      // Build request body exactly as per OFFICIAL CoinDCX API documentation
       const requestBody = {
         timestamp: timestamp,
-        order: orderBody
+        order: {
+          side: orderData.side,
+          pair: `B-${orderData.pair}`, // Futures requires B- prefix for pair field
+          order_type: "limit_order", // Official docs: "market_order" OR "limit_order"
+          price: originalPrice, // Use exact original trade price
+          total_quantity: sanitizedQuantity,
+          leverage: sanitizedLeverage,
+          ...(sanitizedStopLoss && { stop_loss_price: sanitizedStopLoss }), // Include stop loss if available
+          ...(sanitizedTakeProfit && { take_profit_price: sanitizedTakeProfit }), // Include take profit if available
+          notification: "email_notification", // Official docs enum
+          time_in_force: "good_till_cancel", // Official docs enum
+          hidden: false, // Official docs boolean
+          post_only: false // Official docs boolean
+        }
       };
-
-      console.log(`🚀 ===== FINAL API REQUEST TO COINDCX =====`);
+      
+      console.log(`\n🚀 ===== FINAL API REQUEST TO COINDCX =====`);
       console.log(`📡 Endpoint: ${this.config.baseUrl}${endpoint}`);
-      console.log(`🔐 API Key: ${this.config.apiKey.substring(0, 10)}...${this.config.apiKey.slice(-4)}`);
+      console.log(`🔐 API Key: ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length-4)}`);
       console.log(`⏰ Timestamp: ${timestamp}`);
-      console.log(`📋 Complete Request Body JSON:`);
+      console.log(`\n📋 Complete Request Body JSON:`);
       console.log(JSON.stringify(requestBody, null, 2));
-      console.log(`📊 Request Summary:`);
-      console.log(`   - Order Type: ${orderBody.order_type}`);
-      console.log(`   - Trading Pair: ${orderBody.pair}`);
-      console.log(`   - Direction: ${orderBody.side?.toUpperCase()}`);
-      console.log(`   - Entry Price: ${orderBody.price} USDT`);
-      console.log(`   - Quantity: ${orderBody.total_quantity} coins`);
-      console.log(`   - Leverage: ${orderBody.leverage}x`);
-      console.log(`   - Stop Loss: ${orderBody.stop_loss_price} USDT`);
-      console.log(`   - Take Profit: ${orderBody.take_profit_price} USDT`);
-      console.log(`   - Notification: ${orderBody.notification}`);
-      console.log(`   - Time in Force: ${orderBody.time_in_force}`);
+      console.log(`\n📊 Request Summary:`);
+      console.log(`   - Order Type: ${requestBody.order.order_type}`);
+      console.log(`   - Trading Pair: ${requestBody.order.pair}`);
+      console.log(`   - Direction: ${requestBody.order.side.toUpperCase()}`);
+      console.log(`   - Entry Price: ${requestBody.order.price} USDT`);
+      console.log(`   - Quantity: ${requestBody.order.total_quantity} coins`);
+      console.log(`   - Leverage: ${requestBody.order.leverage}x`);
+      console.log(`   - Stop Loss: ${(requestBody.order as any).stop_loss_price ? `${(requestBody.order as any).stop_loss_price} USDT` : 'Not included'}`);
+      console.log(`   - Take Profit: ${(requestBody.order as any).take_profit_price ? `${(requestBody.order as any).take_profit_price} USDT` : 'Not included'}`);
+      console.log(`   - Notification: ${requestBody.order.notification}`);
+      console.log(`   - Time in Force: ${requestBody.order.time_in_force}`);
       console.log(`📝 Total Request Size: ${JSON.stringify(requestBody).length} bytes`);
-      console.log(`=============================================`);
-
+      console.log(`=============================================\n`);
+      
       const body = JSON.stringify(requestBody);
-      const headers = this.getHeaders(body);
-
-      console.log(`📤 Sending futures order to CoinDCX: ${sanitizedParams.side} ${orderData.pair}`);
-      console.log(`📋 Request body:`, requestBody);
-
-      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, requestBody, {
-        headers
+      
+      // Generate signature with user's secret
+      const signature = crypto.createHmac('sha256', apiSecret).update(body).digest('hex');
+      
+      const headers = {
+        'X-AUTH-APIKEY': apiKey,
+        'X-AUTH-SIGNATURE': signature,
+        'Content-Type': 'application/json',
+      };
+      
+      console.log(`📤 Sending futures order to CoinDCX: ${orderData.side} ${orderData.pair}`);
+      console.log(`📋 Request body:`, JSON.stringify(requestBody, null, 2));
+      
+      const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
+        headers,
+        timeout: 15000, // 15 second timeout for order placement
       });
 
       if (response.status === 200 || response.status === 201) {
@@ -394,7 +624,6 @@ export class CoinDCXService {
           
           return { 
             success: false, 
-            orderId: null,
             message: `Order placement failed: No valid order ID received from exchange`,
             data: response.data
           };
@@ -409,91 +638,88 @@ export class CoinDCXService {
           data: response.data
         };
       } else {
+        console.log(`❌ Unexpected response status: ${response.status}`);
         return { 
           success: false, 
-          orderId: null,
-          message: `Order failed with status ${response.status}`,
-          data: response.data
+          message: `Unexpected response: ${response.status}` 
         };
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
-      console.error(`❌ Failed to create futures order:`, {
+      console.error(`❌ Futures order creation failed:`, {
         status: error.response?.status,
         statusText: error.response?.statusText,
-        message: errorMessage,
-        responseData: error.response?.data
+        message: error.message,
+        responseData: error.response?.data,
+        endpoint: error.config?.url
       });
       
-      return { 
-        success: false, 
-        orderId: null,
-        message: errorMessage,
-        data: error.response?.data
-      };
+      // Classify error types for better handling
+      if (error.response?.status === 401) {
+        return { success: false, message: 'Invalid API credentials' };
+      } else if (error.response?.status === 403) {
+        return { success: false, message: 'API access forbidden - check trading permissions' };
+      } else if (error.response?.status === 400) {
+        const apiMessage = error.response?.data?.message || 'Invalid order parameters';
+        return { success: false, message: `Bad request: ${apiMessage}` };
+      } else if (error.response?.status === 429) {
+        return { success: false, message: 'Rate limit exceeded - retrying...' };
+      } else if (error.code === 'ECONNABORTED') {
+        return { success: false, message: 'Order timeout - connection failed' };
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        return { success: false, message: 'Connection failed' };
+      } else {
+        const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+        return { success: false, message: `Order failed: ${errorMsg}` };
+      }
     }
   }
 
-  // Helper function for copy trading service
-  async createFuturesOrderWithCustomCredentials(orderData: any, apiKey: string, apiSecret: string): Promise<{ success: boolean; orderId: string | null; message: string; data?: any }> {
-    try {
-      // Temporarily switch credentials
-      const originalConfig = { ...this.config };
-      this.config.apiKey = apiKey;
-      this.config.apiSecret = apiSecret;
-      
-      const result = await this.createFuturesOrder(orderData);
-      
-      // Restore original credentials
-      this.config = originalConfig;
-      
-      return result;
-    } catch (error: any) {
-      // Restore original credentials in case of error
-      const originalConfig = { ...this.config };
-      this.config = originalConfig;
-      
-      throw error;
+  transformTradeData(coindcxTrade: CoinDCXTrade) {
+    // Handle futures positions data format
+    let pair = coindcxTrade.pair || coindcxTrade.market || 'UNKNOWN';
+    
+    // Remove B- prefix if it exists
+    if (pair.startsWith('B-')) {
+      pair = pair.substring(2);
     }
-  }
-
-  /**
-   * Transform CoinDCX trade data to our Trade schema format
-   */
-  transformTradeData(coindcxTrade: any): any {
-    // Determine trade type (buy/sell) based on active position
-    let type = 'unknown';
-    if (coindcxTrade.active_pos !== undefined) {
-      type = (coindcxTrade.active_pos || 0) > 0 ? 'buy' : 'sell';
+    const price = coindcxTrade.avg_price?.toString() || coindcxTrade.price || '0';
+    const leverage = coindcxTrade.leverage || 1;
+    const side = (coindcxTrade.active_pos || 0) > 0 ? 'buy' : ((coindcxTrade.active_pos || 0) < 0 ? 'sell' : coindcxTrade.side || 'unknown');
+    const positionSize = Math.abs(coindcxTrade.active_pos || 0);
+    
+    // Only log important transform details
+    if (positionSize > 0) {
+      console.log(`📊 Transform: ${pair} ${side.toUpperCase()} ${leverage}x @ $${price}`);
     }
-
-    // Calculate total value (price * quantity)
-    const price = parseFloat(coindcxTrade.price || 0);
-    const quantity = Math.abs(parseFloat(coindcxTrade.active_pos || 0));
-    const total = price * quantity;
+    
+    // Calculate additional take profit levels
+    let takeProfit2 = null;
+    let takeProfit3 = null;
+    
+    if (coindcxTrade.take_profit_trigger && coindcxTrade.avg_price) {
+      const avgPrice = coindcxTrade.avg_price;
+      const takeProfit1 = coindcxTrade.take_profit_trigger;
+      const difference = takeProfit1 - avgPrice;
+      
+      takeProfit2 = takeProfit1 + difference;
+      takeProfit3 = takeProfit1 + (2 * difference);
+    }
 
     return {
       tradeId: coindcxTrade.id,
-      pair: coindcxTrade.pair,
-      type: type,
-      price: price.toString(),
-      leverage: parseInt(coindcxTrade.leverage || 1),
-      total: total.toString(),
-      fee: coindcxTrade.fee ? parseFloat(coindcxTrade.fee).toString() : null,
-      takeProfitTrigger: null,
-      takeProfit2: null,
-      takeProfit3: null,
-      stopLossTrigger: null,
-      safebookPrice: null,
-      targetStatus: {},
-      status: 'active',
-      completionReason: null,
-      exchangeExited: false,
-      notes: null,
-      channelId: null
+      pair: pair as string,
+      type: side === 'buy' ? 'BUY' : side === 'sell' ? 'SELL' : side,
+      price: price,
+      leverage: leverage,
+      total: (parseFloat(price) * positionSize).toString(),
+      fee: coindcxTrade.fee || '0',
+      takeProfitTrigger: coindcxTrade.take_profit_trigger?.toString() || null,
+      takeProfit2: takeProfit2?.toString() || null,
+      takeProfit3: takeProfit3?.toString() || null,
+      stopLossTrigger: coindcxTrade.stop_loss_trigger?.toString() || null,
+      status: 'active' as const,
     };
   }
 }
 
-// Export singleton instance
 export const coindcxService = new CoinDCXService();
