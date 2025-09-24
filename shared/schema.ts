@@ -155,9 +155,10 @@ export const copyTrades = pgTable("copy_trades", {
   originalQuantity: decimal("original_quantity", { precision: 20, scale: 8 }).notNull(), // Original quantity
   executedQuantity: decimal("executed_quantity", { precision: 20, scale: 8 }), // Actual executed quantity (adjusted for risk)
   leverage: decimal("leverage", { precision: 10, scale: 2 }).notNull(), // Leverage used (supports decimal values like 7.44x)
-  status: varchar("status").notNull().default('pending'), // 'pending', 'executed', 'failed', 'cancelled'
+  status: varchar("status").notNull().default('pending'), // 'pending', 'executed', 'failed', 'cancelled', 'complete'
   executionTime: timestamp("execution_time"), // When trade was executed
   errorMessage: text("error_message"), // Error details if failed
+  exitPrice: decimal("exit_price", { precision: 20, scale: 8 }), // Exit price when trade is closed
   pnl: decimal("pnl", { precision: 20, scale: 8 }), // P&L if trade is closed
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
