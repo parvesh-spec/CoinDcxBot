@@ -28,14 +28,14 @@ export class PnLTrackingService {
     try {
       console.log('📊 Starting P&L update for all executed copy trades...');
 
-      // Get all executed copy trades that don't have P&L data yet
+      // Get all completed copy trades that don't have P&L data yet
       const { copyTrades } = await storage.getCopyTrades({
-        status: 'executed',
+        status: 'complete',
         limit: 100
       });
 
       const executedTrades = copyTrades.filter(trade => 
-        trade.executedTradeId && !trade.pnl
+        trade.executedTradeId && (!trade.pnl || !trade.exitPrice)
       );
 
       console.log(`📋 Found ${executedTrades.length} executed trades without P&L data`);
