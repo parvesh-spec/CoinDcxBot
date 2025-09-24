@@ -508,15 +508,28 @@ export class CoinDCXService {
       
       console.log(`🔧 Sanitized params: qty:${sanitizedQuantity} leverage:${sanitizedLeverage}x SL:${sanitizedStopLoss} TP:${sanitizedTakeProfit}`);
       
-      // Build request body as per CoinDCX Futures API requirements (NOT orders array format)
+      // Get current market price for limit order (slightly above current price for buy orders)
+      const priceAdjustment = orderData.side === 'buy' ? 1.002 : 0.998; // 0.2% adjustment for quick execution
+      // Use stop loss price as reference for current market price (more accurate than quantity)
+      const currentPrice = orderData.stop_loss_price ? 
+        (orderData.side === 'buy' ? orderData.stop_loss_price * 1.005 : orderData.stop_loss_price * 0.995) : 
+        160; // Default fallback price
+      const limitPrice = Math.round(currentPrice * priceAdjustment * 100) / 100;
+      
+      // Build request body exactly as per working sample format
       const requestBody = {
         timestamp: timestamp,
+        order: [], // Empty array as required
         side: orderData.side,
         pair: `B-${orderData.pair}`, // Futures requires B- prefix for pair field
-        order_type: "market", // Use "market" not "market_order" for futures
+        order_type: "limit_order", // Use limit_order as per working sample
+        price: limitPrice.toString(), // Convert to string as per sample
         total_quantity: sanitizedQuantity,
-        leverage: sanitizedLeverage
-        // Note: Removed stop loss and take profit - they might not be allowed with market orders
+        leverage: sanitizedLeverage,
+        notification: "email_notification", // As per working sample
+        time_in_force: "good_till_cancel", // As per working sample  
+        hidden: false, // As per working sample
+        post_only: false // As per working sample
       };
       
       const body = JSON.stringify(requestBody);
