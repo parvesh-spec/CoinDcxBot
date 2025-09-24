@@ -520,20 +520,15 @@ export class CoinDCXService {
       console.log(`   Base Price Calculated: ${basePrice}`);
       console.log(`   Final Limit Price: ${limitPrice}`);
       
-      // Build request body exactly as per working sample format
+      // Build request body exactly as per OFFICIAL CoinDCX API documentation
       const requestBody = {
         timestamp: timestamp,
-        order: [], // Empty array as required
         side: orderData.side,
         pair: `B-${orderData.pair}`, // Futures requires B- prefix for pair field
-        order_type: "limit_order", // Use limit_order as per working sample
-        price: limitPrice.toString(), // Convert to string as per sample
+        order_type: "limit", // Official docs format - NOT "limit_order"
+        price: limitPrice, // Number format as per official docs - NOT string
         total_quantity: sanitizedQuantity,
-        leverage: sanitizedLeverage,
-        notification: "email_notification", // As per working sample
-        time_in_force: "good_till_cancel", // As per working sample  
-        hidden: false, // As per working sample
-        post_only: false // As per working sample
+        leverage: sanitizedLeverage
       };
       
       console.log(`🚀 FINAL REQUEST BODY TO COINDCX:`);
