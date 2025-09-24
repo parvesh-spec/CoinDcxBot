@@ -10,7 +10,6 @@ import {
   copyTradingApplications,
   otpVerifications,
   userAccounts,
-  otpCodes,
   type User,
   type InsertUser,
   type TelegramChannel,
@@ -40,10 +39,8 @@ import {
   type UserAccount,
   type InsertUserAccount,
   type UpdateUserAccount,
-  type OtpCode,
-  type InsertOtpCode,
-  type SendUserOtp,
-  type VerifyUserOtp,
+  type SendUserAccessOtp,
+  type VerifyUserAccessOtp,
   normalizeTargetStatus,
 } from "@shared/schema";
 import { db } from "./db";
@@ -145,9 +142,9 @@ export interface IStorage {
   updateUserAccount(id: string, userAccount: UpdateUserAccount): Promise<UserAccount | undefined>;
   updateUserLastLogin(email: string): Promise<UserAccount | undefined>;
 
-  // User OTP operations
-  createOtpCode(otpData: InsertOtpCode): Promise<OtpCode>;
-  verifyUserOtp(email: string, code: string): Promise<{ success: boolean; userAccount?: UserAccount }>;
+  // User OTP operations  
+  sendUserAccessOtp(data: SendUserAccessOtp): Promise<{ success: boolean; message: string }>;
+  verifyUserAccessOtp(data: VerifyUserAccessOtp): Promise<{ success: boolean; userAccount?: UserAccount; message: string }>;
   cleanupExpiredUserOtps(): Promise<number>;
   
   // Copy Trade operations
@@ -1418,54 +1415,87 @@ export class DatabaseStorage implements IStorage {
     return updatedUserAccount;
   }
 
-  // User OTP operations
-  async createOtpCode(otpData: InsertOtpCode): Promise<OtpCode> {
-    const [otpCode] = await db.insert(otpCodes).values(otpData).returning();
-    return otpCode;
+  // User OTP operations using existing otpVerifications table
+  async sendUserAccessOtp(data: SendUserAccessOtp): Promise<{ success: boolean; message: string }> {
+    try {
+      // Use existing OTP service with purpose "user_access"
+      const result = await this.generateAndSendOTP({ 
+        email: data.email, 
+        purpose: 'user_access' 
+      });
+      return { success: result.success, message: result.message };
+    } catch (error) {
+      console.error('Error sending user access OTP:', error);
+      return { success: false, message: 'Failed to send OTP. Please try again.' };
+    }
   }
 
-  async verifyUserOtp(email: string, code: string): Promise<{ success: boolean; userAccount?: UserAccount }> {
-    // Check if OTP is valid and not expired
-    const [otpCode] = await db
-      .select()
-      .from(otpCodes)
-      .where(
-        and(
-          eq(otpCodes.email, email),
-          eq(otpCodes.code, code),
-          eq(otpCodes.isUsed, false),
-          sql`${otpCodes.expiresAt} > NOW()`
+  async verifyUserAccessOtp(data: VerifyUserAccessOtp): Promise<{ success: boolean; userAccount?: UserAccount; message: string }> {
+    try {
+      // Check if OTP is valid and not expired using existing otpVerifications table
+      const [otpRecord] = await db
+        .select()
+        .from(otpVerifications)
+        .where(
+          and(
+            eq(otpVerifications.email, data.email),
+            eq(otpVerifications.otp, data.otp),
+            eq(otpVerifications.purpose, 'user_access'),
+            eq(otpVerifications.isVerified, false),
+            sql`${otpVerifications.expiresAt} > NOW()`
+          )
         )
-      )
-      .orderBy(desc(otpCodes.createdAt))
-      .limit(1);
+        .orderBy(desc(otpVerifications.createdAt))
+        .limit(1);
 
-    if (!otpCode) {
-      return { success: false };
+      if (!otpRecord) {
+        return { success: false, message: 'Invalid or expired OTP. Please request a new one.' };
+      }
+
+      // Check attempts limit
+      if (otpRecord.attempts >= otpRecord.maxAttempts) {
+        return { success: false, message: 'Too many verification attempts. Please request a new OTP.' };
+      }
+
+      // Mark OTP as verified
+      await db
+        .update(otpVerifications)
+        .set({ 
+          isVerified: true, 
+          attempts: otpRecord.attempts + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(otpVerifications.id, otpRecord.id));
+
+      // Get or create user account
+      let userAccount = await this.getUserAccountByEmail(data.email);
+      if (!userAccount) {
+        userAccount = await this.createUserAccount({ email: data.email });
+      }
+
+      // Update last login
+      userAccount = await this.updateUserLastLogin(data.email);
+
+      return { 
+        success: true, 
+        userAccount, 
+        message: 'Login successful!' 
+      };
+    } catch (error) {
+      console.error('Error verifying user access OTP:', error);
+      return { success: false, message: 'Verification failed. Please try again.' };
     }
-
-    // Mark OTP as used
-    await db
-      .update(otpCodes)
-      .set({ isUsed: true })
-      .where(eq(otpCodes.id, otpCode.id));
-
-    // Get or create user account
-    let userAccount = await this.getUserAccountByEmail(email);
-    if (!userAccount) {
-      userAccount = await this.createUserAccount({ email });
-    }
-
-    // Update last login
-    userAccount = await this.updateUserLastLogin(email);
-
-    return { success: true, userAccount };
   }
 
   async cleanupExpiredUserOtps(): Promise<number> {
     const result = await db
-      .delete(otpCodes)
-      .where(sql`${otpCodes.expiresAt} < NOW()`);
+      .delete(otpVerifications)
+      .where(
+        and(
+          eq(otpVerifications.purpose, 'user_access'),
+          sql`${otpVerifications.expiresAt} < NOW()`
+        )
+      );
     return result.rowCount || 0;
   }
 }
