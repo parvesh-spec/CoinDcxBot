@@ -107,17 +107,34 @@ export class PnLTrackingService {
       return;
     }
 
-    // Calculate total P&L from all transactions for this order
+    // Find the specific P&L for this executed trade ID
     console.log(`💰 P&L Calculation for copy trade ${copyTradeId}:`);
     console.log(`   - Processing ${transactions.length} transactions...`);
+    console.log(`   - Looking for executed trade ID: ${copyTrade.executedTradeId}`);
     
-    let totalPnL = 0;
-    transactions.forEach((transaction, index) => {
-      console.log(`   - Transaction ${index + 1}: amount = ${transaction.amount} USDT`);
-      totalPnL += transaction.amount;
-    });
+    // Step 1: Find transaction with parent_id = executed_trade_id
+    const mainTransaction = transactions.find(tx => tx.parent_id === copyTrade.executedTradeId);
+    if (!mainTransaction) {
+      console.log(`   - ❌ No transaction found with parent_id = ${copyTrade.executedTradeId}`);
+      return;
+    }
     
-    console.log(`   - Total P&L = ${totalPnL} USDT`);
+    console.log(`   - ✅ Found main transaction with position_id: ${mainTransaction.position_id}`);
+    
+    // Step 2: Find P&L transaction with same position_id but different parent_id
+    const pnlTransaction = transactions.find(tx => 
+      tx.position_id === mainTransaction.position_id && 
+      tx.parent_id !== copyTrade.executedTradeId &&
+      tx.amount !== 0 // P&L transactions have non-zero amount
+    );
+    
+    if (!pnlTransaction) {
+      console.log(`   - ❌ No P&L transaction found for position_id: ${mainTransaction.position_id}`);
+      return;
+    }
+    
+    const totalPnL = pnlTransaction.amount;
+    console.log(`   - ✅ Found P&L transaction: parent_id = ${pnlTransaction.parent_id}, amount = ${totalPnL} USDT`);
 
     // Calculate exit price if we have the required data
     let exitPrice: number | undefined;
