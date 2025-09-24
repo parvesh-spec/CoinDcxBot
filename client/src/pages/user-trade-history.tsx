@@ -209,7 +209,7 @@ export function UserTradeHistory({ copyTradingUser, onBack }: UserTradeHistoryPr
                   </div>
                 ))}
               </div>
-            ) : tradesData?.trades?.length > 0 ? (
+            ) : tradesData?.copyTrades?.length > 0 ? (
               <div className="space-y-3">
                 {tradesData.copyTrades.map((trade: CopyTrade) => (
                   <div
