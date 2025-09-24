@@ -501,8 +501,8 @@ export class CoinDCXService {
       const endpoint = '/exchange/v1/derivatives/futures/orders/create';
       const timestamp = Date.now();
       
-      // Sanitize parameters for CoinDCX API requirements - VERY conservative
-      const sanitizedQuantity = Math.round(orderData.total_quantity * 100) / 100; // 2 decimal precision like sample
+      // Sanitize parameters for CoinDCX API requirements - must be divisible by 0.1
+      const sanitizedQuantity = Math.round(orderData.total_quantity * 10) / 10; // Round to nearest 0.1
       const sanitizedLeverage = Math.min(orderData.leverage, 5); // Cap leverage at 5x like working sample
       const sanitizedStopLoss = orderData.stop_loss_price ? Math.round(orderData.stop_loss_price * 100) / 100 : undefined; // 2 decimal precision
       const sanitizedTakeProfit = orderData.take_profit_price ? Math.round(orderData.take_profit_price * 100) / 100 : undefined; // 2 decimal precision
