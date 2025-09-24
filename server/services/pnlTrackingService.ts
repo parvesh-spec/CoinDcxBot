@@ -28,9 +28,9 @@ export class PnLTrackingService {
     try {
       console.log('📊 Starting P&L update for all executed copy trades...');
 
-      // Get all completed copy trades that don't have P&L data yet
+      // Get all executed copy trades that don't have P&L data yet
       const { copyTrades } = await storage.getCopyTrades({
-        status: 'complete',
+        status: 'executed',
         limit: 100
       });
 
