@@ -515,9 +515,8 @@ export class CoinDCXService {
         pair: `B-${orderData.pair}`, // Futures requires B- prefix for pair field
         order_type: "market", // Use "market" not "market_order" for futures
         total_quantity: sanitizedQuantity,
-        leverage: sanitizedLeverage,
-        ...(sanitizedStopLoss && { stop_loss_price: sanitizedStopLoss }),
-        ...(sanitizedTakeProfit && { take_profit_price: sanitizedTakeProfit })
+        leverage: sanitizedLeverage
+        // Note: Removed stop loss and take profit - they might not be allowed with market orders
       };
       
       const body = JSON.stringify(requestBody);
