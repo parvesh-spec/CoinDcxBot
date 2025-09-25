@@ -33,8 +33,31 @@ interface CoinDCXConfig {
   baseUrl: string;
 }
 
+interface FuturesInstrumentMeta {
+  stepSize: number;
+  minQty: number;
+  maxLeverage: number;
+  minNotional: number;
+  tickSize?: number;
+}
+
+interface CoinDCXMarketDetail {
+  pair: string;
+  coindcx_name: string;
+  min_quantity: number;
+  step: number;
+  max_leverage: number;
+  min_notional: number;
+  min_price: number;
+  max_price: number;
+  base_currency_precision: number;
+  target_currency_precision: number;
+}
+
 export class CoinDCXService {
   private config: CoinDCXConfig;
+  private metadataCache: Map<string, { data: FuturesInstrumentMeta, expiry: number }> = new Map();
+  private cacheExpiryMs = 60 * 60 * 1000; // 1 hour TTL
 
   constructor(customApiKey?: string, customApiSecret?: string) {
     this.config = {
@@ -719,6 +742,92 @@ export class CoinDCXService {
       stopLossTrigger: coindcxTrade.stop_loss_trigger?.toString() || null,
       status: 'active' as const,
     };
+  }
+
+  /**
+   * Fetch futures instrument metadata for a trading pair with caching
+   * @param pair Trading pair (e.g., "SOL_USDT", "BTC_USDT")
+   * @returns Promise<FuturesInstrumentMeta>
+   */
+  async getFuturesInstrumentMeta(pair: string): Promise<FuturesInstrumentMeta> {
+    // Normalize pair for consistent caching
+    const normalizedPair = pair.replace(/^B-/, '');
+    
+    // Check cache first
+    const cached = this.metadataCache.get(normalizedPair);
+    if (cached && Date.now() < cached.expiry) {
+      console.log(`📋 Using cached metadata for ${pair}`);
+      return cached.data;
+    }
+
+    try {
+      // Fetch all market details (public endpoint, no auth required)
+      const endpoint = '/exchange/v1/markets_details';
+      console.log(`📡 Fetching market metadata for ${pair}...`);
+      
+      const response = await axios.get(`${this.config.baseUrl}${endpoint}`);
+      
+      if (!Array.isArray(response.data)) {
+        throw new Error('Invalid market details response format');
+      }
+
+      // Find the specific pair - handle both formats (SOL_USDT and B-SOL_USDT)
+      const targetPair = pair.startsWith('B-') ? pair : `B-${pair}`;
+      const normalizedPair = pair.replace(/^B-/, '');
+      
+      const market = response.data.find((m: CoinDCXMarketDetail) => 
+        m.pair === targetPair || 
+        m.pair === normalizedPair ||
+        m.coindcx_name === normalizedPair
+      );
+
+      if (!market) {
+        throw new Error(`Trading pair ${pair} not found in market metadata`);
+      }
+
+      // Transform to our interface
+      const metadata: FuturesInstrumentMeta = {
+        stepSize: market.step || 1,
+        minQty: market.min_quantity || 1,
+        maxLeverage: market.max_leverage || 1,
+        minNotional: market.min_notional || 0.001,
+        tickSize: market.min_price || undefined
+      };
+
+      // Cache the result with expiry using normalized key
+      this.metadataCache.set(normalizedPair, {
+        data: metadata,
+        expiry: Date.now() + this.cacheExpiryMs
+      });
+
+      console.log(`✅ Fetched metadata for ${pair}:`, {
+        stepSize: metadata.stepSize,
+        minQty: metadata.minQty,
+        maxLeverage: metadata.maxLeverage,
+        minNotional: metadata.minNotional
+      });
+
+      return metadata;
+
+    } catch (error: any) {
+      console.error(`❌ Failed to fetch metadata for ${pair}:`, error.message);
+      
+      // Try to return cached data even if expired as fallback
+      const expired = this.metadataCache.get(normalizedPair);
+      if (expired) {
+        console.log(`⚠️ Using expired cache for ${pair} as fallback`);
+        return expired.data;
+      }
+
+      // Last resort: return safe defaults
+      console.log(`⚠️ Using default metadata for ${pair}`);
+      return {
+        stepSize: 1,
+        minQty: 1,
+        maxLeverage: 1,
+        minNotional: 0.001
+      };
+    }
   }
 }
 
