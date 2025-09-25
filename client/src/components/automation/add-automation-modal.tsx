@@ -46,6 +46,8 @@ const formSchema = z.object({
     required_error: "Please select automation type",
   }),
   triggerType: z.string().min(1, "Please select trigger type"),
+  sourceFilter: z.string().optional(),
+  signalTypeFilter: z.string().optional(),
   scheduledTime: z.string().optional(),
   scheduledDays: z.array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])).optional(),
   isActive: z.boolean().optional(),
@@ -76,6 +78,8 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
       templateId: "",
       automationType: "trade",
       triggerType: "trade_registered",
+      sourceFilter: "",
+      signalTypeFilter: "",
       scheduledTime: "",
       scheduledDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       isActive: true,
@@ -364,6 +368,67 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
                 );
               }}
             />
+
+            {/* Trade Filters for Trade-Based Automations */}
+            {form.watch('automationType') === 'trade' && (
+              <>
+                {/* Source Filter */}
+                <FormField
+                  control={form.control}
+                  name="sourceFilter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Source Filter (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-source-filter">
+                            <SelectValue placeholder="Filter by source (All sources if empty)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">All Sources</SelectItem>
+                          <SelectItem value="coindcx">CoinDCX Exchange</SelectItem>
+                          <SelectItem value="api">API Registered</SelectItem>
+                          <SelectItem value="manual">Manual Entry</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Only trigger automation for trades from selected source. Leave empty to include all sources.
+                      </p>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Signal Type Filter */}
+                <FormField
+                  control={form.control}
+                  name="signalTypeFilter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Signal Type Filter (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-signal-type-filter">
+                            <SelectValue placeholder="Filter by signal type (All types if empty)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">All Signal Types</SelectItem>
+                          <SelectItem value="intraday">Intraday</SelectItem>
+                          <SelectItem value="swing">Swing</SelectItem>
+                          <SelectItem value="positional">Positional</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Only trigger automation for trades with selected signal type. Leave empty to include all types.
+                      </p>
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             {/* Time Scheduling Fields for Simple Automations */}
             {form.watch('automationType') === 'simple' && (
