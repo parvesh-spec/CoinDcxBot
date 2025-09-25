@@ -96,31 +96,16 @@ export class PositionSizingService {
       console.log(`   - Min Qty: ${meta.minQty}`);
       console.log(`   - Final Quantity: ${qty}`);
 
-      // Step 4: Calculate leverage and validate
+      // Step 4: Calculate leverage (natural calculation without artificial limits)
       const notional = qty * entry;
       let requiredLev = Math.ceil(notional / fund); // Round up to whole number
       
       const warnings: string[] = [];
       
-      // Check leverage limits
+      // Log leverage info but don't artificially limit it
       if (requiredLev > meta.maxLeverage) {
-        console.log(`   ⚠️ Required leverage ${requiredLev}x > max ${meta.maxLeverage}x`);
-        
-        // Reduce quantity to fit max leverage
-        const maxNotional = fund * meta.maxLeverage;
-        const maxQty = this.floorToStep(maxNotional / entry, meta.stepSize);
-        
-        if (maxQty < meta.minQty) {
-          return {
-            success: false,
-            error: `Insufficient funds: Maximum possible quantity ${maxQty} is below minimum ${meta.minQty}`,
-            reason: 'insufficient_funds'
-          };
-        }
-        
-        qty = maxQty;
-        requiredLev = meta.maxLeverage;
-        warnings.push(`Quantity reduced to ${qty} due to ${meta.maxLeverage}x leverage limit`);
+        console.log(`   ℹ️ Calculated leverage ${requiredLev}x > exchange max ${meta.maxLeverage}x (will be handled by exchange)`);
+        warnings.push(`High leverage ${requiredLev}x may be rejected by exchange (max: ${meta.maxLeverage}x)`);
       }
       
       // Ensure leverage is at least 1x
