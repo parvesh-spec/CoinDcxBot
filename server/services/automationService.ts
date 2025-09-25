@@ -125,8 +125,8 @@ export class AutomationService {
           return false;
         }
         
-        // Apply signal type filter if specified (skip if empty or "all")
-        if (automation.signalTypeFilter && automation.signalTypeFilter !== "all" && automation.signalTypeFilter !== trade.signalType) {
+        // Apply signal type filter if specified (skip if empty or "all") - case insensitive
+        if (automation.signalTypeFilter && automation.signalTypeFilter !== "all" && automation.signalTypeFilter.toLowerCase() !== trade.signalType?.toLowerCase()) {
           console.log(`🔍 Automation "${automation.name}" filtered out - signal type mismatch. Required: ${automation.signalTypeFilter}, Trade: ${trade.signalType}`);
           return false;
         }
