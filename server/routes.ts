@@ -154,7 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tradeData.fee = '0'; // Default fee
         }
         if (!tradeData.safebookPrice) {
-          tradeData.safebookPrice = null; // Explicitly set to null
+          tradeData.safebookPrice = undefined; // Explicitly set to undefined
         }
       }
       
