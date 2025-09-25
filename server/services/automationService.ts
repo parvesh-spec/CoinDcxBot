@@ -588,6 +588,7 @@ export class AutomationService {
       'takeProfit2': trade.takeProfit2 ? `$${Number(trade.takeProfit2).toFixed(4)}` : '',
       'takeProfit3': trade.takeProfit3 ? `$${Number(trade.takeProfit3).toFixed(4)}` : '',
       'safebookPrice': trade.safebookPrice ? `$${Number(trade.safebookPrice).toFixed(4)}` : '',
+      'signalType': htmlEscape(trade.signalType || ''), // Add missing signalType variable
       'notes': htmlEscape(trade.notes || '') // HTML escape user notes
     };
     

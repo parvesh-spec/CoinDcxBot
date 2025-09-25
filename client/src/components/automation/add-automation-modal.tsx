@@ -470,6 +470,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
                           <SelectItem value="all">All Signal Types</SelectItem>
                           <SelectItem value="intraday">Intraday</SelectItem>
                           <SelectItem value="swing">Swing</SelectItem>
+                          <SelectItem value="scalp">Scalp</SelectItem>
                           <SelectItem value="positional">Positional</SelectItem>
                         </SelectContent>
                       </Select>
