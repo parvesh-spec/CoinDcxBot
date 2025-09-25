@@ -146,9 +146,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Set default values for manual and API trades
       if (tradeData.source === 'manual' || tradeData.source === 'api') {
+        console.log(`🔍 Debug before calculation - total: "${tradeData.total}" (type: ${typeof tradeData.total})`);
         if (!tradeData.total) {
           // Calculate total = price * quantity (using leverage as quantity)
           tradeData.total = (parseFloat(tradeData.price) * tradeData.leverage).toString();
+          console.log(`✅ Calculated total: ${tradeData.total}`);
         }
         if (!tradeData.fee) {
           tradeData.fee = '0'; // Default fee
