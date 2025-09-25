@@ -106,6 +106,8 @@ export const automations = pgTable("automations", {
   triggerType: varchar("trigger_type").notNull(), // For trade: 'trade_registered', 'trade_completed', etc. For simple: 'scheduled'
   scheduledTime: varchar("scheduled_time"), // For simple automations: "09:00" (24h format, Kolkata timezone)
   scheduledDays: jsonb("scheduled_days").default(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']), // Days of week for simple automations
+  sourceFilter: varchar("source_filter"), // Optional filter by trade source: 'coindcx', 'api', 'manual'
+  signalTypeFilter: varchar("signal_type_filter"), // Optional filter by signal type: 'intraday', 'swing', 'positional'
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
