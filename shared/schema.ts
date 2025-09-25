@@ -329,6 +329,9 @@ export const insertTradeSchema = createInsertSchema(trades).omit({
   updatedAt: true,
 }).extend({
   tradeId: z.string().optional(), // Make tradeId optional for auto-generation
+  total: z.string().optional(), // Make total optional for manual trades
+  fee: z.string().optional(), // Make fee optional for manual trades
+  safebookPrice: z.string().optional(), // Make safebook price optional for manual trades
   status: z.enum(['active', 'completed']).optional(),
   completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book', 'manual_exit']).optional(),
   source: z.enum(['coindcx', 'api', 'manual']).optional(),
