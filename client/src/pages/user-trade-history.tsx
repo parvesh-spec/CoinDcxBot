@@ -33,6 +33,8 @@ interface CopyTrade {
   executedPrice?: string;
   originalQuantity: string;
   executedQuantity?: string;
+  stopLossPrice?: string;
+  takeProfitPrice?: string;
   leverage: string;
   status: string;
   executionTime?: string;
@@ -210,45 +212,87 @@ export function UserTradeHistory({ copyTradingUser, onBack }: UserTradeHistoryPr
                 ))}
               </div>
             ) : tradesData?.copyTrades?.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {tradesData.copyTrades.map((trade: CopyTrade) => (
                   <div
                     key={trade.id}
-                    className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-md dark:hover:shadow-gray-900/20 transition-all duration-200"
                     data-testid={`trade-item-${trade.id}`}
                   >
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                        {getTypeIcon(trade.type)}
+                    {/* Header Section */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${trade.type === 'buy' ? 'bg-green-100 dark:bg-green-900/20' : 'bg-orange-100 dark:bg-orange-900/20'}`}>
+                          {getTypeIcon(trade.type)}
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white" data-testid={`text-pair-${trade.id}`}>
+                              {trade.pair}
+                            </h3>
+                            <Badge className={`text-xs font-medium uppercase ${trade.type === 'buy' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400'}`}>
+                              {trade.type}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {format(new Date(trade.createdAt), 'MMM dd, HH:mm')}
+                            </span>
+                            <span>
+                              {trade.leverage}x leverage
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white" data-testid={`text-pair-${trade.id}`}>
-                            {trade.pair}
-                          </p>
-                          <Badge className={`text-xs ${getStatusColor(trade.status)}`} data-testid={`badge-status-${trade.id}`}>
-                            {trade.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                          <span className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {format(new Date(trade.createdAt), 'MMM dd, HH:mm')}
-                          </span>
-                          <span>
-                            {trade.leverage}x leverage
-                          </span>
-                        </div>
+                      <Badge className={`text-xs ${getStatusColor(trade.status)}`} data-testid={`badge-status-${trade.id}`}>
+                        {trade.status}
+                      </Badge>
+                    </div>
+
+                    {/* Trading Details Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      {/* Entry Price */}
+                      <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Entry Price</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white" data-testid={`text-price-${trade.id}`}>
+                          ${formatPrice(trade.executedPrice || trade.originalPrice)}
+                        </p>
+                      </div>
+
+                      {/* Quantity */}
+                      <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Quantity</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white" data-testid={`text-quantity-${trade.id}`}>
+                          {formatPrice(trade.executedQuantity || trade.originalQuantity)}
+                        </p>
+                      </div>
+
+                      {/* Stop Loss */}
+                      <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Stop Loss</p>
+                        <p className="text-sm font-semibold text-red-600 dark:text-red-400" data-testid={`text-stop-loss-${trade.id}`}>
+                          {trade.stopLossPrice ? `$${formatPrice(trade.stopLossPrice)}` : 'Not set'}
+                        </p>
+                      </div>
+
+                      {/* Target */}
+                      <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Target</p>
+                        <p className="text-sm font-semibold text-green-600 dark:text-green-400" data-testid={`text-target-${trade.id}`}>
+                          {trade.takeProfitPrice ? `$${formatPrice(trade.takeProfitPrice)}` : 'Not set'}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-medium ${trade.type === 'buy' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} data-testid={`text-price-${trade.id}`}>
-                        ${formatPrice(trade.executedPrice || trade.originalPrice)}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400" data-testid={`text-quantity-${trade.id}`}>
-                        Qty: {formatPrice(trade.executedQuantity || trade.originalQuantity)}
-                      </p>
-                    </div>
+
+                    {/* Error Message for Failed Trades */}
+                    {trade.status === 'failed' && trade.errorMessage && (
+                      <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-lg p-3">
+                        <p className="text-xs text-red-600 dark:text-red-400" data-testid={`text-error-${trade.id}`}>
+                          {trade.errorMessage}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
