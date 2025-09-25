@@ -11,6 +11,41 @@ import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchem
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { safeDecrypt } from "./utils/encryption";
 
+// API Key Authentication Middleware
+async function authenticateApiKey(req: any, res: any, next: any) {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: "API key required. Include 'Authorization: Bearer YOUR_API_KEY' header" });
+  }
+  
+  const apiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
+  
+  try {
+    const user = await storage.validateApiKey(apiKey);
+    if (!user) {
+      return res.status(401).json({ message: "Invalid API key" });
+    }
+    
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error("API key validation error:", error);
+    res.status(500).json({ message: "Authentication failed" });
+  }
+}
+
+// Combined authentication middleware (session OR API key)
+async function authenticateSessionOrApiKey(req: any, res: any, next: any) {
+  // Try session authentication first
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    return next();
+  }
+  
+  // If no session, try API key authentication
+  return authenticateApiKey(req, res, next);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize time-based scheduler for simple automations
   automationService.initializeScheduler();
@@ -82,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new trade (manual or via API)
-  app.post('/api/trades', isAuthenticated, async (req, res) => {
+  app.post('/api/trades', authenticateSessionOrApiKey, async (req, res) => {
     try {
       // Parse and validate request body
       const tradeData = insertTradeSchema.parse(req.body);
@@ -605,6 +640,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting trade:", error);
       res.status(500).json({ message: "Failed to delete trade" });
+    }
+  });
+
+  // Developer API endpoints
+  app.get('/api/developer/api-key', isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as User;
+      let apiKey = await storage.getUserApiKey(user.id);
+      
+      // If no API key exists, generate one
+      if (!apiKey) {
+        apiKey = await storage.generateApiKey(user.id);
+      }
+      
+      res.json({ apiKey });
+    } catch (error) {
+      console.error("Error retrieving API key:", error);
+      res.status(500).json({ message: "Failed to retrieve API key" });
+    }
+  });
+
+  app.post('/api/developer/api-key', isAuthenticated, async (req, res) => {
+    try {
+      const user = req.user as User;
+      const newApiKey = await storage.generateApiKey(user.id);
+      
+      res.json({ apiKey: newApiKey });
+    } catch (error) {
+      console.error("Error generating API key:", error);
+      res.status(500).json({ message: "Failed to generate API key" });
     }
   });
 

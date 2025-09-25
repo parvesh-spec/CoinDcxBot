@@ -48,6 +48,11 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // API Key operations
+  getUserApiKey(userId: string): Promise<string | undefined>;
+  generateApiKey(userId: string): Promise<string>;
+  validateApiKey(apiKey: string): Promise<User | undefined>;
 
   // Telegram channel operations
   getTelegramChannels(): Promise<TelegramChannel[]>;
@@ -168,6 +173,25 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(userData: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(userData).returning();
+    return user;
+  }
+
+  // API Key operations
+  async getUserApiKey(userId: string): Promise<string | undefined> {
+    const [user] = await db.select({ apiKey: users.apiKey }).from(users).where(eq(users.id, userId));
+    return user?.apiKey || undefined;
+  }
+
+  async generateApiKey(userId: string): Promise<string> {
+    // Generate a secure random API key
+    const apiKey = `cfw_${Buffer.from(`${userId}_${Date.now()}_${Math.random()}`).toString('base64').replace(/[/+=]/g, '').substring(0, 32)}`;
+    
+    await db.update(users).set({ apiKey }).where(eq(users.id, userId));
+    return apiKey;
+  }
+
+  async validateApiKey(apiKey: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.apiKey, apiKey));
     return user;
   }
 
