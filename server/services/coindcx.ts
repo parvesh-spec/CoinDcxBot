@@ -771,12 +771,14 @@ export class CoinDCXService {
         throw new Error('Invalid market details response format');
       }
 
-      // Find the specific pair - handle both formats (SOL_USDT and B-SOL_USDT)
-      const targetPair = pair.startsWith('B-') ? pair : `B-${pair}`;
-      const normalizedPair = pair.replace(/^B-/, '');
+      // Find the specific pair - handle multiple formats (SOL_USDT, B-SOL_USDT, KC-SOL_USDT)
+      const normalizedPair = pair.replace(/^[BI]-|^KC-/, ''); // Remove B-, I-, KC- prefixes
+      const targetPairB = pair.startsWith('B-') ? pair : `B-${pair}`;
+      const targetPairKC = pair.startsWith('KC-') ? pair : `KC-${pair}`;
       
       const market = response.data.find((m: CoinDCXMarketDetail) => 
-        m.pair === targetPair || 
+        m.pair === targetPairB || 
+        m.pair === targetPairKC ||
         m.pair === normalizedPair ||
         m.coindcx_name === normalizedPair
       );
