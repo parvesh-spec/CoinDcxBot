@@ -217,6 +217,10 @@ export default function CopyTradingUsersPage() {
   };
 
   const handleEditUser = (user: CopyTradingUserWithWallet) => {
+    console.log('DEBUG: User data for editing:', user);
+    console.log('DEBUG: sourceFilter:', user.sourceFilter);
+    console.log('DEBUG: signalTypeFilter:', user.signalTypeFilter);
+    
     setEditingUser(user);
     form.reset({
       name: user.name,
@@ -234,6 +238,8 @@ export default function CopyTradingUsersPage() {
       signalTypeFilter: user.signalTypeFilter || ['intraday', 'swing', 'scalp', 'positional'],
       notes: user.notes || "",
     });
+    
+    console.log('DEBUG: Form values after reset:', form.getValues());
     setIsAddDialogOpen(true);
   };
 
