@@ -144,6 +144,8 @@ export const copyTradingUsers = pgTable("copy_trading_users", {
   isActive: boolean("is_active").default(true), // Enable/disable copy trading
   lowFund: boolean("low_fund").default(false), // True when futures wallet balance < trade fund
   futuresWalletBalance: decimal("futures_wallet_balance", { precision: 20, scale: 8 }).default('0.00'), // USDT balance from futures wallet
+  sourceFilter: jsonb("source_filter").default(['manual', 'api', 'coindcx']), // Trade sources to copy ['manual', 'api', 'coindcx'] - empty array means all
+  signalTypeFilter: jsonb("signal_type_filter").default(['intraday', 'swing', 'scalp', 'positional']), // Signal types to copy - empty array means all
   notes: text("notes"), // Optional notes about the user
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -533,6 +535,8 @@ export const insertCopyTradingUserSchema = createInsertSchema(copyTradingUsers).
   riskPerTrade: z.coerce.number().min(5, "Risk per trade must be at least 5%").max(50, "Risk per trade cannot exceed 50%"),
   tradeFund: z.coerce.number().min(100, "Trade fund must be at least 100 USDT").max(100000, "Trade fund cannot exceed 100,000 USDT"),
   maxTradesPerDay: z.coerce.number().min(1, "Max trades per day must be at least 1").max(20, "Max trades per day cannot exceed 20").optional(),
+  sourceFilter: z.array(z.enum(['manual', 'api', 'coindcx'])).default(['manual', 'api', 'coindcx']).optional(),
+  signalTypeFilter: z.array(z.string()).default(['intraday', 'swing', 'scalp', 'positional']).optional(),
 });
 
 export const insertCopyTradeSchema = createInsertSchema(copyTrades).omit({
