@@ -157,7 +157,7 @@ export class CopyTradingService {
           console.log(`🔍 DEBUG: User ${user.name} has no signal type filter, including`);
           return true; // No filter means copy all signal types
         }
-        const includes = originalTrade.signalType && user.signalTypeFilter.includes(originalTrade.signalType);
+        const includes = originalTrade.signalType && user.signalTypeFilter.map(s => s.toLowerCase()).includes(originalTrade.signalType.toLowerCase());
         console.log(`🔍 DEBUG: User ${user.name} signal filter includes '${originalTrade.signalType}': ${includes}`);
         return includes;
       });
