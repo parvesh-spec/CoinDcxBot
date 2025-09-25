@@ -78,8 +78,8 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
       templateId: "",
       automationType: "trade",
       triggerType: "trade_registered",
-      sourceFilter: "",
-      signalTypeFilter: "",
+      sourceFilter: "all",
+      signalTypeFilter: "all",
       scheduledTime: "",
       scheduledDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       isActive: true,
@@ -382,11 +382,11 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-source-filter">
-                            <SelectValue placeholder="Filter by source (All sources if empty)" />
+                            <SelectValue placeholder="Select source filter" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">All Sources</SelectItem>
+                          <SelectItem value="all">All Sources</SelectItem>
                           <SelectItem value="coindcx">CoinDCX Exchange</SelectItem>
                           <SelectItem value="api">API Registered</SelectItem>
                           <SelectItem value="manual">Manual Entry</SelectItem>
@@ -410,11 +410,11 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-signal-type-filter">
-                            <SelectValue placeholder="Filter by signal type (All types if empty)" />
+                            <SelectValue placeholder="Select signal type filter" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">All Signal Types</SelectItem>
+                          <SelectItem value="all">All Signal Types</SelectItem>
                           <SelectItem value="intraday">Intraday</SelectItem>
                           <SelectItem value="swing">Swing</SelectItem>
                           <SelectItem value="positional">Positional</SelectItem>

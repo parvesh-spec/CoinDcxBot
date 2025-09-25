@@ -119,14 +119,14 @@ export class AutomationService {
           return false;
         }
         
-        // Apply source filter if specified
-        if (automation.sourceFilter && automation.sourceFilter !== trade.source) {
+        // Apply source filter if specified (skip if empty or "all")
+        if (automation.sourceFilter && automation.sourceFilter !== "all" && automation.sourceFilter !== trade.source) {
           console.log(`🔍 Automation "${automation.name}" filtered out - source mismatch. Required: ${automation.sourceFilter}, Trade: ${trade.source}`);
           return false;
         }
         
-        // Apply signal type filter if specified
-        if (automation.signalTypeFilter && automation.signalTypeFilter !== trade.signalType) {
+        // Apply signal type filter if specified (skip if empty or "all")
+        if (automation.signalTypeFilter && automation.signalTypeFilter !== "all" && automation.signalTypeFilter !== trade.signalType) {
           console.log(`🔍 Automation "${automation.name}" filtered out - signal type mismatch. Required: ${automation.signalTypeFilter}, Trade: ${trade.signalType}`);
           return false;
         }
