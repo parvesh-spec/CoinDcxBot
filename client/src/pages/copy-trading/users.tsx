@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,6 +63,8 @@ export default function CopyTradingUsersPage() {
       tradeFund: 100.0,
       maxTradesPerDay: undefined,
       isActive: true,
+      sourceFilter: ['manual', 'api', 'coindcx'],
+      signalTypeFilter: ['intraday', 'swing', 'scalp', 'positional'],
       notes: "",
     },
   });
@@ -227,6 +230,8 @@ export default function CopyTradingUsersPage() {
       tradeFund: parseFloat(user.tradeFund),
       maxTradesPerDay: user.maxTradesPerDay ? parseInt(user.maxTradesPerDay.toString()) : "" as any,
       isActive: !!user.isActive,
+      sourceFilter: user.sourceFilter || ['manual', 'api', 'coindcx'],
+      signalTypeFilter: user.signalTypeFilter || ['intraday', 'swing', 'scalp', 'positional'],
       notes: user.notes || "",
     });
     setIsAddDialogOpen(true);
@@ -662,6 +667,89 @@ export default function CopyTradingUsersPage() {
                         data-testid="input-notes"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Source Filter */}
+              <FormField
+                control={form.control}
+                name="sourceFilter"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Copy Trades From Sources</FormLabel>
+                    <FormDescription>
+                      Select which trade sources to copy for this user
+                    </FormDescription>
+                    <div className="grid grid-cols-3 gap-3 mt-2">
+                      {[
+                        { value: 'manual', label: 'Manual' },
+                        { value: 'api', label: 'API' },
+                        { value: 'coindcx', label: 'CoinDCX' }
+                      ].map((source) => (
+                        <div key={source.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`source-${source.value}`}
+                            checked={field.value?.includes(source.value) || false}
+                            onCheckedChange={(checked) => {
+                              const currentValue = field.value || [];
+                              if (checked) {
+                                field.onChange([...currentValue, source.value]);
+                              } else {
+                                field.onChange(currentValue.filter((v: string) => v !== source.value));
+                              }
+                            }}
+                            data-testid={`checkbox-source-${source.value}`}
+                          />
+                          <Label htmlFor={`source-${source.value}`} className="text-sm font-normal">
+                            {source.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Signal Type Filter */}
+              <FormField
+                control={form.control}
+                name="signalTypeFilter"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Copy Signal Types</FormLabel>
+                    <FormDescription>
+                      Select which signal types to copy for this user
+                    </FormDescription>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      {[
+                        { value: 'intraday', label: 'Intraday' },
+                        { value: 'swing', label: 'Swing' },
+                        { value: 'scalp', label: 'Scalp' },
+                        { value: 'positional', label: 'Positional' }
+                      ].map((signalType) => (
+                        <div key={signalType.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`signal-${signalType.value}`}
+                            checked={field.value?.includes(signalType.value) || false}
+                            onCheckedChange={(checked) => {
+                              const currentValue = field.value || [];
+                              if (checked) {
+                                field.onChange([...currentValue, signalType.value]);
+                              } else {
+                                field.onChange(currentValue.filter((v: string) => v !== signalType.value));
+                              }
+                            }}
+                            data-testid={`checkbox-signal-${signalType.value}`}
+                          />
+                          <Label htmlFor={`signal-${signalType.value}`} className="text-sm font-normal">
+                            {signalType.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
