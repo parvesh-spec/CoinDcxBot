@@ -135,7 +135,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (isEditMode && editAutomation) {
-        return await apiRequest("PUT", `/api/automations/${editAutomation.id}`, data);
+        return await apiRequest("PATCH", `/api/automations/${editAutomation.id}`, data);
       } else {
         return await apiRequest("POST", "/api/automations", data);
       }
