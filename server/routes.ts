@@ -122,6 +122,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse and validate request body
       const tradeData = insertTradeSchema.parse(req.body);
       
+      // Auto-generate Trade ID if not provided
+      if (!tradeData.tradeId) {
+        const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+        const random = Math.random().toString(36).substring(2, 5).toUpperCase(); // Random 3 chars
+        tradeData.tradeId = `T${timestamp}${random}`; // e.g., T789123ABC
+      }
+      
       // If source is not provided, default to 'manual' for manual creation
       if (!tradeData.source) {
         tradeData.source = 'manual';

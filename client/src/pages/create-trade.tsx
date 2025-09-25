@@ -14,21 +14,16 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { ArrowLeft, Plus } from 'lucide-react';
 
-// Manual trade creation schema
+// Manual trade creation schema - simplified
 const createTradeSchema = z.object({
-  tradeId: z.string().min(1, "Trade ID is required"),
   pair: z.string().min(1, "Trading pair is required"),
   type: z.enum(['buy', 'sell'], { required_error: "Trade type is required" }),
   price: z.string().min(1, "Price is required"),
   leverage: z.coerce.number().min(1, "Leverage must be at least 1").max(1000, "Leverage cannot exceed 1000"),
-  total: z.string().min(1, "Total amount is required"),
-  fee: z.string().optional(),
   takeProfitTrigger: z.string().optional(),
   takeProfit2: z.string().optional(),
   takeProfit3: z.string().optional(),
   stopLossTrigger: z.string().optional(),
-  safebookPrice: z.string().optional(),
-  source: z.enum(['manual', 'api'], { required_error: "Source is required" }),
   signalType: z.string().min(1, "Signal type is required"),
   notes: z.string().optional(),
 });
@@ -47,7 +42,6 @@ export default function CreateTradePage({ onBack }: CreateTradePageProps) {
     resolver: zodResolver(createTradeSchema),
     defaultValues: {
       type: 'buy',
-      source: 'manual',
       signalType: 'manual',
       leverage: 1,
     },
@@ -120,24 +114,6 @@ export default function CreateTradePage({ onBack }: CreateTradePageProps) {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Trade ID */}
-                  <FormField
-                    control={form.control}
-                    name="tradeId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Trade ID *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Enter unique trade ID"
-                            data-testid="input-trade-id"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   {/* Trading Pair */}
                   <FormField
@@ -224,50 +200,6 @@ export default function CreateTradePage({ onBack }: CreateTradePageProps) {
                     )}
                   />
 
-                  {/* Total Amount */}
-                  <FormField
-                    control={form.control}
-                    name="total"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Total Amount *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number"
-                            step="0.00000001"
-                            placeholder="Enter total amount"
-                            data-testid="input-total"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Source */}
-                  <FormField
-                    control={form.control}
-                    name="source"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Source *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-source">
-                              <SelectValue placeholder="Select source" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="manual">Manual</SelectItem>
-                            <SelectItem value="api">API</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   {/* Signal Type */}
                   <FormField
                     control={form.control}
@@ -293,26 +225,6 @@ export default function CreateTradePage({ onBack }: CreateTradePageProps) {
                   <h3 className="text-lg font-semibold">Optional Fields</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Fee */}
-                    <FormField
-                      control={form.control}
-                      name="fee"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Fee</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number"
-                              step="0.00000001"
-                              placeholder="Enter fee amount"
-                              data-testid="input-fee"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
                     {/* Stop Loss */}
                     <FormField
@@ -398,26 +310,6 @@ export default function CreateTradePage({ onBack }: CreateTradePageProps) {
                       )}
                     />
 
-                    {/* Safebook Price */}
-                    <FormField
-                      control={form.control}
-                      name="safebookPrice"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Safebook Price</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number"
-                              step="0.00000001"
-                              placeholder="Enter safebook price"
-                              data-testid="input-safebook-price"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
 
                   {/* Notes */}

@@ -328,6 +328,7 @@ export const insertTradeSchema = createInsertSchema(trades).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
+  tradeId: z.string().optional(), // Make tradeId optional for auto-generation
   status: z.enum(['active', 'completed']).optional(),
   completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book', 'manual_exit']).optional(),
   source: z.enum(['coindcx', 'api', 'manual']).optional(),
