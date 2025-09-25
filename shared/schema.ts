@@ -88,6 +88,8 @@ export const trades = pgTable("trades", {
   completionReason: varchar("completion_reason"), // 'stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book'
   exchangeExited: boolean("exchange_exited").default(false), // Track if position was exited on exchange
   notes: text("notes"), // User notes when marking as completed
+  source: varchar("source").notNull().default('coindcx'), // 'coindcx', 'api', 'manual'
+  signalType: varchar("signal_type").notNull().default('intraday'), // Signal type for the trade
   channelId: varchar("channel_id").references(() => telegramChannels.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -325,6 +327,8 @@ export const insertTradeSchema = createInsertSchema(trades).omit({
 }).extend({
   status: z.enum(['active', 'completed']).optional(),
   completionReason: z.enum(['stop_loss_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit', 'safe_book', 'manual_exit']).optional(),
+  source: z.enum(['coindcx', 'api', 'manual']).optional(),
+  signalType: z.string().optional(), // Signal type will be sent from API
 });
 
 export const completeTradeSchema = z.object({
