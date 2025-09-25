@@ -57,6 +57,8 @@ interface Trade {
   status: string;
   completionReason?: string | null;
   notes?: string | null;
+  source?: string | null;
+  signalType?: string | null;
   createdAt: string;
   channel?: {
     name: string;
@@ -671,6 +673,8 @@ export default function TradesTable({
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Pair</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Source</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Signal Type</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Leverage</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Stop Loss</th>
@@ -685,6 +689,8 @@ export default function TradesTable({
               <tr key={index}>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-6 w-12" /></td>
+                <td className="px-6 py-4"><Skeleton className="h-6 w-16" /></td>
+                <td className="px-6 py-4"><Skeleton className="h-6 w-20" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>
                 <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
@@ -712,6 +718,12 @@ export default function TradesTable({
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Type
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Source
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Signal Type
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Price
@@ -742,7 +754,7 @@ export default function TradesTable({
           <tbody className="bg-card divide-y divide-border">
             {trades.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-12 text-center">
+                <td colSpan={11} className="px-6 py-12 text-center">
                   <div className="text-muted-foreground">
                     <i className="fas fa-chart-line text-2xl mb-2" />
                     <p>No trades found</p>
@@ -766,6 +778,31 @@ export default function TradesTable({
                       }
                     >
                       {trade.type.toUpperCase()}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    <Badge
+                      variant="outline"
+                      className={
+                        trade.source === "coindcx"
+                          ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800"
+                          : trade.source === "api"
+                          ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800"
+                          : "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950 dark:text-gray-300 dark:border-gray-800"
+                      }
+                    >
+                      {trade.source ? trade.source.toUpperCase() : 'MANUAL'}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                    <Badge
+                      variant="outline"
+                      className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+                    >
+                      {trade.signalType ? 
+                        trade.signalType.charAt(0).toUpperCase() + trade.signalType.slice(1) 
+                        : 'Intraday'
+                      }
                     </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
