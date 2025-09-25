@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus } from "lucide-react";
+import { Plus, Code } from "lucide-react";
 
 export default function TradesPage() {
   const { toast } = useToast();
   const [selectedTrade, setSelectedTrade] = useState<any>(null);
   const [showCreateTrade, setShowCreateTrade] = useState(false);
+  const [showDeveloper, setShowDeveloper] = useState(false);
   const [filters, setFilters] = useState({
     status: "all",
     channelId: "",
@@ -176,6 +177,14 @@ export default function TradesPage() {
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Trade
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setShowDeveloper(true)}
+                data-testid="button-developer"
+              >
+                <Code className="h-4 w-4 mr-2" />
+                Developer
               </Button>
               <Button 
                 variant="outline" 
