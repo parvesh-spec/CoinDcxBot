@@ -144,6 +144,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tradeData.signalType = 'manual';
       }
       
+      // Set default values for manual trades
+      if (tradeData.source === 'manual') {
+        if (!tradeData.total) {
+          // Calculate total = price * quantity (using leverage as quantity for manual trades)
+          tradeData.total = (parseFloat(tradeData.price) * tradeData.leverage).toString();
+        }
+        if (!tradeData.fee) {
+          tradeData.fee = '0'; // Default fee for manual trades
+        }
+        if (!tradeData.safebookPrice) {
+          tradeData.safebookPrice = null; // Explicitly set to null
+        }
+      }
+      
       console.log(`📝 Creating new ${tradeData.source} trade:`, {
         pair: tradeData.pair,
         type: tradeData.type,
