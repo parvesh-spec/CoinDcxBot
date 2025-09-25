@@ -7,7 +7,7 @@ import { telegramService } from "./services/telegram";
 import { coindcxService, CoinDCXService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
 import { sendApplicationConfirmationEmail } from "./services/email";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema, sendUserAccessOtpSchema, verifyUserAccessOtpSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, insertTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema, sendUserAccessOtpSchema, verifyUserAccessOtpSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { safeDecrypt } from "./utils/encryption";
 
@@ -78,6 +78,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching trade:", error);
       res.status(500).json({ message: "Failed to fetch trade" });
+    }
+  });
+
+  // Create new trade (manual or via API)
+  app.post('/api/trades', isAuthenticated, async (req, res) => {
+    try {
+      // Parse and validate request body
+      const tradeData = insertTradeSchema.parse(req.body);
+      
+      // If source is not provided, default to 'manual' for manual creation
+      if (!tradeData.source) {
+        tradeData.source = 'manual';
+      }
+      
+      // If signalType is not provided and source is manual, set to 'manual'
+      if (!tradeData.signalType && tradeData.source === 'manual') {
+        tradeData.signalType = 'manual';
+      }
+      
+      console.log(`📝 Creating new ${tradeData.source} trade:`, {
+        pair: tradeData.pair,
+        type: tradeData.type,
+        leverage: tradeData.leverage,
+        source: tradeData.source,
+        signalType: tradeData.signalType
+      });
+      
+      const newTrade = await storage.createTrade(tradeData);
+      
+      console.log(`✅ Trade created successfully: ${newTrade.id}`);
+      res.status(201).json(newTrade);
+      
+    } catch (error) {
+      console.error("Error creating trade:", error);
+      
+      // Handle Zod validation errors
+      if (error && typeof error === 'object' && 'issues' in error) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: error.issues 
+        });
+      }
+      
+      res.status(500).json({ message: "Failed to create trade" });
     }
   });
 
