@@ -127,23 +127,41 @@ export class CopyTradingService {
 
       // Get all active copy trading users
       const activeUsers = await storage.getCopyTradingUsers();
+      console.log(`🔍 DEBUG: Total users from DB: ${activeUsers.length}`);
+      activeUsers.forEach(user => {
+        console.log(`🔍 DEBUG: User ${user.name}, isActive: ${user.isActive} (type: ${typeof user.isActive})`);
+      });
+      
       let activeCopyUsers = activeUsers.filter(user => user.isActive);
+      console.log(`🔍 DEBUG: Active users after isActive filter: ${activeCopyUsers.length}`);
       
       // Apply source filter - check if user wants to copy this trade source
+      console.log(`🔍 DEBUG: Trade source: ${originalTrade.source}`);
       activeCopyUsers = activeCopyUsers.filter(user => {
+        console.log(`🔍 DEBUG: User ${user.name} sourceFilter:`, user.sourceFilter);
         if (!user.sourceFilter || !Array.isArray(user.sourceFilter) || user.sourceFilter.length === 0) {
+          console.log(`🔍 DEBUG: User ${user.name} has no source filter, including`);
           return true; // No filter means copy all sources
         }
-        return user.sourceFilter.includes(originalTrade.source);
+        const includes = user.sourceFilter.includes(originalTrade.source);
+        console.log(`🔍 DEBUG: User ${user.name} source filter includes '${originalTrade.source}': ${includes}`);
+        return includes;
       });
+      console.log(`🔍 DEBUG: Active users after source filter: ${activeCopyUsers.length}`);
       
       // Apply signal type filter - check if user wants to copy this signal type
+      console.log(`🔍 DEBUG: Trade signalType: ${originalTrade.signalType}`);
       activeCopyUsers = activeCopyUsers.filter(user => {
+        console.log(`🔍 DEBUG: User ${user.name} signalTypeFilter:`, user.signalTypeFilter);
         if (!user.signalTypeFilter || !Array.isArray(user.signalTypeFilter) || user.signalTypeFilter.length === 0) {
+          console.log(`🔍 DEBUG: User ${user.name} has no signal type filter, including`);
           return true; // No filter means copy all signal types
         }
-        return originalTrade.signalType && user.signalTypeFilter.includes(originalTrade.signalType);
+        const includes = originalTrade.signalType && user.signalTypeFilter.includes(originalTrade.signalType);
+        console.log(`🔍 DEBUG: User ${user.name} signal filter includes '${originalTrade.signalType}': ${includes}`);
+        return includes;
       });
+      console.log(`🔍 DEBUG: Final active users after all filters: ${activeCopyUsers.length}`);
 
       if (activeCopyUsers.length === 0) {
         console.log('📭 No active copy trading users found');
