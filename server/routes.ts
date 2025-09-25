@@ -277,9 +277,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`📊 EXIT FOR ALL: Found ${executedCopyTrades.length} executed copy trades to exit`);
         
         for (const copyTrade of executedCopyTrades) {
+          // Get copy user credentials outside try block for catch scope access
+          let copyUser: any = null;
           try {
-            // Get copy user credentials
-            const copyUser = await storage.getCopyTradingUser(copyTrade.copyUserId);
+            copyUser = await storage.getCopyTradingUser(copyTrade.copyUserId);
             if (!copyUser || !copyUser.apiKey || !copyUser.apiSecret) {
               copyTradesFailed++;
               results.push({ 
@@ -333,24 +334,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             } else {
               copyTradesFailed++;
+              
+              // Handle specific error cases with user-friendly messages
+              let userFriendlyMessage = copyExitResult.message;
+              if (copyExitResult.message?.includes('Position is not valid') || 
+                  copyExitResult.message?.includes('not found') ||
+                  copyExitResult.message?.includes('position already closed')) {
+                userFriendlyMessage = 'Position already closed or expired';
+                // Update copy trade status to reflect this
+                await storage.updateCopyTradeStatus(copyTrade.id, 'already_closed', 
+                  `Position already closed/expired during EXIT FOR ALL: ${copyExitResult.message}`
+                );
+              }
+              
               console.error(`❌ EXIT FOR ALL: Failed to exit copy trade for ${copyUser.name}: ${copyExitResult.message}`);
               results.push({ 
                 type: 'copy', 
                 trade: copyTrade.executedTradeId, 
                 user: copyUser.name,
                 status: 'failed', 
-                message: copyExitResult.message 
+                message: userFriendlyMessage 
               });
             }
           } catch (error: any) {
             copyTradesFailed++;
             console.error(`❌ EXIT FOR ALL: Error exiting copy trade:`, error);
+            
+            // Handle specific exception cases with user-friendly messages
+            let userFriendlyMessage = error.message || 'Unknown error';
+            if (error.response?.data?.message?.includes('Position is not valid') ||
+                error.message?.includes('Position is not valid') ||
+                error.message?.includes('not found')) {
+              userFriendlyMessage = 'Position already closed or expired';
+              // Update copy trade status to reflect this
+              await storage.updateCopyTradeStatus(copyTrade.id, 'already_closed', 
+                `Position already closed/expired during EXIT FOR ALL: ${error.message}`
+              );
+            }
+            
             results.push({ 
               type: 'copy', 
               trade: copyTrade.executedTradeId || 'Unknown', 
-              user: 'Unknown',
+              user: copyUser?.name || 'Unknown',
               status: 'failed', 
-              message: error.message 
+              message: userFriendlyMessage 
             });
           }
         }
