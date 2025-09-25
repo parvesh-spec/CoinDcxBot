@@ -598,25 +598,6 @@ export class CoinDCXService {
         }
       };
       
-      console.log(`\n🚀 ===== FINAL API REQUEST TO COINDCX =====`);
-      console.log(`📡 Endpoint: ${this.config.baseUrl}${endpoint}`);
-      console.log(`🔐 API Key: ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length-4)}`);
-      console.log(`⏰ Timestamp: ${timestamp}`);
-      console.log(`\n📋 Complete Request Body JSON:`);
-      console.log(JSON.stringify(requestBody, null, 2));
-      console.log(`\n📊 Request Summary:`);
-      console.log(`   - Order Type: ${requestBody.order.order_type}`);
-      console.log(`   - Trading Pair: ${requestBody.order.pair}`);
-      console.log(`   - Direction: ${requestBody.order.side.toUpperCase()}`);
-      console.log(`   - Entry Price: ${requestBody.order.price} USDT`);
-      console.log(`   - Quantity: ${requestBody.order.total_quantity} coins`);
-      console.log(`   - Leverage: ${requestBody.order.leverage}x`);
-      console.log(`   - Stop Loss: ${(requestBody.order as any).stop_loss_price ? `${(requestBody.order as any).stop_loss_price} USDT` : 'Not included'}`);
-      console.log(`   - Take Profit: ${(requestBody.order as any).take_profit_price ? `${(requestBody.order as any).take_profit_price} USDT` : 'Not included'}`);
-      console.log(`   - Notification: ${requestBody.order.notification}`);
-      console.log(`   - Time in Force: ${requestBody.order.time_in_force}`);
-      console.log(`📝 Total Request Size: ${JSON.stringify(requestBody).length} bytes`);
-      console.log(`=============================================\n`);
       
       const body = JSON.stringify(requestBody);
       
@@ -629,8 +610,7 @@ export class CoinDCXService {
         'Content-Type': 'application/json',
       };
       
-      console.log(`📤 Sending futures order to CoinDCX: ${orderData.side} ${orderData.pair}`);
-      console.log(`📋 Request body:`, JSON.stringify(requestBody, null, 2));
+      console.log(`📤 Placing ${orderData.side.toUpperCase()} order: ${orderData.total_quantity} ${orderData.pair} @ ${orderData.leverage}x`);
       
       const response = await axios.post(`${this.config.baseUrl}${endpoint}`, body, {
         headers,

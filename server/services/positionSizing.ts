@@ -63,13 +63,6 @@ export class PositionSizingService {
       }
       
       const rawQty = riskAmount / perUnitRisk;
-      
-      console.log(`🧮 POSITION SIZING: ${pair}`);
-      console.log(`   - Fund: ${fund} USDT, Risk: ${riskPct}%`);
-      console.log(`   - Entry: ${entry}, SL: ${stopLoss}`);
-      console.log(`   - Risk Amount: ${riskAmount} USDT`);
-      console.log(`   - Per Unit Risk: ${perUnitRisk} USDT`);
-      console.log(`   - Raw Quantity: ${rawQty}`);
 
       // Step 2: Fetch exchange metadata
       const meta = await coindcxService.getFuturesInstrumentMeta(pair);
@@ -88,13 +81,8 @@ export class PositionSizingService {
       
       // Ensure minimum quantity with step size compliance
       if (qty < meta.minQty) {
-        console.log(`   ⚠️ Calculated qty ${qty} < minQty ${meta.minQty}, adjusting to compliant minQty`);
         qty = this.ceilToStep(meta.minQty, meta.stepSize);
       }
-      
-      console.log(`   - Step Size: ${meta.stepSize}`);
-      console.log(`   - Min Qty: ${meta.minQty}`);
-      console.log(`   - Final Quantity: ${qty}`);
 
       // Step 4: Calculate leverage (natural calculation without artificial limits)
       const notional = qty * entry;
@@ -104,7 +92,6 @@ export class PositionSizingService {
       
       // Log leverage info but don't artificially limit it
       if (requiredLev > meta.maxLeverage) {
-        console.log(`   ℹ️ Calculated leverage ${requiredLev}x > exchange max ${meta.maxLeverage}x (will be handled by exchange)`);
         warnings.push(`High leverage ${requiredLev}x may be rejected by exchange (max: ${meta.maxLeverage}x)`);
       }
       

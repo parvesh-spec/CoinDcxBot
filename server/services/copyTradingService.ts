@@ -408,24 +408,7 @@ export class CopyTradingService {
       const stopLossPrice = originalTrade.stopLossTrigger ? parseFloat(originalTrade.stopLossTrigger) : null;
       const takeProfitPrice = originalTrade.takeProfitTrigger ? parseFloat(originalTrade.takeProfitTrigger) : null;
       
-      console.log(`\n🔍 ===== COPY TRADE PARAMETERS VERIFICATION =====`);
-      console.log(`📊 Original Trade Data:`);
-      console.log(`   - Trade ID: ${copyTrade.originalTradeId}`);
-      console.log(`   - Pair: ${copyTrade.pair}`);
-      console.log(`   - Side: ${copyTrade.type}`);
-      console.log(`   - Original Price: ${copyTrade.originalPrice} USDT`);
-      console.log(`   - Original Leverage: ${copyTrade.leverage}x`);
-      
-      console.log(`👤 User Settings:`);
-      console.log(`   - User Name: ${user.name}`);
-      console.log(`   - Trade Fund: ${tradeFund} USDT`);
-      console.log(`   - Risk Per Trade: ${user.riskPerTrade}%`);
-      console.log(`   - Wallet Balance: ${user.walletBalance} USDT`);
-      
-      console.log(`💰 Price Points:`);
-      console.log(`   - Entry Price: ${entryPrice} USDT`);
-      console.log(`   - Stop Loss: ${stopLossPrice || 'Not set'} USDT`);
-      console.log(`   - Take Profit: ${takeProfitPrice || 'Not set'} USDT`);
+      console.log(`🚀 Executing ${this.isDryRun ? 'DRY-RUN' : 'REAL'} trade: ${copyTrade.pair} ${copyTrade.type} for ${user.name}`);
       
       // NEW APPROACH: Use Position Sizing Service for exchange compliance
       let calculatedQuantity = 0;
@@ -452,31 +435,19 @@ export class CopyTradingService {
         calculatedQuantity = positionData.qty;
         calculatedLeverage = positionData.leverage;
         
-        console.log(`🧮 POSITION SIZING RESULTS:`);
-        console.log(`   - Input Trade Fund: ${tradeFund} USDT`);
-        console.log(`   - Input Risk Percent: ${user.riskPerTrade}%`);
-        console.log(`   - Input Entry Price: ${entryPrice} USDT`);
-        console.log(`   - Input Stop Loss: ${stopLossPrice} USDT`);
-        console.log(`   - ✅ Exchange-Compliant Quantity: ${calculatedQuantity} coins`);
-        console.log(`   - ✅ Integer Leverage: ${calculatedLeverage}x`);
-        console.log(`   - 📊 Notional Value: ${positionData.notional.toFixed(2)} USDT`);
-        console.log(`   - 💰 Required Margin: ${positionData.requiredMargin.toFixed(2)} USDT`);
+        console.log(`✅ Position sized: ${calculatedQuantity} ${copyTrade.pair} @ ${calculatedLeverage}x leverage`);
         
         // Show any warnings
         if (positionData.warnings && positionData.warnings.length > 0) {
-          console.log(`   - ⚠️ Warnings: ${positionData.warnings.join(', ')}`);
+          console.log(`⚠️ ${positionData.warnings.join(', ')}`);
         }
         
       } else {
         // Fallback: Use original trade values if no stop loss
         calculatedLeverage = parseFloat(copyTrade.leverage);
         calculatedQuantity = (tradeFund * calculatedLeverage) / entryPrice; // Simple fallback
-        console.log(`⚠️ No stop loss found, using fallback calculation with original leverage: ${calculatedLeverage}x`);
-        console.log(`⚠️ WARNING: No step size compliance applied without stop loss!`);
+        console.log(`⚠️ No stop loss found, using original leverage: ${calculatedLeverage}x`);
       }
-      
-      console.log(`   - Notional Value: ${(calculatedQuantity * entryPrice).toFixed(2)} USDT`);
-      console.log(`   - Required Margin: ${((calculatedQuantity * entryPrice) / calculatedLeverage).toFixed(2)} USDT`);
       
       // Validate order parameters
       const validation = this.coindcxService.validateOrderParameters(
