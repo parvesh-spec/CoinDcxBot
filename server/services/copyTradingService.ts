@@ -127,7 +127,23 @@ export class CopyTradingService {
 
       // Get all active copy trading users
       const activeUsers = await storage.getCopyTradingUsers();
-      const activeCopyUsers = activeUsers.filter(user => user.isActive);
+      let activeCopyUsers = activeUsers.filter(user => user.isActive);
+      
+      // Apply source filter - check if user wants to copy this trade source
+      activeCopyUsers = activeCopyUsers.filter(user => {
+        if (!user.sourceFilter || !Array.isArray(user.sourceFilter) || user.sourceFilter.length === 0) {
+          return true; // No filter means copy all sources
+        }
+        return user.sourceFilter.includes(originalTrade.source);
+      });
+      
+      // Apply signal type filter - check if user wants to copy this signal type
+      activeCopyUsers = activeCopyUsers.filter(user => {
+        if (!user.signalTypeFilter || !Array.isArray(user.signalTypeFilter) || user.signalTypeFilter.length === 0) {
+          return true; // No filter means copy all signal types
+        }
+        return originalTrade.signalType && user.signalTypeFilter.includes(originalTrade.signalType);
+      });
 
       if (activeCopyUsers.length === 0) {
         console.log('📭 No active copy trading users found');
