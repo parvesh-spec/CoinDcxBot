@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import StatsCards from "@/components/trades/stats-cards";
 import TradesTable from "@/components/trades/trades-table";
 import TradeDetailModal from "@/components/trades/trade-detail-modal";
+import CreateTradePage from "./create-trade";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Plus } from "lucide-react";
 
 export default function TradesPage() {
   const { toast } = useToast();
   const [selectedTrade, setSelectedTrade] = useState<any>(null);
+  const [showCreateTrade, setShowCreateTrade] = useState(false);
   const [filters, setFilters] = useState({
     status: "all",
     channelId: "",
@@ -111,6 +114,11 @@ export default function TradesPage() {
     syncMutation.mutate();
   };
 
+  // Show create trade page when requested
+  if (showCreateTrade) {
+    return <CreateTradePage onBack={() => setShowCreateTrade(false)} />;
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <StatsCards />
@@ -162,6 +170,13 @@ export default function TradesPage() {
             </div>
             
             <div className="flex space-x-2">
+              <Button 
+                onClick={() => setShowCreateTrade(true)}
+                data-testid="button-create-trade"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Trade
+              </Button>
               <Button 
                 variant="outline" 
                 onClick={handleSync} 
