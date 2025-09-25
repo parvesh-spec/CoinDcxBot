@@ -4,6 +4,7 @@ import StatsCards from "@/components/trades/stats-cards";
 import TradesTable from "@/components/trades/trades-table";
 import TradeDetailModal from "@/components/trades/trade-detail-modal";
 import CreateTradePage from "./create-trade";
+import DeveloperDocsPage from "./developer-docs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,6 +119,11 @@ export default function TradesPage() {
   // Show create trade page when requested
   if (showCreateTrade) {
     return <CreateTradePage onBack={() => setShowCreateTrade(false)} />;
+  }
+
+  // Show developer docs page when requested
+  if (showDeveloper) {
+    return <DeveloperDocsPage onBack={() => setShowDeveloper(false)} />;
   }
 
   return (
