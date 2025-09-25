@@ -36,10 +36,10 @@ interface CoinDCXConfig {
 export class CoinDCXService {
   private config: CoinDCXConfig;
 
-  constructor() {
+  constructor(customApiKey?: string, customApiSecret?: string) {
     this.config = {
-      apiKey: process.env.COINDCX_API_KEY || '',
-      apiSecret: process.env.COINDCX_API_SECRET || '',
+      apiKey: customApiKey || process.env.COINDCX_API_KEY || '',
+      apiSecret: customApiSecret || process.env.COINDCX_API_SECRET || '',
       baseUrl: process.env.COINDCX_BASE_URL || 'https://api.coindcx.com',
     };
 

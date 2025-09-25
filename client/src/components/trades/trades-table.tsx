@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatCryptoPrice } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 
 // Edit form schema
 const editTradeSchema = z.object({
@@ -443,6 +445,44 @@ export default function TradesTable({
     },
   });
 
+  // Mutation for exiting all copy trades for an original trade
+  const exitForAllMutation = useMutation({
+    mutationFn: async (tradeId: string) => {
+      const response = await apiRequest('PATCH', `/api/trades/${tradeId}/exit-for-all`, {});
+      return response.json();
+    },
+    onSuccess: (data: any, tradeId: string) => {
+      console.log('🔍 Exit For All API Response:', data);
+      
+      if (data && data.success === true) {
+        queryClient.invalidateQueries({ queryKey: ['trades'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/trades/stats'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/copy-trading/trades'] });
+        
+        const { originalExited, copyTradesExited, totalCopyTrades } = data;
+        
+        toast({ 
+          title: "Exit For All completed!", 
+          description: `Original trade and ${copyTradesExited}/${totalCopyTrades} copy trades exited successfully`
+        });
+      } else {
+        console.error('❌ Unexpected exit for all response:', data);
+        toast({ 
+          title: "Exit For All may have failed", 
+          description: data?.message || "Unexpected response from server", 
+          variant: "destructive" 
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to exit for all", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
   // Handler functions
   const handleTargetHit = (tradeId: string, targetType: 'target_1' | 'target_2' | 'target_3') => {
     updateTargetStatusMutation.mutate({ tradeId, targetType });
@@ -483,9 +523,14 @@ export default function TradesTable({
     reopenTradeMutation.mutate(tradeId);
   };
 
-  const handleExitTrade = (tradeId: string) => {
-    console.log('🚪 EXIT: Starting exit for active trade:', tradeId);
+  const handleExitMyOnly = (tradeId: string) => {
+    console.log('🚪 EXIT MY ONLY: Starting exit for original trade only:', tradeId);
     exitTradeMutation.mutate(tradeId);
+  };
+
+  const handleExitForAll = (tradeId: string) => {
+    console.log('🚪 EXIT FOR ALL: Starting exit for original trade and all copy trades:', tradeId);
+    exitForAllMutation.mutate(tradeId);
   };
 
   // Function to render target status content
@@ -784,20 +829,48 @@ export default function TradesTable({
                         Edit
                       </Button>
                       {trade.status === 'active' && (
-                        <Button
-                          size="sm"
-                          variant={(trade as any).exchangeExited ? "secondary" : "destructive"}
-                          onClick={() => handleExitTrade(trade.id)}
-                          className={`text-xs h-7 px-2 ${
-                            (trade as any).exchangeExited 
-                              ? "bg-gray-500 hover:bg-gray-600 cursor-not-allowed" 
-                              : "bg-orange-600 hover:bg-orange-700"
-                          }`}
-                          disabled={exitTradeMutation.isPending || (trade as any).exchangeExited}
-                          data-testid={`button-exit-${trade.id}`}
-                        >
-                          {(trade as any).exchangeExited ? "✅ Exited" : "🚪 Exit"}
-                        </Button>
+                        (trade as any).exchangeExited ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="text-xs h-7 px-2 bg-gray-500 hover:bg-gray-600 cursor-not-allowed"
+                            disabled={true}
+                            data-testid={`button-exit-${trade.id}`}
+                          >
+                            ✅ Exited
+                          </Button>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="text-xs h-7 px-2 bg-orange-600 hover:bg-orange-700"
+                                disabled={exitTradeMutation.isPending || exitForAllMutation.isPending}
+                                data-testid={`button-exit-${trade.id}`}
+                              >
+                                🚪 Exit
+                                <ChevronDown className="ml-1 h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleExitMyOnly(trade.id)}
+                                disabled={exitTradeMutation.isPending}
+                                data-testid={`menu-exit-my-only-${trade.id}`}
+                              >
+                                <span className="text-orange-600">🚪 Exit My Only</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleExitForAll(trade.id)}
+                                disabled={exitForAllMutation.isPending}
+                                data-testid={`menu-exit-for-all-${trade.id}`}
+                              >
+                                <span className="text-red-600">🚪 Exit For All</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )
                       )}
                       {trade.status === 'completed' && (
                         <Button

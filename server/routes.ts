@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
-import { coindcxService } from "./services/coindcx";
+import { coindcxService, CoinDCXService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
 import { sendApplicationConfirmationEmail } from "./services/email";
 import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema, sendUserAccessOtpSchema, verifyUserAccessOtpSchema } from "@shared/schema";
@@ -214,6 +214,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generic server error for other cases
       res.status(500).json({ message: "Failed to exit trade" });
+    }
+  });
+
+  // Endpoint to exit original trade AND all copy trades for a trade
+  app.patch('/api/trades/:id/exit-for-all', isAuthenticated, async (req, res) => {
+    try {
+      const trade = await storage.getTrade(req.params.id);
+      if (!trade) {
+        return res.status(404).json({ message: "Trade not found" });
+      }
+
+      if (trade.status !== 'active') {
+        return res.status(400).json({ message: "Only active trades can be exited" });
+      }
+
+      console.log(`🚪 API: Starting EXIT FOR ALL for trade ${trade.tradeId} (${req.params.id})`);
+      
+      // Results tracking
+      let originalExited = false;
+      let copyTradesExited = 0;
+      let copyTradesFailed = 0;
+      const results = [];
+
+      // Step 1: Exit original trade (same logic as regular exit)
+      try {
+        let tradeType: 'spot' | 'margin' | 'futures' = 'futures';
+        
+        if (trade.leverage === 1) {
+          tradeType = 'spot';
+        } else if (trade.leverage > 1 && trade.leverage <= 5) {
+          tradeType = 'margin';
+        } else {
+          tradeType = 'futures';
+        }
+        
+        console.log(`🎯 EXIT FOR ALL: Exiting original trade (${tradeType}, ${trade.leverage}x)`);
+        
+        const exitResult = await coindcxService.exitTrade(trade.tradeId, trade.pair, tradeType);
+        
+        if (exitResult.success) {
+          originalExited = true;
+          await storage.markExchangeExited(trade.id, 
+            `🚪 Position exited via EXIT FOR ALL at market price: ${exitResult.message}`
+          );
+          console.log(`✅ EXIT FOR ALL: Original trade exited successfully`);
+          results.push({ type: 'original', trade: trade.tradeId, status: 'success', message: exitResult.message });
+        } else {
+          console.error(`❌ EXIT FOR ALL: Failed to exit original trade: ${exitResult.message}`);
+          results.push({ type: 'original', trade: trade.tradeId, status: 'failed', message: exitResult.message });
+        }
+      } catch (error: any) {
+        console.error(`❌ EXIT FOR ALL: Error exiting original trade:`, error);
+        results.push({ type: 'original', trade: trade.tradeId, status: 'failed', message: error.message });
+      }
+
+      // Step 2: Find and exit all executed copy trades for this original trade
+      try {
+        const copyTrades = await storage.getCopyTradesByOriginalId(trade.id);
+        const executedCopyTrades = copyTrades.filter(ct => ct.status === 'executed' && ct.executedTradeId);
+        
+        console.log(`📊 EXIT FOR ALL: Found ${executedCopyTrades.length} executed copy trades to exit`);
+        
+        for (const copyTrade of executedCopyTrades) {
+          try {
+            // Get copy user credentials
+            const copyUser = await storage.getCopyTradingUser(copyTrade.copyUserId);
+            if (!copyUser || !copyUser.apiKey || !copyUser.apiSecret) {
+              copyTradesFailed++;
+              results.push({ 
+                type: 'copy', 
+                trade: copyTrade.executedTradeId, 
+                user: copyUser?.name || 'Unknown',
+                status: 'failed', 
+                message: 'Missing API credentials' 
+              });
+              continue;
+            }
+
+            // Decrypt credentials and create service instance for this user
+            const decryptedKey = safeDecrypt(copyUser.apiKey);
+            const decryptedSecret = safeDecrypt(copyUser.apiSecret);
+            const userCoinDCXService = new CoinDCXService(decryptedKey, decryptedSecret);
+
+            // Determine trade type for copy trade
+            let copyTradeType: 'spot' | 'margin' | 'futures' = 'futures';
+            
+            if (copyTrade.leverage === '1') {
+              copyTradeType = 'spot';
+            } else if (parseFloat(copyTrade.leverage) > 1 && parseFloat(copyTrade.leverage) <= 5) {
+              copyTradeType = 'margin';
+            } else {
+              copyTradeType = 'futures';
+            }
+            
+            console.log(`🚪 EXIT FOR ALL: Exiting copy trade for ${copyUser.name} (${copyTradeType}, ${copyTrade.leverage}x)`);
+            
+            // Exit copy trade using user's credentials
+            const copyExitResult = await userCoinDCXService.exitTrade(
+              copyTrade.executedTradeId!,
+              copyTrade.pair,
+              copyTradeType
+            );
+            
+            if (copyExitResult.success) {
+              copyTradesExited++;
+              // Update copy trade status
+              await storage.updateCopyTradeStatus(copyTrade.id, 'exited', 
+                `Exited via EXIT FOR ALL: ${copyExitResult.message}`
+              );
+              console.log(`✅ EXIT FOR ALL: Copy trade exited for ${copyUser.name}`);
+              results.push({ 
+                type: 'copy', 
+                trade: copyTrade.executedTradeId, 
+                user: copyUser.name,
+                status: 'success', 
+                message: copyExitResult.message 
+              });
+            } else {
+              copyTradesFailed++;
+              console.error(`❌ EXIT FOR ALL: Failed to exit copy trade for ${copyUser.name}: ${copyExitResult.message}`);
+              results.push({ 
+                type: 'copy', 
+                trade: copyTrade.executedTradeId, 
+                user: copyUser.name,
+                status: 'failed', 
+                message: copyExitResult.message 
+              });
+            }
+          } catch (error: any) {
+            copyTradesFailed++;
+            console.error(`❌ EXIT FOR ALL: Error exiting copy trade:`, error);
+            results.push({ 
+              type: 'copy', 
+              trade: copyTrade.executedTradeId || 'Unknown', 
+              user: 'Unknown',
+              status: 'failed', 
+              message: error.message 
+            });
+          }
+        }
+      } catch (error: any) {
+        console.error(`❌ EXIT FOR ALL: Error processing copy trades:`, error);
+      }
+
+      // Step 3: Return comprehensive results
+      const totalCopyTrades = copyTradesExited + copyTradesFailed;
+      const message = `Exit For All completed: Original ${originalExited ? 'SUCCESS' : 'FAILED'}, Copy Trades ${copyTradesExited}/${totalCopyTrades} exited`;
+      
+      console.log(`🏁 EXIT FOR ALL: ${message}`);
+      
+      res.json({
+        success: true,
+        message,
+        originalExited,
+        copyTradesExited,
+        totalCopyTrades,
+        copyTradesFailed,
+        results
+      });
+      
+    } catch (error: any) {
+      console.error("Error in exit for all:", error);
+      res.status(500).json({ message: "Failed to execute exit for all" });
     }
   });
 

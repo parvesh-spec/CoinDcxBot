@@ -143,6 +143,7 @@ export interface IStorage {
     limit?: number;
     offset?: number;
   }): Promise<{ copyTrades: any[]; total: number }>;
+  getCopyTradesByOriginalId(originalTradeId: string): Promise<CopyTrade[]>;
   createCopyTrade(copyTrade: InsertCopyTrade): Promise<CopyTrade>;
   updateCopyTradeStatus(id: string, status: string, errorMessage?: string): Promise<CopyTrade | undefined>;
   updateCopyTradeExecution(id: string, executionDetails: {
@@ -1286,6 +1287,16 @@ export class DatabaseStorage implements IStorage {
       .where(whereClause);
 
     return { copyTrades: copyTradesResult, total: total[0]?.count || 0 };
+  }
+
+  async getCopyTradesByOriginalId(originalTradeId: string): Promise<CopyTrade[]> {
+    const copyTradesResult = await db
+      .select()
+      .from(copyTrades)
+      .where(eq(copyTrades.originalTradeId, originalTradeId))
+      .orderBy(desc(copyTrades.createdAt));
+    
+    return copyTradesResult;
   }
 
   async createCopyTrade(copyTradeData: InsertCopyTrade): Promise<CopyTrade> {
