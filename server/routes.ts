@@ -129,9 +129,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tradeData.tradeId = `T${timestamp}${random}`; // e.g., T789123ABC
       }
       
-      // If source is not provided, default to 'manual' for manual creation
+      // If source is not provided, check if it's an API call (has Authorization header)
       if (!tradeData.source) {
-        tradeData.source = 'manual';
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          tradeData.source = 'api'; // API call with Bearer token
+        } else {
+          tradeData.source = 'manual'; // Manual form submission
+        }
       }
       
       // If signalType is not provided and source is manual, set to 'manual'

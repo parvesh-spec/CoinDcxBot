@@ -163,14 +163,17 @@ export default function DeveloperDocsPage({ onBack }: DeveloperDocsProps) {
               <h3 className="text-lg font-semibold mb-2">Request Body</h3>
               <div className="bg-muted p-3 rounded font-mono text-sm overflow-x-auto">
                 <pre>{JSON.stringify({
-                  symbol: "BTCUSDT",
-                  side: "BUY",
-                  quantity: 0.001,
-                  entryPrice: 45000,
-                  targets: [46000, 47000, 48000],
-                  stopLoss: 44000,
-                  source: "api", // or "manual"
-                  signalType: "intraday" // "intraday", "scalping", "swing", "positional"
+                  pair: "BTC_USDT",
+                  type: "buy",
+                  price: "45000",
+                  leverage: 10,
+                  takeProfitTrigger: "46000", // Optional
+                  takeProfit2: "47000", // Optional
+                  takeProfit3: "48000", // Optional
+                  stopLossTrigger: "44000", // Optional
+                  signalType: "intraday", // Required
+                  notes: "API trade example" // Optional
+                  // Note: tradeId is auto-generated, source is auto-set to 'api'
                 }, null, 2)}</pre>
               </div>
             </div>
@@ -180,20 +183,21 @@ export default function DeveloperDocsPage({ onBack }: DeveloperDocsProps) {
               <h3 className="text-lg font-semibold mb-2">Response</h3>
               <div className="bg-muted p-3 rounded font-mono text-sm overflow-x-auto">
                 <pre>{JSON.stringify({
-                  success: true,
-                  trade: {
-                    id: "uuid",
-                    symbol: "BTCUSDT",
-                    side: "BUY",
-                    quantity: 0.001,
-                    entryPrice: 45000,
-                    targets: [46000, 47000, 48000],
-                    stopLoss: 44000,
-                    source: "api",
-                    signalType: "intraday",
-                    status: "active",
-                    createdAt: "2025-09-25T12:00:00Z"
-                  }
+                  id: "uuid-generated",
+                  tradeId: "T789123ABC", // Auto-generated
+                  pair: "BTC_USDT",
+                  type: "buy",
+                  price: "45000",
+                  leverage: 10,
+                  takeProfitTrigger: "46000",
+                  takeProfit2: "47000",
+                  takeProfit3: "48000",
+                  stopLossTrigger: "44000",
+                  source: "api", // Auto-set for API calls
+                  signalType: "intraday",
+                  status: "active",
+                  notes: "API trade example",
+                  createdAt: "2025-09-25T12:00:00Z"
                 }, null, 2)}</pre>
               </div>
             </div>
@@ -203,44 +207,57 @@ export default function DeveloperDocsPage({ onBack }: DeveloperDocsProps) {
               <h3 className="text-lg font-semibold mb-2">Field Descriptions</h3>
               <div className="space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
-                  <strong>symbol</strong>
+                  <strong>pair</strong>
                   <span>string</span>
-                  <span>Trading pair (e.g., BTCUSDT)</span>
+                  <span>Trading pair (e.g., BTC_USDT, ETH_USDT)</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
-                  <strong>side</strong>
+                  <strong>type</strong>
                   <span>string</span>
-                  <span>BUY or SELL</span>
+                  <span>"buy" or "sell"</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
-                  <strong>quantity</strong>
-                  <span>number</span>
-                  <span>Trade quantity</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
-                  <strong>entryPrice</strong>
-                  <span>number</span>
+                  <strong>price</strong>
+                  <span>string</span>
                   <span>Entry price for the trade</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
-                  <strong>targets</strong>
-                  <span>number[]</span>
-                  <span>Array of target prices (max 5)</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
-                  <strong>stopLoss</strong>
+                  <strong>leverage</strong>
                   <span>number</span>
-                  <span>Stop loss price</span>
+                  <span>Leverage multiplier (1-1000)</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
-                  <strong>source</strong>
+                  <strong>takeProfitTrigger</strong>
                   <span>string</span>
-                  <span>"api" or "manual"</span>
+                  <span>Take profit target 1 price (optional)</span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
+                  <strong>takeProfit2</strong>
+                  <span>string</span>
+                  <span>Take profit target 2 price (optional)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
+                  <strong>takeProfit3</strong>
+                  <span>string</span>
+                  <span>Take profit target 3 price (optional)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
+                  <strong>stopLossTrigger</strong>
+                  <span>string</span>
+                  <span>Stop loss price (optional)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
                   <strong>signalType</strong>
                   <span>string</span>
-                  <span>"intraday", "scalping", "swing", "positional"</span>
+                  <span>"intraday", "scalping", "swing", "positional" (required)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-2 border-b">
+                  <strong>notes</strong>
+                  <span>string</span>
+                  <span>Additional notes for the trade (optional)</span>
+                </div>
+                <div className="bg-yellow-50 p-2 rounded mt-2">
+                  <strong>Note:</strong> tradeId is auto-generated and source is automatically set to "api" for API calls.
                 </div>
               </div>
             </div>
@@ -266,14 +283,16 @@ export default function DeveloperDocsPage({ onBack }: DeveloperDocsProps) {
     'Authorization': 'Bearer YOUR_API_KEY'
   },
   body: JSON.stringify({
-    symbol: 'BTCUSDT',
-    side: 'BUY',
-    quantity: 0.001,
-    entryPrice: 45000,
-    targets: [46000, 47000, 48000],
-    stopLoss: 44000,
-    source: 'api',
-    signalType: 'intraday'
+    pair: 'BTC_USDT',
+    type: 'buy',
+    price: '45000',
+    leverage: 10,
+    takeProfitTrigger: '46000',
+    takeProfit2: '47000',
+    takeProfit3: '48000',
+    stopLossTrigger: '44000',
+    signalType: 'intraday',
+    notes: 'API trade from JavaScript'
   })
 });
 
@@ -291,14 +310,16 @@ console.log(result);`}</pre>
     'Authorization': 'Bearer YOUR_API_KEY'
   },
   body: JSON.stringify({
-    symbol: 'BTCUSDT',
-    side: 'BUY',
-    quantity: 0.001,
-    entryPrice: 45000,
-    targets: [46000, 47000, 48000],
-    stopLoss: 44000,
-    source: 'api',
-    signalType: 'intraday'
+    pair: 'BTC_USDT',
+    type: 'buy',
+    price: '45000',
+    leverage: 10,
+    takeProfitTrigger: '46000',
+    takeProfit2: '47000',
+    takeProfit3: '48000',
+    stopLossTrigger: '44000',
+    signalType: 'intraday',
+    notes: 'API trade from JavaScript'
   })
 });
 
@@ -324,14 +345,16 @@ headers = {
     'Authorization': 'Bearer YOUR_API_KEY'
 }
 data = {
-    'symbol': 'BTCUSDT',
-    'side': 'BUY',
-    'quantity': 0.001,
-    'entryPrice': 45000,
-    'targets': [46000, 47000, 48000],
-    'stopLoss': 44000,
-    'source': 'api',
-    'signalType': 'intraday'
+    'pair': 'BTC_USDT',
+    'type': 'buy',
+    'price': '45000',
+    'leverage': 10,
+    'takeProfitTrigger': '46000',
+    'takeProfit2': '47000',
+    'takeProfit3': '48000',
+    'stopLossTrigger': '44000',
+    'signalType': 'intraday',
+    'notes': 'API trade from Python'
 }
 
 response = requests.post(url, headers=headers, json=data)
@@ -351,14 +374,16 @@ headers = {
     'Authorization': 'Bearer YOUR_API_KEY'
 }
 data = {
-    'symbol': 'BTCUSDT',
-    'side': 'BUY',
-    'quantity': 0.001,
-    'entryPrice': 45000,
-    'targets': [46000, 47000, 48000],
-    'stopLoss': 44000,
-    'source': 'api',
-    'signalType': 'intraday'
+    'pair': 'BTC_USDT',
+    'type': 'buy',
+    'price': '45000',
+    'leverage': 10,
+    'takeProfitTrigger': '46000',
+    'takeProfit2': '47000',
+    'takeProfit3': '48000',
+    'stopLossTrigger': '44000',
+    'signalType': 'intraday',
+    'notes': 'API trade from Python'
 }
 
 response = requests.post(url, headers=headers, json=data)
