@@ -169,6 +169,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newTrade = await storage.createTrade(tradeData);
       
       console.log(`✅ Trade created successfully: ${newTrade.id}`);
+      
+      // Trigger automations for the new trade
+      try {
+        await automationService.triggerAutomations(newTrade, 'trade_registered');
+        console.log(`🔔 Automations triggered for trade: ${newTrade.id}`);
+      } catch (error) {
+        console.error(`⚠️ Failed to trigger automations for trade ${newTrade.id}:`, error);
+        // Don't fail the trade creation if automation fails
+      }
+      
       res.status(201).json(newTrade);
       
     } catch (error) {
