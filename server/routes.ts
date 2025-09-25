@@ -846,7 +846,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }),
           profitLoss: '+2.5%',
           quantity: '0.1',
-          tradeId: 'TXN-TEST-123'
+          tradeId: 'TXN-TEST-123',
+          signalType: 'Intraday'
         };
 
         // Process template with mock data
@@ -866,7 +867,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           timestamp: mockTrade.timestamp,
           profitLoss: mockTrade.profitLoss,
           quantity: mockTrade.quantity,
-          tradeId: mockTrade.tradeId
+          tradeId: mockTrade.tradeId,
+          signalType: mockTrade.signalType
         };
 
         for (const [key, value] of Object.entries(variables)) {
