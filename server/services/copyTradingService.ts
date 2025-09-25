@@ -2,6 +2,7 @@ import { DatabaseStorage } from '../storage';
 import { CoinDCXService } from './coindcx';
 import { decrypt, safeDecrypt } from '../utils/encryption';
 import type { Trade, CopyTrade, CopyTradingUser } from '@shared/schema';
+import { positionSizingService } from './positionSizing';
 
 const storage = new DatabaseStorage();
 
@@ -426,44 +427,53 @@ export class CopyTradingService {
       console.log(`   - Stop Loss: ${stopLossPrice || 'Not set'} USDT`);
       console.log(`   - Take Profit: ${takeProfitPrice || 'Not set'} USDT`);
       
-      // NEW APPROACH: Calculate quantity FIRST, then leverage
+      // NEW APPROACH: Use Position Sizing Service for exchange compliance
       let calculatedQuantity = 0;
       let calculatedLeverage = 1;
       
       if (stopLossPrice) {
-        // Step 1: Calculate quantity using NEW formula
-        calculatedQuantity = this.coindcxService.calculateQuantity(
-          tradeFund,        // Trade Fund from user settings
-          user.riskPerTrade, // Risk percentage from user settings
-          entryPrice,       // Original trade entry price
-          stopLossPrice     // Original trade stop loss
-        );
+        // Use Position Sizing Service for proper step size compliance and integer leverage
+        const positionResult = await positionSizingService.sizePosition({
+          entry: entryPrice,
+          stopLoss: stopLossPrice,
+          fund: tradeFund,
+          riskPct: user.riskPerTrade,
+          pair: copyTrade.pair
+        });
         
-        // Step 2: Calculate leverage using NEW formula
-        calculatedLeverage = this.coindcxService.calculateLeverage(
-          calculatedQuantity, // Quantity calculated above
-          entryPrice,         // Original trade entry price
-          tradeFund           // Trade Fund from user settings
-        );
+        // Check if position sizing failed
+        if (!positionResult || 'success' in positionResult && !positionResult.success) {
+          const error = positionResult as any;
+          throw new Error(`Position sizing failed: ${error.error}`);
+        }
+        
+        // Extract results from position sizing service
+        const positionData = positionResult as any;
+        calculatedQuantity = positionData.qty;
+        calculatedLeverage = positionData.leverage;
+        
+        console.log(`🧮 POSITION SIZING RESULTS:`);
+        console.log(`   - Input Trade Fund: ${tradeFund} USDT`);
+        console.log(`   - Input Risk Percent: ${user.riskPerTrade}%`);
+        console.log(`   - Input Entry Price: ${entryPrice} USDT`);
+        console.log(`   - Input Stop Loss: ${stopLossPrice} USDT`);
+        console.log(`   - ✅ Exchange-Compliant Quantity: ${calculatedQuantity} coins`);
+        console.log(`   - ✅ Integer Leverage: ${calculatedLeverage}x`);
+        console.log(`   - 📊 Notional Value: ${positionData.notional.toFixed(2)} USDT`);
+        console.log(`   - 💰 Required Margin: ${positionData.requiredMargin.toFixed(2)} USDT`);
+        
+        // Show any warnings
+        if (positionData.warnings && positionData.warnings.length > 0) {
+          console.log(`   - ⚠️ Warnings: ${positionData.warnings.join(', ')}`);
+        }
+        
       } else {
         // Fallback: Use original trade values if no stop loss
         calculatedLeverage = parseFloat(copyTrade.leverage);
         calculatedQuantity = (tradeFund * calculatedLeverage) / entryPrice; // Simple fallback
         console.log(`⚠️ No stop loss found, using fallback calculation with original leverage: ${calculatedLeverage}x`);
+        console.log(`⚠️ WARNING: No step size compliance applied without stop loss!`);
       }
-      
-      console.log(`🧮 NEW CALCULATION RESULTS:`);
-      console.log(`   - Input Trade Fund: ${tradeFund} USDT`);
-      console.log(`   - Input Risk Percent: ${user.riskPerTrade}%`);
-      console.log(`   - Input Entry Price: ${entryPrice} USDT`);
-      console.log(`   - Input Stop Loss: ${stopLossPrice || 'Not set'} USDT`);
-      console.log(`   - ✅ STEP 1 - Calculated Quantity: ${calculatedQuantity} coins`);
-      console.log(`   - ✅ STEP 2 - Calculated Leverage: ${calculatedLeverage}x`);
-      
-      // Round quantity based on trading pair requirements
-      const originalQuantity = calculatedQuantity;
-      calculatedQuantity = this.roundQuantityForPair(copyTrade.pair, calculatedQuantity);
-      console.log(`   - 🔄 Rounded Quantity: ${originalQuantity} → ${calculatedQuantity} coins`);
       
       console.log(`   - Notional Value: ${(calculatedQuantity * entryPrice).toFixed(2)} USDT`);
       console.log(`   - Required Margin: ${((calculatedQuantity * entryPrice) / calculatedLeverage).toFixed(2)} USDT`);
@@ -729,55 +739,6 @@ export class CopyTradingService {
     }
   }
 
-  /**
-   * Round quantity based on trading pair requirements
-   */
-  private roundQuantityForPair(pair: string, quantity: number): number {
-    // Define pairs that require whole numbers (no decimal places)
-    const wholeNumberPairs = [
-      'AVAX_USDT', 'HIPPO_USDT', 'BNB_USDT', 'SOL_USDT', 'ADA_USDT',
-      'DOT_USDT', 'MATIC_USDT', 'LINK_USDT', 'UNI_USDT', 'ICP_USDT',
-      'ATOM_USDT', 'VET_USDT', 'FIL_USDT', 'TRX_USDT', 'ETC_USDT'
-    ];
-
-    // Define pairs that allow specific decimal places
-    const decimalPairs: { [key: string]: number } = {
-      'BTC_USDT': 6,     // 6 decimal places
-      'ETH_USDT': 5,     // 5 decimal places
-      'XRP_USDT': 2,     // 2 decimal places
-      'LTC_USDT': 4,     // 4 decimal places
-      'BCH_USDT': 4,     // 4 decimal places
-    };
-
-    console.log(`🔄 Rounding quantity for pair ${pair}: ${quantity}`);
-
-    // Check if pair requires whole numbers
-    if (wholeNumberPairs.includes(pair)) {
-      const rounded = Math.round(quantity);
-      console.log(`   → Whole number required: ${quantity} → ${rounded}`);
-      
-      // Ensure minimum 1 coin for whole number pairs
-      if (rounded === 0 && quantity > 0) {
-        console.log(`   → Adjusting to minimum 1 coin (was ${rounded})`);
-        return 1;
-      }
-      
-      return rounded;
-    }
-
-    // Check if pair has specific decimal precision
-    if (decimalPairs[pair] !== undefined) {
-      const decimals = decimalPairs[pair];
-      const rounded = parseFloat(quantity.toFixed(decimals));
-      console.log(`   → ${decimals} decimal places: ${quantity} → ${rounded}`);
-      return rounded;
-    }
-
-    // Default: round to 8 decimal places (most crypto precision)
-    const rounded = parseFloat(quantity.toFixed(8));
-    console.log(`   → Default 8 decimals: ${quantity} → ${rounded}`);
-    return rounded;
-  }
 }
 
 export const copyTradingService = new CopyTradingService();
