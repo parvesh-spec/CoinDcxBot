@@ -364,7 +364,7 @@ export default function CopyTradingTradesPage() {
                       </div>
                       
                       {/* Trade Details Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div className="space-y-1">
                           <div className="text-muted-foreground">Original Quantity</div>
                           <div className="font-medium">{trade.originalQuantity}</div>
@@ -374,6 +374,22 @@ export default function CopyTradingTradesPage() {
                           <div className="font-medium">
                             {trade.executedQuantity || (
                               <span className="text-yellow-600">Pending</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">Stop Loss</div>
+                          <div className="font-medium text-red-600">
+                            {trade.stopLossPrice ? `$${trade.stopLossPrice}` : (
+                              <span className="text-gray-400">Not set</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">Target</div>
+                          <div className="font-medium text-green-600">
+                            {trade.takeProfitPrice ? `$${trade.takeProfitPrice}` : (
+                              <span className="text-gray-400">Not set</span>
                             )}
                           </div>
                         </div>
