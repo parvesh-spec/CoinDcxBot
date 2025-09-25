@@ -1283,6 +1283,8 @@ export class DatabaseStorage implements IStorage {
         executedPrice: copyTrades.executedPrice,
         originalQuantity: copyTrades.originalQuantity,
         executedQuantity: copyTrades.executedQuantity,
+        stopLossPrice: copyTrades.stopLossPrice,
+        takeProfitPrice: copyTrades.takeProfitPrice,
         leverage: copyTrades.leverage,
         status: copyTrades.status,
         executionTime: copyTrades.executionTime,

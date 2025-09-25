@@ -425,6 +425,12 @@ export class CopyTradingService {
       console.log(`   - Input Stop Loss: ${stopLossPrice || 'Not set'} USDT`);
       console.log(`   - ✅ STEP 1 - Calculated Quantity: ${calculatedQuantity} coins`);
       console.log(`   - ✅ STEP 2 - Calculated Leverage: ${calculatedLeverage}x`);
+      
+      // Round quantity based on trading pair requirements
+      const originalQuantity = calculatedQuantity;
+      calculatedQuantity = this.roundQuantityForPair(copyTrade.pair, calculatedQuantity);
+      console.log(`   - 🔄 Rounded Quantity: ${originalQuantity} → ${calculatedQuantity} coins`);
+      
       console.log(`   - Notional Value: ${(calculatedQuantity * entryPrice).toFixed(2)} USDT`);
       console.log(`   - Required Margin: ${((calculatedQuantity * entryPrice) / calculatedLeverage).toFixed(2)} USDT`);
       
@@ -687,6 +693,49 @@ export class CopyTradingService {
         successRate: 0
       };
     }
+  }
+
+  /**
+   * Round quantity based on trading pair requirements
+   */
+  private roundQuantityForPair(pair: string, quantity: number): number {
+    // Define pairs that require whole numbers (no decimal places)
+    const wholeNumberPairs = [
+      'AVAX_USDT', 'HIPPO_USDT', 'BNB_USDT', 'SOL_USDT', 'ADA_USDT',
+      'DOT_USDT', 'MATIC_USDT', 'LINK_USDT', 'UNI_USDT', 'ICP_USDT',
+      'ATOM_USDT', 'VET_USDT', 'FIL_USDT', 'TRX_USDT', 'ETC_USDT'
+    ];
+
+    // Define pairs that allow specific decimal places
+    const decimalPairs: { [key: string]: number } = {
+      'BTC_USDT': 6,     // 6 decimal places
+      'ETH_USDT': 5,     // 5 decimal places
+      'XRP_USDT': 2,     // 2 decimal places
+      'LTC_USDT': 4,     // 4 decimal places
+      'BCH_USDT': 4,     // 4 decimal places
+    };
+
+    console.log(`🔄 Rounding quantity for pair ${pair}: ${quantity}`);
+
+    // Check if pair requires whole numbers
+    if (wholeNumberPairs.includes(pair)) {
+      const rounded = Math.round(quantity);
+      console.log(`   → Whole number required: ${quantity} → ${rounded}`);
+      return rounded;
+    }
+
+    // Check if pair has specific decimal precision
+    if (decimalPairs[pair] !== undefined) {
+      const decimals = decimalPairs[pair];
+      const rounded = parseFloat(quantity.toFixed(decimals));
+      console.log(`   → ${decimals} decimal places: ${quantity} → ${rounded}`);
+      return rounded;
+    }
+
+    // Default: round to 8 decimal places (most crypto precision)
+    const rounded = parseFloat(quantity.toFixed(8));
+    console.log(`   → Default 8 decimals: ${quantity} → ${rounded}`);
+    return rounded;
   }
 }
 
