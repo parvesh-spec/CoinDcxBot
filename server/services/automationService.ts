@@ -113,10 +113,27 @@ export class AutomationService {
       
       // Find all active automations for this trigger type
       const automations = await storage.getAutomations();
-      const matchingAutomations = automations.filter(automation => 
-        automation.isActive && 
-        automation.triggerType === trigger
-      );
+      const matchingAutomations = automations.filter(automation => {
+        // Basic criteria: must be active and have matching trigger type
+        if (!automation.isActive || automation.triggerType !== trigger) {
+          return false;
+        }
+        
+        // Apply source filter if specified
+        if (automation.sourceFilter && automation.sourceFilter !== trade.source) {
+          console.log(`🔍 Automation "${automation.name}" filtered out - source mismatch. Required: ${automation.sourceFilter}, Trade: ${trade.source}`);
+          return false;
+        }
+        
+        // Apply signal type filter if specified
+        if (automation.signalTypeFilter && automation.signalTypeFilter !== trade.signalType) {
+          console.log(`🔍 Automation "${automation.name}" filtered out - signal type mismatch. Required: ${automation.signalTypeFilter}, Trade: ${trade.signalType}`);
+          return false;
+        }
+        
+        console.log(`✅ Automation "${automation.name}" matches all filter criteria`);
+        return true;
+      });
       
       console.log(`📋 Found ${matchingAutomations.length} matching automations for ${trigger}`);
       
