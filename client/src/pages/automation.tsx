@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Settings, Send, AlertCircle, Eye, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Settings, Send, AlertCircle, Eye, Trash2, ToggleLeft, ToggleRight, Edit2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Automation, SentMessage } from "@shared/schema";
@@ -52,6 +52,7 @@ interface SentMessageWithRelations extends SentMessage {
 export default function AutomationPage() {
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editAutomation, setEditAutomation] = useState<AutomationWithRelations | null>(null);
   const [viewMessage, setViewMessage] = useState<{text: string, title: string} | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
 
@@ -131,6 +132,10 @@ export default function AutomationPage() {
       automationId: automation.id,
       isActive: !automation.isActive
     });
+  };
+
+  const handleEditAutomation = (automation: AutomationWithRelations) => {
+    setEditAutomation(automation);
   };
 
   const getTriggerBadge = (triggerType: string) => {
@@ -269,6 +274,16 @@ export default function AutomationPage() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => handleEditAutomation(automation)}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
+                      data-testid={`button-edit-automation-${automation.id}`}
+                      title="Edit automation"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDeleteAutomation(automation)}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       data-testid={`button-delete-automation-${automation.id}`}
@@ -374,6 +389,13 @@ export default function AutomationPage() {
       <AddAutomationModal 
         isOpen={showAddModal} 
         onClose={() => setShowAddModal(false)} 
+      />
+
+      {/* Edit Automation Modal */}
+      <AddAutomationModal 
+        isOpen={!!editAutomation} 
+        onClose={() => setEditAutomation(null)}
+        editAutomation={editAutomation}
       />
       
       {/* View Message Dialog */}

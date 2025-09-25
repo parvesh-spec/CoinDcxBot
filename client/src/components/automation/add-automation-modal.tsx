@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,6 +35,7 @@ import { Loader2 } from "lucide-react";
 interface AddAutomationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editAutomation?: any; // Will be typed properly when passed from parent
 }
 
 // Form schema with validation - create our own since insertAutomationSchema uses .refine()
@@ -55,7 +56,7 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-export default function AddAutomationModal({ isOpen, onClose }: AddAutomationModalProps) {
+export default function AddAutomationModal({ isOpen, onClose, editAutomation }: AddAutomationModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -70,9 +71,23 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
     enabled: isOpen,
   });
 
+  // Determine if this is edit mode
+  const isEditMode = !!editAutomation;
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: isEditMode ? {
+      name: editAutomation.name || "",
+      channelId: editAutomation.channelId || "",
+      templateId: editAutomation.templateId || "",
+      automationType: editAutomation.automationType || "trade",
+      triggerType: editAutomation.triggerType || "trade_registered",
+      sourceFilter: editAutomation.sourceFilter || "all",
+      signalTypeFilter: editAutomation.signalTypeFilter || "all",
+      scheduledTime: editAutomation.scheduledTime || "",
+      scheduledDays: editAutomation.scheduledDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      isActive: editAutomation.isActive ?? true,
+    } : {
       name: "",
       channelId: "",
       templateId: "",
@@ -86,24 +101,59 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
     },
   });
 
-  const createMutation = useMutation({
+  // Reset form when editAutomation changes
+  useEffect(() => {
+    if (isEditMode && editAutomation) {
+      form.reset({
+        name: editAutomation.name || "",
+        channelId: editAutomation.channelId || "",
+        templateId: editAutomation.templateId || "",
+        automationType: editAutomation.automationType || "trade",
+        triggerType: editAutomation.triggerType || "trade_registered",
+        sourceFilter: editAutomation.sourceFilter || "all",
+        signalTypeFilter: editAutomation.signalTypeFilter || "all",
+        scheduledTime: editAutomation.scheduledTime || "",
+        scheduledDays: editAutomation.scheduledDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        isActive: editAutomation.isActive ?? true,
+      });
+    } else if (!isEditMode) {
+      form.reset({
+        name: "",
+        channelId: "",
+        templateId: "",
+        automationType: "trade",
+        triggerType: "trade_registered",
+        sourceFilter: "all",
+        signalTypeFilter: "all",
+        scheduledTime: "",
+        scheduledDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        isActive: true,
+      });
+    }
+  }, [editAutomation, isEditMode, form]);
+
+  const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      return await apiRequest("POST", "/api/automations", data);
+      if (isEditMode && editAutomation) {
+        return await apiRequest("PUT", `/api/automations/${editAutomation.id}`, data);
+      } else {
+        return await apiRequest("POST", "/api/automations", data);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/automations"] });
       toast({
         title: "Success",
-        description: "Automation created successfully",
+        description: isEditMode ? "Automation updated successfully" : "Automation created successfully",
       });
       form.reset();
       onClose();
     },
     onError: (error) => {
-      console.error("Error creating automation:", error);
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} automation:`, error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create automation",
+        description: error instanceof Error ? error.message : `Failed to ${isEditMode ? 'update' : 'create'} automation`,
         variant: "destructive",
       });
     },
@@ -131,7 +181,7 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
       console.log(`Time conversion: ${data.scheduledTime} IST → ${processedData.scheduledTime} UTC`);
     }
     
-    createMutation.mutate(processedData);
+    saveMutation.mutate(processedData);
   };
 
   const handleClose = () => {
@@ -162,15 +212,18 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
   const activeChannels = useMemo(() => channels.filter(channel => channel.isActive), [channels]);
   const activeTemplates = useMemo(() => templates.filter(template => template.isActive), [templates]);
   
-  const isSubmitDisabled = channelsLoading || templatesLoading || activeChannels.length === 0 || activeTemplates.length === 0 || createMutation.isPending;
+  const isSubmitDisabled = channelsLoading || templatesLoading || activeChannels.length === 0 || activeTemplates.length === 0 || saveMutation.isPending;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="sm:max-w-md" data-testid="modal-add-automation">
         <DialogHeader>
-          <DialogTitle>Add New Automation</DialogTitle>
+          <DialogTitle>{isEditMode ? "Edit Automation" : "Add New Automation"}</DialogTitle>
           <DialogDescription>
-            Create a new automation rule to send Telegram messages automatically based on trade events.
+            {isEditMode 
+              ? "Update your automation rule for sending Telegram messages automatically."
+              : "Create a new automation rule to send Telegram messages automatically based on trade events."
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -461,7 +514,7 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
                 type="button"
                 variant="outline"
                 onClick={handleClose}
-                disabled={createMutation.isPending}
+                disabled={saveMutation.isPending}
                 data-testid="button-cancel"
               >
                 Cancel
@@ -471,13 +524,13 @@ export default function AddAutomationModal({ isOpen, onClose }: AddAutomationMod
                 disabled={isSubmitDisabled}
                 data-testid="button-create-automation"
               >
-                {createMutation.isPending ? (
+                {saveMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {isEditMode ? "Updating..." : "Creating..."}
                   </>
                 ) : (
-                  "Create Automation"
+                  isEditMode ? "Update Automation" : "Create Automation"
                 )}
               </Button>
             </div>
