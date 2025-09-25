@@ -24,7 +24,7 @@ const createTradeSchema = z.object({
   takeProfit2: z.string().optional(),
   takeProfit3: z.string().optional(),
   stopLossTrigger: z.string().optional(),
-  signalType: z.string().min(1, "Signal type is required"),
+  signalType: z.enum(['intraday', 'swing', 'scalp', 'positional'], { required_error: "Signal type is required" }),
   notes: z.string().optional(),
 });
 
@@ -42,7 +42,7 @@ export default function CreateTradePage({ onBack }: CreateTradePageProps) {
     resolver: zodResolver(createTradeSchema),
     defaultValues: {
       type: 'buy',
-      signalType: 'manual',
+      signalType: 'intraday',
       leverage: 1,
     },
   });
@@ -207,13 +207,19 @@ export default function CreateTradePage({ onBack }: CreateTradePageProps) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Signal Type *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="e.g., intraday, swing, scalping"
-                            data-testid="input-signal-type"
-                            {...field} 
-                          />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-signal-type">
+                              <SelectValue placeholder="Select signal type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="intraday">Intraday</SelectItem>
+                            <SelectItem value="swing">Swing</SelectItem>
+                            <SelectItem value="scalp">Scalp</SelectItem>
+                            <SelectItem value="positional">Positional</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

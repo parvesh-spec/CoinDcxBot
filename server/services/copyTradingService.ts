@@ -755,6 +755,13 @@ export class CopyTradingService {
     if (wholeNumberPairs.includes(pair)) {
       const rounded = Math.round(quantity);
       console.log(`   → Whole number required: ${quantity} → ${rounded}`);
+      
+      // Ensure minimum 1 coin for whole number pairs
+      if (rounded === 0 && quantity > 0) {
+        console.log(`   → Adjusting to minimum 1 coin (was ${rounded})`);
+        return 1;
+      }
+      
       return rounded;
     }
 
