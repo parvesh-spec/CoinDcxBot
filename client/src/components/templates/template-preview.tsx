@@ -25,6 +25,7 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
       safebookPrice: "$4,325.00",
       timestamp: "Dec 15, 2024 14:32",
       profitLoss: "+$5,234",
+      signalType: "Intraday",
     };
 
     // Replace all variables with sample data
@@ -52,7 +53,8 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
       safebookPrice: "4325.00",
       timestamp: "Dec15-2024",
       tradeId: "TXN-12345",
-      profitLoss: "5234"
+      profitLoss: "5234",
+      signalType: "Intraday"
     };
 
     return buttons.map((row, rowIndex) => (

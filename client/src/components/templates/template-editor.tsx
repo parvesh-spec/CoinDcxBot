@@ -296,7 +296,7 @@ Stay tuned for more updates.
                 {[
                   "{pair}", "{price}", "{type}", "{leverage}", "{stopLoss}", 
                   "{takeProfit1}", "{takeProfit2}", "{takeProfit3}", 
-                  "{safebookPrice}", "{timestamp}", "{profitLoss}"
+                  "{safebookPrice}", "{timestamp}", "{profitLoss}", "{signalType}"
                 ].map(variable => (
                   <span 
                     key={variable}
