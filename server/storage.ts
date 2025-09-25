@@ -1066,6 +1066,8 @@ export class DatabaseStorage implements IStorage {
     if (userData.tradeFund !== undefined) dbData.tradeFund = userData.tradeFund.toString();
     if (userData.maxTradesPerDay !== undefined) dbData.maxTradesPerDay = userData.maxTradesPerDay || null;
     if (userData.isActive !== undefined) dbData.isActive = userData.isActive;
+    if (userData.sourceFilter !== undefined) dbData.sourceFilter = userData.sourceFilter;
+    if (userData.signalTypeFilter !== undefined) dbData.signalTypeFilter = userData.signalTypeFilter;
     if (userData.notes !== undefined) dbData.notes = userData.notes;
     
     // Handle API credentials - only update if both are provided
