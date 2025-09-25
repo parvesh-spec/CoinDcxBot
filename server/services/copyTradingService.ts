@@ -195,6 +195,8 @@ export class CopyTradingService {
       executedPrice: null,
       originalQuantity: originalTrade.total, // Store original quantity for reference
       executedQuantity: adjustedQuantity, // Adjusted quantity based on risk %
+      stopLossPrice: originalTrade.stopLossTrigger || null, // Exact stop loss from original trade
+      takeProfitPrice: originalTrade.takeProfitTrigger || null, // Exact take profit from original trade
       leverage: originalTrade.leverage.toString(),
       status: 'pending',
       executionTime: null,
