@@ -6,6 +6,7 @@ import { tradeMonitor } from "./services/tradeMonitor";
 import { telegramService } from "./services/telegram";
 import { coindcxService, CoinDCXService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
+import { copyTradingService } from "./services/copyTradingService";
 import { sendApplicationConfirmationEmail } from "./services/email";
 import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, insertTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema, sendUserAccessOtpSchema, verifyUserAccessOtpSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
@@ -179,6 +180,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error(`⚠️ Failed to trigger automations for trade ${newTrade.id}:`, error);
         // Don't fail the trade creation if automation fails
+      }
+      
+      // Process copy trading for the new trade
+      try {
+        await copyTradingService.processNewTradeForCopyTrading(newTrade);
+        console.log(`📋 Copy trading processed for trade: ${newTrade.id}`);
+      } catch (error) {
+        console.error(`⚠️ Failed to process copy trading for trade ${newTrade.id}:`, error);
+        // Don't fail the trade creation if copy trading fails
       }
       
       res.status(201).json(newTrade);
