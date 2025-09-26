@@ -824,52 +824,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Use telegramService for proper template handling
         
-        // Create mock trade data for template testing
-        const mockTrade = {
-          id: 'test-trade-123',
-          pair: 'BTC-USDT',
-          price: '45,250.50',
-          type: 'BUY',
-          leverage: '10x',
-          stopLoss: '42,000.00',
-          takeProfit1: '47,000.00',
-          takeProfit2: '48,500.00',
-          takeProfit3: '50,000.00',
-          safebookPrice: '46,000.00',
-          timestamp: new Date().toLocaleString('en-GB', { 
-            timeZone: 'Asia/Kolkata',
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          profitLoss: '+2.5%',
-          quantity: '0.1',
-          tradeId: 'TXN-TEST-123',
-          signalType: 'Intraday'
-        };
+        // Create mock data based on template type
+        let variables: any = {};
+        
+        if (template.type === 'research_report') {
+          // Mock research report data for testing
+          const mockResearchData = {
+            pair: 'BTC-USDT',
+            supportLevel: '42,500.00',
+            resistance: '48,000.00',
+            summary: 'Strong bullish momentum with potential breakout above resistance. Support levels holding well.',
+            upsideTarget1: '50,000.00',
+            upsideTarget2: '52,500.00',
+            downsideTarget1: '40,000.00',
+            downsideTarget2: '38,500.00',
+            breakoutPossibility: 'High - Volume surge indicates strong buying interest',
+            upsidePercentage: '17.6',
+            downsidePercentage: '6.0',
+            imageUrl: '/images/btc-analysis.png',
+            timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+            reportId: 'RR-TEST-123'
+          };
+          
+          variables = {
+            pair: mockResearchData.pair,
+            supportLevel: mockResearchData.supportLevel,
+            resistance: mockResearchData.resistance,
+            summary: mockResearchData.summary,
+            upsideTarget1: mockResearchData.upsideTarget1,
+            upsideTarget2: mockResearchData.upsideTarget2,
+            downsideTarget1: mockResearchData.downsideTarget1,
+            downsideTarget2: mockResearchData.downsideTarget2,
+            breakoutPossibility: mockResearchData.breakoutPossibility,
+            upsidePercentage: mockResearchData.upsidePercentage + '%',
+            downsidePercentage: mockResearchData.downsidePercentage + '%',
+            imageUrl: mockResearchData.imageUrl,
+            timestamp: mockResearchData.timestamp,
+            reportId: mockResearchData.reportId
+          };
+        } else {
+          // Mock trade data for template testing
+          const mockTrade = {
+            id: 'test-trade-123',
+            pair: 'BTC-USDT',
+            price: '45,250.50',
+            type: 'BUY',
+            leverage: '10x',
+            stopLoss: '42,000.00',
+            takeProfit1: '47,000.00',
+            takeProfit2: '48,500.00',
+            takeProfit3: '50,000.00',
+            safebookPrice: '46,000.00',
+            timestamp: new Date().toLocaleString('en-GB', { 
+              timeZone: 'Asia/Kolkata',
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            profitLoss: '+2.5%',
+            quantity: '0.1',
+            tradeId: 'TXN-TEST-123',
+            signalType: 'Intraday'
+          };
+
+          variables = {
+            pair: mockTrade.pair,
+            price: mockTrade.price,
+            type: mockTrade.type,
+            leverage: mockTrade.leverage,
+            stopLoss: mockTrade.stopLoss,
+            takeProfit1: mockTrade.takeProfit1,
+            takeProfit2: mockTrade.takeProfit2,
+            takeProfit3: mockTrade.takeProfit3,
+            safebookPrice: mockTrade.safebookPrice,
+            timestamp: mockTrade.timestamp,
+            profitLoss: mockTrade.profitLoss,
+            quantity: mockTrade.quantity,
+            tradeId: mockTrade.tradeId,
+            signalType: mockTrade.signalType
+          };
+        }
 
         // Process template with mock data
         let processedMessage = template.template;
-        
-        // Replace variables in template
-        const variables = {
-          pair: mockTrade.pair,
-          price: mockTrade.price,
-          type: mockTrade.type,
-          leverage: mockTrade.leverage,
-          stopLoss: mockTrade.stopLoss,
-          takeProfit1: mockTrade.takeProfit1,
-          takeProfit2: mockTrade.takeProfit2,
-          takeProfit3: mockTrade.takeProfit3,
-          safebookPrice: mockTrade.safebookPrice,
-          timestamp: mockTrade.timestamp,
-          profitLoss: mockTrade.profitLoss,
-          quantity: mockTrade.quantity,
-          tradeId: mockTrade.tradeId,
-          signalType: mockTrade.signalType
-        };
 
         for (const [key, value] of Object.entries(variables)) {
           const placeholder = `{${key}}`;
