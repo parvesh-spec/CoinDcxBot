@@ -2,7 +2,8 @@ import OpenAI from "openai";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY 
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000 // 30 second timeout for faster responses
 });
 
 export interface EnhancementRequest {
@@ -45,7 +46,11 @@ export class OpenAIService {
             content: prompt
           }
         ],
-        response_format: { type: "json_object" }
+        response_format: { type: "json_object" },
+        max_tokens: 500, // Limit response length for faster processing
+        temperature: 0.3, // Lower temperature for more focused responses
+        presence_penalty: 0, // Reduce computational overhead
+        frequency_penalty: 0 // Reduce computational overhead
       });
 
       const result = JSON.parse(response.choices[0].message.content || "{}");
