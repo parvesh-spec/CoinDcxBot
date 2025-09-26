@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Upload, X, FileText, Save, Loader2, Wand2, Languages, Zap, Sparkles } from "lucide-react";
 import ObjectUploader from "@/components/ui/object-uploader";
+import { ResearchReport } from "@shared/schema"; // Import correct type
 
 // Form validation schema
 const researchReportSchema = z.object({
@@ -32,13 +33,6 @@ const researchReportSchema = z.object({
 });
 
 type ResearchReportFormData = z.infer<typeof researchReportSchema>;
-
-interface ResearchReport extends ResearchReportFormData {
-  id: string;
-  reportId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 interface ResearchReportModalProps {
   isOpen: boolean;
@@ -64,13 +58,13 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
     defaultValues: isEditMode && editReport ? {
       pair: editReport.pair || "",
       supportLevel: editReport.supportLevel || "",
-      resistance: editReport.resistance || "",
+      resistance: editReport.resistanceLevel || "", // Fix field name
       summary: editReport.summary || "",
-      upsideTarget1: editReport.upsideTarget1 || "",
-      upsideTarget2: editReport.upsideTarget2 || "",
-      downsideTarget1: editReport.downsideTarget1 || "",
-      downsideTarget2: editReport.downsideTarget2 || "",
-      breakoutDirection: editReport.breakoutDirection || "upside",
+      upsideTarget1: (editReport.scenarios as any)?.upside?.target1 || "", // Extract from scenarios
+      upsideTarget2: (editReport.scenarios as any)?.upside?.target2 || "", // Extract from scenarios
+      downsideTarget1: (editReport.scenarios as any)?.downside?.target1 || "", // Extract from scenarios
+      downsideTarget2: (editReport.scenarios as any)?.downside?.target2 || "", // Extract from scenarios
+      breakoutDirection: (editReport.breakoutDirection as any) || "upside",
       imageUrl: editReport.imageUrl || "",
     } : {
       pair: "",
@@ -92,13 +86,13 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
       form.reset({
         pair: editReport.pair || "",
         supportLevel: editReport.supportLevel || "",
-        resistance: editReport.resistance || "",
+        resistance: editReport.resistanceLevel || "", // Fix field name
         summary: editReport.summary || "",
-        upsideTarget1: editReport.upsideTarget1 || "",
-        upsideTarget2: editReport.upsideTarget2 || "",
-        downsideTarget1: editReport.downsideTarget1 || "",
-        downsideTarget2: editReport.downsideTarget2 || "",
-        breakoutDirection: editReport.breakoutDirection || "upside",
+        upsideTarget1: (editReport.scenarios as any)?.upside?.target1 || "", // Extract from scenarios
+        upsideTarget2: (editReport.scenarios as any)?.upside?.target2 || "", // Extract from scenarios
+        downsideTarget1: (editReport.scenarios as any)?.downside?.target1 || "", // Extract from scenarios
+        downsideTarget2: (editReport.scenarios as any)?.downside?.target2 || "", // Extract from scenarios
+        breakoutDirection: (editReport.breakoutDirection as any) || "upside",
         imageUrl: editReport.imageUrl || "",
       });
     } else if (!isEditMode) {

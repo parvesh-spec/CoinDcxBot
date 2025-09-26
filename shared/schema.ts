@@ -132,6 +132,7 @@ export const sentMessages = pgTable("sent_messages", {
 // Research Reports table
 export const researchReports = pgTable("research_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pair: varchar("pair").notNull(), // Trading pair e.g., "BTC-USDT"
   supportLevel: text("support_level").notNull(), // e.g., "9.03800 to 9.03847"
   resistanceLevel: text("resistance_level").notNull(), // Same format as support level
   summary: text("summary").notNull(), // Brief research summary
