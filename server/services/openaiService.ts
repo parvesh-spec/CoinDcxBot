@@ -102,8 +102,8 @@ export class OpenAIService {
    */
   private static getSystemPrompt(language: 'english' | 'hinglish', level: 'low' | 'medium'): string {
     const languageInstruction = language === 'hinglish' 
-      ? "You MUST respond in Hinglish (Hindi + English mix) style. Use Hindi words mixed with English naturally like Indian traders speak."
-      : "You MUST respond in clear, professional English only.";
+      ? "CRITICAL: You MUST respond ONLY in Hinglish (Hindi + English mix). Use Hindi words mixed with English naturally. NEVER use pure English. Always mix Hindi and English words."
+      : "CRITICAL: You MUST respond ONLY in pure English. NEVER use Hindi words. Use only English language throughout the response.";
     
     if (level === 'low') {
       // LOW LEVEL: Grammar correction only
@@ -159,7 +159,7 @@ IMPORTANT FOR LOW LEVEL:
 - Do NOT add new information or make it more professional
 - Do NOT expand or elaborate the content
 - Keep the same length and casual/formal style as original
-- If it's in ${languageLabel}, respond in ${languageLabel}
+- CRITICAL: Your response MUST be in ${languageLabel} language only. Do not mix languages.
 
 Only correct what's grammatically wrong, nothing else.`;
     } else {
@@ -177,7 +177,7 @@ IMPORTANT FOR MEDIUM LEVEL:
 - You may rearrange sentences for better flow
 - Use only information that's provided or clearly implied in the original
 - Make it more comprehensive and actionable while staying concise
-- If it's in ${languageLabel}, respond in ${languageLabel}
+- CRITICAL: Your response MUST be in ${languageLabel} language only. Do not mix languages.
 - Do NOT add new facts, data, or information not mentioned in the original
 
 Transform the rough text into a polished version using existing content only.`;
