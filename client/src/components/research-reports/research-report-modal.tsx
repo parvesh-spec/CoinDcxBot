@@ -194,8 +194,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
     setShowLanguageModal(false);
 
     try {
-      const response = await apiRequest({
-        url: '/api/enhance-text',
+      const response = await apiRequest('/api/enhance-text', {
         method: 'POST',
         body: {
           text: currentText,
