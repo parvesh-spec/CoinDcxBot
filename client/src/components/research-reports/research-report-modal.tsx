@@ -194,16 +194,15 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
     setShowLanguageModal(false);
 
     try {
-      const response = await apiRequest('/api/enhance-text', {
-        method: 'POST',
-        body: {
-          text: currentText,
-          language: language
-        }
+      const response = await apiRequest('POST', '/api/enhance-text', {
+        text: currentText,
+        language: language
       });
 
-      if (response.enhancedText) {
-        form.setValue('summary', response.enhancedText);
+      const data = await response.json();
+      
+      if (data.enhancedText) {
+        form.setValue('summary', data.enhancedText);
         toast({
           title: "✨ Text Enhanced!",
           description: `Analysis enhanced in ${language === 'hinglish' ? 'Hinglish' : 'English'} using AI`,
