@@ -76,39 +76,12 @@ export class OpenAIService {
    * Create system prompt based on language preference
    */
   private static getSystemPrompt(language: 'english' | 'hinglish', level: 'low' | 'medium'): string {
-    const baseLanguageRules = language === 'hinglish' 
-      ? "Use natural Hinglish mixing (Hindi + English)" 
-      : "Use clear, professional English";
-    
     if (level === 'low') {
       // LOW LEVEL: Grammar correction only
-      return `You are a grammar correction assistant for ${language === 'hinglish' ? 'Hinglish (Hindi + English mix)' : 'English'} text. 
-      Your ONLY task is to fix grammar and improve readability while keeping the EXACT same meaning and emotion.
-      
-      Guidelines:
-      - Fix grammar errors and typos only
-      - Maintain the EXACT same emotion, tone, and message
-      - Keep the same length - do NOT add new information
-      - ${baseLanguageRules}
-      - DO NOT expand or elaborate the content
-      - Only correct what's grammatically wrong
-      
-      Respond in JSON format: {"enhancedText": "corrected text here"}`;
+      return `Fix grammar errors in ${language} text. Keep same meaning and length. Return JSON: {"enhancedText": "corrected text"}`;
     } else {
-      // MEDIUM LEVEL: Light enhancement with existing information
-      return `You are a text enhancement assistant for ${language === 'hinglish' ? 'Hinglish (Hindi + English mix)' : 'English'} text.
-      Your task is to improve the text while keeping it concise and using ONLY the information provided.
-      
-      Guidelines:
-      - Fix grammar, spelling, and sentence structure
-      - Improve clarity and flow using existing information only
-      - Keep the EXACT same emotion, tone, and core message
-      - ${baseLanguageRules}
-      - DO NOT add new facts or information not implied in the original
-      - Make it slightly more professional but not lengthy
-      - Enhance readability while preserving original meaning
-      
-      Respond in JSON format: {"enhancedText": "enhanced text here"}`;
+      // MEDIUM LEVEL: Light enhancement  
+      return `Improve ${language} text - fix grammar and enhance clarity. Keep same meaning, don't add new info. Return JSON: {"enhancedText": "enhanced text"}`;
     }
   }
 
@@ -116,50 +89,10 @@ export class OpenAIService {
    * Create enhancement prompt
    */
   private static createEnhancementPrompt(text: string, language: 'english' | 'hinglish', level: 'low' | 'medium'): string {
-    const languageLabel = language === 'hinglish' ? 'Hinglish' : 'English';
-    
     if (level === 'low') {
-      // LOW LEVEL: Grammar correction only
-      const instruction = `Fix grammar errors and typos in this ${languageLabel} text:`;
-      
-      return `${instruction}
-
-Original text:
-"${text}"
-
-Please correct ONLY the following:
-1. Grammar mistakes
-2. Spelling errors  
-3. Sentence structure issues
-4. Basic readability improvements
-
-IMPORTANT:
-- Keep the EXACT same meaning and emotion
-- Do NOT add new content or information
-- Do NOT make it longer
-- Do NOT change the overall message
-- Only fix what's grammatically wrong`;
+      return `Text: "${text}"\n\nFix grammar and typos only. Keep same meaning.`;
     } else {
-      // MEDIUM LEVEL: Light enhancement
-      const instruction = `Enhance this ${languageLabel} text while using only existing information:`;
-      
-      return `${instruction}
-
-Original text:
-"${text}"
-
-Please improve the following while keeping it concise:
-1. Grammar, spelling, and sentence structure
-2. Clarity and flow using existing information only
-3. Professional tone while maintaining emotion
-4. Readability without changing meaning
-
-IMPORTANT:
-- Keep the SAME core message and emotion
-- Do NOT add new facts or information
-- Use only what's provided or implied in the original
-- Make it better but not lengthy
-- Preserve the original meaning and intent`;
+      return `Text: "${text}"\n\nImprove grammar and clarity. Use only existing information.`;
     }
   }
 }
