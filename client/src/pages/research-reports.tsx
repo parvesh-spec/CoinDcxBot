@@ -252,100 +252,66 @@ export default function ResearchReports() {
               </div>
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-3">
               {paginatedReports.map((report: ResearchReport) => (
-                <Card key={report.id} className="relative hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="text-sm font-medium">
-                        {report.pair}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(report.createdAt), 'MMM dd, yyyy')}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-semibold text-sm text-muted-foreground">
-                        ID: {report.reportId}
-                      </h3>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Price Levels */}
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div className="space-y-1">
-                        <p className="font-medium text-muted-foreground">Support</p>
-                        <p className="font-semibold text-green-600 dark:text-green-400">
-                          ${Number(report.supportLevel).toFixed(4)}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="font-medium text-muted-foreground">Resistance</p>
-                        <p className="font-semibold text-red-600 dark:text-red-400">
-                          ${Number(report.resistance).toFixed(4)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Breakout Direction */}
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground font-medium">Breakout Direction</span>
-                      <span className={`font-semibold px-2 py-1 rounded text-xs ${
-                        report.breakoutDirection === 'upside' 
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                      }`}>
-                        {report.breakoutDirection === 'upside' ? '📈 Upside' : '📉 Downside'}
-                      </span>
-                    </div>
-
-                    {/* Summary */}
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground font-medium">Analysis Summary</p>
-                      <p className="text-sm text-foreground line-clamp-3">
-                        {report.summary}
-                      </p>
-                    </div>
-
-                    {/* Image indicator */}
+                <div key={report.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                  {/* Left side - Report info in one line */}
+                  <div className="flex items-center space-x-4 flex-1">
+                    <Badge variant="secondary" className="text-xs font-medium">
+                      {report.pair}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(report.createdAt), 'MMM dd, yyyy')}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      S: {report.supportLevel}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      R: {report.resistanceLevel}
+                    </span>
+                    <span className={`text-xs font-medium px-2 py-1 rounded ${
+                      report.breakoutDirection === 'upside' 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                    }`}>
+                      {report.breakoutDirection === 'upside' ? '📈' : '📉'}
+                    </span>
+                    <span className="text-sm truncate max-w-xs">
+                      {report.summary}
+                    </span>
                     {report.imageUrl && (
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <i className="fas fa-image mr-1" />
-                        Chart attached
-                      </div>
+                      <span className="text-xs text-blue-500">📊</span>
                     )}
+                  </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 text-xs"
-                        data-testid={`button-view-report-${report.id}`}
-                        onClick={() => {
-                          setEditingReport(report);
-                          setIsModalOpen(true);
-                        }}
-                      >
-                        <i className="fas fa-eye mr-1" />
-                        View
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 text-xs"
-                        onClick={() => {
-                          setEditingReport(report);
-                          setIsModalOpen(true);
-                        }}
-                        data-testid={`button-edit-report-${report.id}`}
-                      >
-                        <i className="fas fa-edit mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                  {/* Right side - Actions */}
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-xs px-3"
+                      data-testid={`button-view-report-${report.id}`}
+                      onClick={() => {
+                        setEditingReport(report);
+                        setIsModalOpen(true);
+                      }}
+                    >
+                      👁️ View
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-xs px-3"
+                      onClick={() => {
+                        setEditingReport(report);
+                        setIsModalOpen(true);
+                      }}
+                      data-testid={`button-edit-report-${report.id}`}
+                    >
+                      ✏️ Edit
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           )}
