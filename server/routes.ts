@@ -11,6 +11,7 @@ import { sendApplicationConfirmationEmail } from "./services/email";
 import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, insertTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema, sendUserAccessOtpSchema, verifyUserAccessOtpSchema, insertResearchReportSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { safeDecrypt } from "./utils/encryption";
+import { OpenAIService } from "./services/openaiService";
 
 // API Key Authentication Middleware
 async function authenticateApiKey(req: any, res: any, next: any) {
@@ -2307,6 +2308,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting research report:", error);
       res.status(500).json({ message: "Failed to delete research report" });
+    }
+  });
+
+  // AI Text Enhancement API
+  app.post('/api/enhance-text', isAuthenticated, async (req, res) => {
+    try {
+      const { text, language = 'english' } = req.body;
+      
+      if (!text?.trim()) {
+        return res.status(400).json({ message: "Text is required for enhancement" });
+      }
+      
+      if (!['english', 'hinglish'].includes(language)) {
+        return res.status(400).json({ message: "Language must be 'english' or 'hinglish'" });
+      }
+      
+      const result = await OpenAIService.enhanceAnalysisText({
+        text: text.trim(),
+        language: language as 'english' | 'hinglish'
+      });
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error enhancing text:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to enhance text";
+      res.status(500).json({ message: errorMessage });
     }
   });
 

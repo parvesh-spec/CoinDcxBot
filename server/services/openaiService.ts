@@ -61,7 +61,8 @@ export class OpenAIService {
 
     } catch (error) {
       console.error("OpenAI Enhancement Error:", error);
-      throw new Error(`Failed to enhance text: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      throw new Error(`Failed to enhance text: ${errorMessage}`);
     }
   }
 
