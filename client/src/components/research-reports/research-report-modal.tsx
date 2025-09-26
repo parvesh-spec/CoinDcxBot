@@ -25,7 +25,6 @@ const researchReportSchema = z.object({
   upsideTarget2: z.string().min(1, "Second upside target is required"),
   downsideTarget1: z.string().min(1, "First downside target is required"),
   downsideTarget2: z.string().min(1, "Second downside target is required"),
-  breakoutPossibility: z.string().min(5, "Breakout possibility must be at least 5 characters"),
   breakoutDirection: z.enum(['upside', 'downside'], {
     errorMap: () => ({ message: "Please select breakout direction" })
   }),
@@ -65,7 +64,6 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
       upsideTarget2: editReport.upsideTarget2 || "",
       downsideTarget1: editReport.downsideTarget1 || "",
       downsideTarget2: editReport.downsideTarget2 || "",
-      breakoutPossibility: editReport.breakoutPossibility || "",
       breakoutDirection: editReport.breakoutDirection || "upside",
       imageUrl: editReport.imageUrl || "",
     } : {
@@ -77,7 +75,6 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
       upsideTarget2: "",
       downsideTarget1: "",
       downsideTarget2: "",
-      breakoutPossibility: "",
       breakoutDirection: "upside",
       imageUrl: "",
     },
@@ -95,7 +92,6 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
         upsideTarget2: editReport.upsideTarget2 || "",
         downsideTarget1: editReport.downsideTarget1 || "",
         downsideTarget2: editReport.downsideTarget2 || "",
-        breakoutPossibility: editReport.breakoutPossibility || "",
         breakoutDirection: editReport.breakoutDirection || "upside",
         imageUrl: editReport.imageUrl || "",
       });
@@ -109,7 +105,6 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
         upsideTarget2: "",
         downsideTarget1: "",
         downsideTarget2: "",
-        breakoutPossibility: "",
         breakoutDirection: "upside",
         imageUrl: "",
       });
@@ -407,24 +402,6 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="breakoutPossibility"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Breakout Possibility *</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Assess the likelihood and conditions for breakout scenarios..."
-                          className="min-h-[80px]"
-                          {...field}
-                          data-testid="textarea-breakout"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </div>
 
               {/* Image Upload */}
