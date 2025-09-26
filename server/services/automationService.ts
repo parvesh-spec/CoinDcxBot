@@ -9,7 +9,8 @@ export type AutomationTrigger =
   | 'safebook_hit'   // V2: Consistent naming with storage layer
   | 'target_1_hit'
   | 'target_2_hit'
-  | 'target_3_hit';
+  | 'target_3_hit'
+  | 'research_report_submit';
 
 export class AutomationService {
   private cronTask?: any; // Store cron task for management
@@ -107,8 +108,65 @@ export class AutomationService {
    * @param trade The trade that triggered the automation
    * @param trigger The type of trigger (trade_registered/trade_completed)
    */
-  async triggerAutomations(trade: Trade, trigger: AutomationTrigger): Promise<void> {
+  async triggerAutomations(trade: Trade, trigger: AutomationTrigger): Promise<void>;
+  
+  /**
+   * Trigger automation for research report event
+   * @param trigger The research report trigger type
+   * @param data Research report data for template variables
+   */
+  async triggerAutomations(trigger: 'research_report_submit', data: any): Promise<void>;
+  
+  async triggerAutomations(tradeOrTrigger: Trade | 'research_report_submit', triggerOrData: AutomationTrigger | any): Promise<void> {
     try {
+      // Handle research report trigger
+      if (typeof tradeOrTrigger === 'string' && tradeOrTrigger === 'research_report_submit') {
+        const trigger = tradeOrTrigger;
+        const data = triggerOrData;
+        
+        console.log(`📊 Checking automations for research report trigger: ${trigger}, pair: ${data.pair}`);
+        
+        // Find all active automations for research report trigger
+        const automations = await storage.getAutomations();
+        const matchingAutomations = automations.filter(automation => {
+          return automation.isActive && automation.triggerType === trigger;
+        });
+        
+        console.log(`📋 Found ${matchingAutomations.length} matching research report automations`);
+        
+        if (matchingAutomations.length === 0) {
+          console.log(`⚠️ No active automations found for research report trigger`);
+          return;
+        }
+        
+        // Process each matching automation with delay support
+        for (const automation of matchingAutomations) {
+          if (automation.automationType === 'research_report' && automation.delayInMinutes) {
+            // Schedule delayed message
+            const delayMs = automation.delayInMinutes * 60 * 1000;
+            console.log(`⏰ Scheduling research report message with ${automation.delayInMinutes} minutes delay`);
+            
+            setTimeout(async () => {
+              try {
+                await this.processResearchReportAutomation(automation, data);
+              } catch (error) {
+                console.error(`❌ Error processing delayed research report automation:`, error);
+              }
+            }, delayMs);
+          } else {
+            // Send immediately
+            await this.processResearchReportAutomation(automation, data);
+          }
+        }
+        
+        console.log(`✅ All research report automations processed for ${data.pair}`);
+        return;
+      }
+      
+      // Handle trade trigger (existing logic)
+      const trade = tradeOrTrigger as Trade;
+      const trigger = triggerOrData as AutomationTrigger;
+      
       console.log(`🤖 Checking automations for trigger: ${trigger}, trade: ${trade.tradeId}`);
       
       // Find all active automations for this trigger type
@@ -150,7 +208,7 @@ export class AutomationService {
       console.log(`✅ All automations processed for trade ${trade.tradeId}`);
       
     } catch (error) {
-      console.error(`❌ Error triggering automations for trade ${trade.tradeId}:`, error);
+      console.error(`❌ Error triggering automations:`, error);
     }
   }
   
@@ -963,6 +1021,152 @@ export class AutomationService {
     } catch (error) {
       console.error('❌ Error in automatic wallet balance update:', error);
     }
+  }
+  
+  /**
+   * Process research report automation - send message to channel using research template
+   */
+  private async processResearchReportAutomation(automation: Automation, data: any): Promise<void> {
+    try {
+      // Get channel and template details
+      const [channel, template] = await Promise.all([
+        storage.getTelegramChannel(automation.channelId),
+        storage.getMessageTemplate(automation.templateId)
+      ]);
+      
+      if (!channel || !channel.isActive) {
+        console.log(`⚠️ Channel not found or inactive for automation ${automation.id}`);
+        return;
+      }
+      
+      if (!template || !template.isActive) {
+        console.log(`⚠️ Template not found or inactive for automation ${automation.id}`);
+        return;
+      }
+      
+      console.log(`📊 Processing research report automation: ${automation.name} -> Channel: ${channel.name}, Template: ${template.name}`);
+      
+      // Generate message from template with research report data
+      const messageText = this.renderResearchReportTemplate(template, data);
+      
+      if (!messageText.trim()) {
+        console.log(`⚠️ Empty message generated for research report automation ${automation.id}, skipping`);
+        return;
+      }
+      
+      // Handle image URL if present in data
+      let shouldTryPhoto = false;
+      let absoluteImageUrl: string | null = null;
+      
+      if (data.imageUrl && data.imageUrl.trim()) {
+        absoluteImageUrl = this.convertToAbsoluteUrl(data.imageUrl.trim());
+        shouldTryPhoto = !!absoluteImageUrl;
+      }
+      
+      // Send message to Telegram
+      let sendResult: any = null;
+      let finalStatus = 'failed';
+      let errorMessage = '';
+      
+      try {
+        if (shouldTryPhoto && absoluteImageUrl) {
+          // Try to send as photo with caption
+          console.log(`📷 Sending research report as photo with caption to ${channel.name}`);
+          sendResult = await telegramService.sendMessage({
+            channelId: channel.channelId,
+            text: messageText,
+            imageUrl: absoluteImageUrl,
+            parseMode: 'HTML'
+          });
+        } else {
+          // Send as text message
+          console.log(`📝 Sending research report as text to ${channel.name}`);
+          sendResult = await telegramService.sendMessage({
+            channelId: channel.channelId,
+            text: messageText,
+            parseMode: 'HTML'
+          });
+        }
+        
+        if (sendResult.success) {
+          finalStatus = 'sent';
+          console.log(`✅ Research report message sent successfully to ${channel.name}`);
+        } else {
+          finalStatus = 'failed';
+          errorMessage = sendResult.error || 'Unknown error';
+          console.error(`❌ Failed to send research report message: ${errorMessage}`);
+        }
+        
+      } catch (error) {
+        finalStatus = 'failed';
+        errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`❌ Error sending research report message:`, error);
+      }
+      
+      // Log sent message to database
+      const logData: InsertSentMessage = {
+        automationId: automation.id,
+        channelId: channel.channelId,
+        messageText,
+        status: finalStatus as any,
+        sentAt: new Date(),
+        telegramMessageId: sendResult?.messageId?.toString() || null,
+        errorMessage: finalStatus === 'failed' ? errorMessage : null
+      };
+      
+      try {
+        await storage.logSentMessage(logData);
+        console.log(`📝 Research report message logged to database`);
+      } catch (dbError) {
+        console.error(`❌ Failed to log research report message:`, dbError);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error processing research report automation ${automation.id}:`, error);
+    }
+  }
+  
+  /**
+   * Render research report template with data - substitute variables like {pair}, {supportLevel}, etc.
+   */
+  private renderResearchReportTemplate(template: MessageTemplate, data: any): string {
+    let messageText = template.template;
+    
+    // HTML escape function for user-provided content
+    const htmlEscape = (text: string): string => {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+    
+    // Define available research report variables
+    const variables: Record<string, string> = {
+      'pair': htmlEscape(data.pair || ''),
+      'supportLevel': data.supportLevel ? `$${Number(data.supportLevel).toFixed(4)}` : '',
+      'resistance': data.resistance ? `$${Number(data.resistance).toFixed(4)}` : '',
+      'summary': htmlEscape(data.summary || ''),
+      'upsideTarget1': data.upsideTarget1 ? `$${Number(data.upsideTarget1).toFixed(4)}` : '',
+      'upsideTarget2': data.upsideTarget2 ? `$${Number(data.upsideTarget2).toFixed(4)}` : '',
+      'downsideTarget1': data.downsideTarget1 ? `$${Number(data.downsideTarget1).toFixed(4)}` : '',
+      'downsideTarget2': data.downsideTarget2 ? `$${Number(data.downsideTarget2).toFixed(4)}` : '',
+      'breakoutPossibility': htmlEscape(data.breakoutPossibility || ''),
+      'upsidePercentage': data.upsidePercentage ? `${data.upsidePercentage}%` : '0%',
+      'downsidePercentage': data.downsidePercentage ? `${data.downsidePercentage}%` : '0%',
+      'imageUrl': data.imageUrl || '',
+      'timestamp': new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+      'reportId': htmlEscape(data.reportId || '')
+    };
+    
+    // Replace all variables in template
+    for (const [key, value] of Object.entries(variables)) {
+      const placeholder = `{${key}}`;
+      messageText = messageText.replace(new RegExp(placeholder, 'g'), value);
+    }
+    
+    return messageText;
   }
 }
 
