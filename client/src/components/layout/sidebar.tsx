@@ -71,6 +71,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: "fas fa-robot",
       current: location === "/automation",
     },
+    {
+      name: "Research Reports",
+      href: "/research-reports",
+      icon: "fas fa-file-alt",
+      current: location === "/research-reports",
+    },
   ];
 
   return (
