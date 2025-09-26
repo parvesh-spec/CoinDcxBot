@@ -136,7 +136,7 @@ export const researchReports = pgTable("research_reports", {
   resistanceLevel: text("resistance_level").notNull(), // Same format as support level
   summary: text("summary").notNull(), // Brief research summary
   scenarios: jsonb("scenarios").notNull(), // {upside: {target1: string, target2: string}, downside: {target1: string, target2: string}}
-  breakoutPossibility: jsonb("breakout_possibility").notNull(), // {upside: number, downside: number} - percentages
+  breakoutDirection: varchar("breakout_direction").notNull(), // 'upside' or 'downside'
   imageUrl: text("image_url"), // Optional image URL from object storage
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -526,12 +526,8 @@ export const insertResearchReportSchema = createInsertSchema(researchReports).om
       target2: z.string().min(1, "Downside target 2 is required")
     })
   }),
-  breakoutPossibility: z.object({
-    upside: z.number().min(0).max(100, "Upside percentage must be between 0 and 100"),
-    downside: z.number().min(0).max(100, "Downside percentage must be between 0 and 100")
-  }).refine((data) => data.upside + data.downside === 100, {
-    message: "Upside and downside percentages must total 100%",
-    path: ["upside"]
+  breakoutDirection: z.enum(['upside', 'downside'], {
+    errorMap: () => ({ message: "Breakout direction must be either 'upside' or 'downside'" })
   }),
   imageUrl: z.string().optional()
 });
