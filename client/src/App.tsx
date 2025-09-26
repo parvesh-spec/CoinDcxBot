@@ -38,6 +38,10 @@ function Router() {
           <Route path="/templates" component={Dashboard} />
           <Route path="/channels" component={Dashboard} />
           <Route path="/automation" component={Dashboard} />
+          <Route path="/research-reports" component={Dashboard} />
+          <Route path="/research-reports/create" component={Dashboard} />
+          <Route path="/research-reports/:id" component={Dashboard} />
+          <Route path="/research-reports/:id/edit" component={Dashboard} />
         </>
       )}
       <Route component={NotFound} />
