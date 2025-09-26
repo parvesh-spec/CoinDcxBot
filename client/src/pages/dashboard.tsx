@@ -7,24 +7,14 @@ import AutomationPage from "./automation";
 import CopyTradingUsersPage from "./copy-trading/users";
 import CopyTradingTradesPage from "./copy-trading/trades";
 import ResearchReportsPage from "./research-reports";
-import ResearchReportForm from "./research-report-form";
 
 export default function Dashboard() {
   const [location] = useLocation();
 
   const renderContent = () => {
-    // Handle research report routes
+    // Handle research report routes (now uses modal instead of separate pages)
     if (location.startsWith("/research-reports")) {
-      if (location === "/research-reports/create" || location.includes("/edit")) {
-        return <ResearchReportForm />;
-      }
-      if (location === "/research-reports") {
-        return <ResearchReportsPage />;
-      }
-      // Handle view individual report (future implementation)
-      if (location.match(/^\/research-reports\/[^\/]+$/)) {
-        return <ResearchReportsPage />; // For now, redirect to list
-      }
+      return <ResearchReportsPage />;
     }
     
     switch (location) {

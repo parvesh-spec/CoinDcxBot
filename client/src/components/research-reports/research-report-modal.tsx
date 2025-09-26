@@ -1,0 +1,504 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
+import { Upload, X, FileText, Save, Loader2 } from "lucide-react";
+import ObjectUploader from "@/components/ui/object-uploader";
+
+// Form validation schema
+const researchReportSchema = z.object({
+  pair: z.string().min(1, "Trading pair is required"),
+  supportLevel: z.string().min(1, "Support level is required"),
+  resistance: z.string().min(1, "Resistance level is required"),
+  summary: z.string().min(10, "Summary must be at least 10 characters"),
+  upsideTarget1: z.string().min(1, "First upside target is required"),
+  upsideTarget2: z.string().min(1, "Second upside target is required"),
+  downsideTarget1: z.string().min(1, "First downside target is required"),
+  downsideTarget2: z.string().min(1, "Second downside target is required"),
+  breakoutPossibility: z.string().min(5, "Breakout possibility must be at least 5 characters"),
+  upsidePercentage: z.number().min(0).max(1000),
+  downsidePercentage: z.number().min(0).max(100),
+  imageUrl: z.string().optional(),
+});
+
+type ResearchReportFormData = z.infer<typeof researchReportSchema>;
+
+interface ResearchReport extends ResearchReportFormData {
+  id: string;
+  reportId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface ResearchReportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  editReport?: ResearchReport | null;
+  onSuccess?: () => void;
+}
+
+export default function ResearchReportModal({ isOpen, onClose, editReport, onSuccess }: ResearchReportModalProps) {
+  const { toast } = useToast();
+
+  const isEditMode = !!editReport;
+
+  // Form setup
+  const form = useForm<ResearchReportFormData>({
+    resolver: zodResolver(researchReportSchema),
+    defaultValues: isEditMode && editReport ? {
+      pair: editReport.pair || "",
+      supportLevel: editReport.supportLevel || "",
+      resistance: editReport.resistance || "",
+      summary: editReport.summary || "",
+      upsideTarget1: editReport.upsideTarget1 || "",
+      upsideTarget2: editReport.upsideTarget2 || "",
+      downsideTarget1: editReport.downsideTarget1 || "",
+      downsideTarget2: editReport.downsideTarget2 || "",
+      breakoutPossibility: editReport.breakoutPossibility || "",
+      upsidePercentage: editReport.upsidePercentage || 0,
+      downsidePercentage: editReport.downsidePercentage || 0,
+      imageUrl: editReport.imageUrl || "",
+    } : {
+      pair: "",
+      supportLevel: "",
+      resistance: "",
+      summary: "",
+      upsideTarget1: "",
+      upsideTarget2: "",
+      downsideTarget1: "",
+      downsideTarget2: "",
+      breakoutPossibility: "",
+      upsidePercentage: 0,
+      downsidePercentage: 0,
+      imageUrl: "",
+    },
+  });
+
+  // Reset form when editReport changes
+  useEffect(() => {
+    if (isEditMode && editReport) {
+      form.reset({
+        pair: editReport.pair || "",
+        supportLevel: editReport.supportLevel || "",
+        resistance: editReport.resistance || "",
+        summary: editReport.summary || "",
+        upsideTarget1: editReport.upsideTarget1 || "",
+        upsideTarget2: editReport.upsideTarget2 || "",
+        downsideTarget1: editReport.downsideTarget1 || "",
+        downsideTarget2: editReport.downsideTarget2 || "",
+        breakoutPossibility: editReport.breakoutPossibility || "",
+        upsidePercentage: editReport.upsidePercentage || 0,
+        downsidePercentage: editReport.downsidePercentage || 0,
+        imageUrl: editReport.imageUrl || "",
+      });
+    } else if (!isEditMode) {
+      form.reset({
+        pair: "",
+        supportLevel: "",
+        resistance: "",
+        summary: "",
+        upsideTarget1: "",
+        upsideTarget2: "",
+        downsideTarget1: "",
+        downsideTarget2: "",
+        breakoutPossibility: "",
+        upsidePercentage: 0,
+        downsidePercentage: 0,
+        imageUrl: "",
+      });
+    }
+  }, [editReport, isEditMode, form]);
+
+  // Create research report mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: ResearchReportFormData) => {
+      const response = await fetch('/api/research-reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create research report');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/research-reports'] });
+      toast({
+        title: "Success",
+        description: "Research report created successfully!",
+      });
+      onSuccess?.();
+      onClose();
+      form.reset();
+    },
+    onError: (error: any) => {
+      console.error('Create error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create research report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Update research report mutation
+  const updateMutation = useMutation({
+    mutationFn: async (data: ResearchReportFormData) => {
+      const response = await fetch(`/api/research-reports/${editReport?.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to update research report');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/research-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/research-reports', editReport?.id] });
+      toast({
+        title: "Success",
+        description: "Research report updated successfully!",
+      });
+      onSuccess?.();
+      onClose();
+    },
+    onError: (error: any) => {
+      console.error('Update error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update research report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const onSubmit = (data: ResearchReportFormData) => {
+    if (isEditMode) {
+      updateMutation.mutate(data);
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold flex items-center">
+            <FileText className="w-6 h-6 mr-2 text-blue-600" />
+            {isEditMode ? "Edit Research Report" : "Create Research Report"}
+          </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {isEditMode ? "Update your market analysis and price targets" : "Analyze market trends and set price targets for trading pairs"}
+          </p>
+        </DialogHeader>
+        
+        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Research Report Details */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center text-blue-600">
+                  📊 Research Report Details
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Trading Pair */}
+                  <FormField
+                    control={form.control}
+                    name="pair"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Trading Pair *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., BTC-USDT" 
+                            {...field}
+                            data-testid="input-pair"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Upside % */}
+                  <FormField
+                    control={form.control}
+                    name="upsidePercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Upside %</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            placeholder="0"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : 0)}
+                            data-testid="input-upside-percentage"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Downside % */}
+                  <FormField
+                    control={form.control}
+                    name="downsidePercentage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Downside %</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            placeholder="0"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : 0)}
+                            data-testid="input-downside-percentage"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Support Level */}
+                  <FormField
+                    control={form.control}
+                    name="supportLevel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Support Level *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., 42500.00" 
+                            {...field}
+                            data-testid="input-support-level"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Resistance Level */}
+                  <FormField
+                    control={form.control}
+                    name="resistance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Resistance Level *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g., 48000.00" 
+                            {...field}
+                            data-testid="input-resistance-level"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Price Targets */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-green-600">🎯 Upside Targets</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="upsideTarget1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target 1 *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="50000.00" 
+                            {...field}
+                            data-testid="input-upside-target1"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="upsideTarget2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target 2 *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="52500.00" 
+                            {...field}
+                            data-testid="input-upside-target2"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <h3 className="text-lg font-semibold text-red-600">🛑 Downside Targets</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="downsideTarget1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target 1 *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="40000.00" 
+                            {...field}
+                            data-testid="input-downside-target1"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="downsideTarget2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target 2 *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="38500.00" 
+                            {...field}
+                            data-testid="input-downside-target2"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Market Analysis */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-purple-600">📋 Market Analysis</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="summary"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Analysis Summary *</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Provide detailed market analysis, key factors, and reasoning behind the price targets..."
+                          className="min-h-[100px]"
+                          {...field}
+                          data-testid="textarea-summary"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="breakoutPossibility"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Breakout Possibility *</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Assess the likelihood and conditions for breakout scenarios..."
+                          className="min-h-[80px]"
+                          {...field}
+                          data-testid="textarea-breakout"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Image Upload */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-orange-600">📊 Chart Upload</h3>
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Analysis Chart (Optional)</FormLabel>
+                      <FormControl>
+                        <ObjectUploader
+                          onImageUploaded={(imageUrl) => field.onChange(imageUrl)}
+                          onImageRemoved={() => field.onChange("")}
+                          currentImageUrl={field.value}
+                          className="w-full"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Upload a chart image to support your analysis. Supports PNG, JPG, GIF up to 5MB.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-2 pt-6 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  data-testid="button-submit"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {isEditMode ? "Updating..." : "Creating..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      {isEditMode ? "Update Report" : "Create Report"}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}

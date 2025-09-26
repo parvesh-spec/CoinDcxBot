@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import ResearchReportModal from "@/components/research-reports/research-report-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,10 +34,12 @@ export default function ResearchReports() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPair, setFilterPair] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingReport, setEditingReport] = useState<ResearchReport | null>(null);
   const itemsPerPage = 12;
 
   // Fetch research reports
-  const { data: reportsData, isLoading, error, refetch } = useQuery({
+  const { data: reportsData, isLoading, error, refetch } = useQuery<{reports: ResearchReport[], total: number}>({
     queryKey: ['/api/research-reports'],
   });
 
@@ -108,12 +110,16 @@ export default function ResearchReports() {
             Create and manage detailed market analysis reports with price targets
           </p>
         </div>
-        <Link href="/research-reports/create">
-          <Button data-testid="button-create-report">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Report
-          </Button>
-        </Link>
+        <Button 
+          onClick={() => {
+            setEditingReport(null);
+            setIsModalOpen(true);
+          }}
+          data-testid="button-create-report"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Create Report
+        </Button>
       </div>
 
       {/* Filters */}
@@ -145,8 +151,8 @@ export default function ResearchReports() {
                 <SelectContent>
                   <SelectItem value="all">All Pairs</SelectItem>
                   {uniquePairs.map((pair) => (
-                    <SelectItem key={pair} value={pair}>
-                      {pair}
+                    <SelectItem key={String(pair)} value={String(pair)}>
+                      {String(pair)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -245,12 +251,16 @@ export default function ResearchReports() {
                     }
                   </p>
                 </div>
-                <Link href="/research-reports/create">
-                  <Button data-testid="button-create-first-report">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create First Report
-                  </Button>
-                </Link>
+                <Button 
+                  onClick={() => {
+                    setEditingReport(null);
+                    setIsModalOpen(true);
+                  }}
+                  data-testid="button-create-first-report"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create First Report
+                </Button>
               </div>
             </div>
           ) : (
@@ -323,28 +333,32 @@ export default function ResearchReports() {
 
                     {/* Actions */}
                     <div className="flex gap-2 pt-2">
-                      <Link href={`/research-reports/${report.id}`}>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1 text-xs"
-                          data-testid={`button-view-report-${report.id}`}
-                        >
-                          <i className="fas fa-eye mr-1" />
-                          View
-                        </Button>
-                      </Link>
-                      <Link href={`/research-reports/${report.id}/edit`}>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1 text-xs"
-                          data-testid={`button-edit-report-${report.id}`}
-                        >
-                          <i className="fas fa-edit mr-1" />
-                          Edit
-                        </Button>
-                      </Link>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 text-xs"
+                        data-testid={`button-view-report-${report.id}`}
+                        onClick={() => {
+                          setEditingReport(report);
+                          setIsModalOpen(true);
+                        }}
+                      >
+                        <i className="fas fa-eye mr-1" />
+                        View
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 text-xs"
+                        onClick={() => {
+                          setEditingReport(report);
+                          setIsModalOpen(true);
+                        }}
+                        data-testid={`button-edit-report-${report.id}`}
+                      >
+                        <i className="fas fa-edit mr-1" />
+                        Edit
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -410,6 +424,19 @@ export default function ResearchReports() {
           )}
         </CardContent>
       </Card>
+
+      {/* Research Report Modal */}
+      <ResearchReportModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingReport(null);
+        }}
+        editReport={editingReport || undefined}
+        onSuccess={() => {
+          refetch();
+        }}
+      />
     </div>
   );
 }
