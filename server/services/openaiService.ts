@@ -67,8 +67,34 @@ export class OpenAIService {
 
     } catch (error) {
       console.error("OpenAI Enhancement Error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-      throw new Error(`Failed to enhance text: ${errorMessage}`);
+      
+      // Handle specific error types for better user feedback
+      if (error instanceof Error) {
+        if (error.message.includes('timeout') || error.message.includes('ECONNRESET')) {
+          throw new Error("Enhancement request timed out. Please try again.");
+        }
+        
+        if (error.message.includes('rate_limit') || error.message.includes('429')) {
+          throw new Error("AI service is busy. Please wait a moment and try again.");
+        }
+        
+        if (error.message.includes('Invalid API key') || error.message.includes('401')) {
+          throw new Error("AI service configuration error. Please contact support.");
+        }
+        
+        if (error.message.includes('insufficient_quota') || error.message.includes('billing')) {
+          throw new Error("AI service quota exceeded. Please contact support.");
+        }
+        
+        // Generic OpenAI API error
+        if (error.message.includes('OpenAI')) {
+          throw new Error("AI enhancement service is temporarily unavailable. Please try again.");
+        }
+        
+        throw new Error(`Enhancement failed: ${error.message}`);
+      }
+      
+      throw new Error("Enhancement service is currently unavailable. Please try again later.");
     }
   }
 
