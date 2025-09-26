@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { Upload, X, FileText, Save, Loader2 } from "lucide-react";
@@ -25,8 +26,9 @@ const researchReportSchema = z.object({
   downsideTarget1: z.string().min(1, "First downside target is required"),
   downsideTarget2: z.string().min(1, "Second downside target is required"),
   breakoutPossibility: z.string().min(5, "Breakout possibility must be at least 5 characters"),
-  upsidePercentage: z.number().min(0).max(1000),
-  downsidePercentage: z.number().min(0).max(100),
+  breakoutDirection: z.enum(['upside', 'downside'], {
+    errorMap: () => ({ message: "Please select breakout direction" })
+  }),
   imageUrl: z.string().optional(),
 });
 
@@ -64,8 +66,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
       downsideTarget1: editReport.downsideTarget1 || "",
       downsideTarget2: editReport.downsideTarget2 || "",
       breakoutPossibility: editReport.breakoutPossibility || "",
-      upsidePercentage: editReport.upsidePercentage || 0,
-      downsidePercentage: editReport.downsidePercentage || 0,
+      breakoutDirection: editReport.breakoutDirection || "upside",
       imageUrl: editReport.imageUrl || "",
     } : {
       pair: "",
@@ -77,8 +78,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
       downsideTarget1: "",
       downsideTarget2: "",
       breakoutPossibility: "",
-      upsidePercentage: 0,
-      downsidePercentage: 0,
+      breakoutDirection: "upside",
       imageUrl: "",
     },
   });
@@ -96,8 +96,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
         downsideTarget1: editReport.downsideTarget1 || "",
         downsideTarget2: editReport.downsideTarget2 || "",
         breakoutPossibility: editReport.breakoutPossibility || "",
-        upsidePercentage: editReport.upsidePercentage || 0,
-        downsidePercentage: editReport.downsidePercentage || 0,
+        breakoutDirection: editReport.breakoutDirection || "upside",
         imageUrl: editReport.imageUrl || "",
       });
     } else if (!isEditMode) {
@@ -111,8 +110,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
         downsideTarget1: "",
         downsideTarget2: "",
         breakoutPossibility: "",
-        upsidePercentage: 0,
-        downsidePercentage: 0,
+        breakoutDirection: "upside",
         imageUrl: "",
       });
     }
@@ -232,43 +230,32 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                     )}
                   />
 
-                  {/* Upside % */}
+                  {/* Breakout Direction */}
                   <FormField
                     control={form.control}
-                    name="upsidePercentage"
+                    name="breakoutDirection"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Upside %</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number"
-                            placeholder="0"
-                            {...field}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : 0)}
-                            data-testid="input-upside-percentage"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Downside % */}
-                  <FormField
-                    control={form.control}
-                    name="downsidePercentage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Downside %</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number"
-                            placeholder="0"
-                            {...field}
-                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : 0)}
-                            data-testid="input-downside-percentage"
-                          />
-                        </FormControl>
+                        <FormLabel>Breakout Possibility *</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-breakout-direction">
+                              <SelectValue placeholder="Select direction..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="upside" data-testid="option-upside">
+                              📈 Upside
+                            </SelectItem>
+                            <SelectItem value="downside" data-testid="option-downside">
+                              📉 Downside
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
