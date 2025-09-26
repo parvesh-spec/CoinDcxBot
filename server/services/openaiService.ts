@@ -35,7 +35,7 @@ export class OpenAIService {
       const prompt = this.createEnhancementPrompt(request.text, request.language, request.level);
       
       const response = await openai.chat.completions.create({
-        model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025
+        model: "gpt-4o", // Using GPT-4o for better stability
         messages: [
           {
             role: "system",
@@ -47,7 +47,7 @@ export class OpenAIService {
           }
         ],
         response_format: { type: "json_object" },
-        max_completion_tokens: 500, // Limit response length for faster processing
+        max_tokens: 500, // Limit response length for faster processing
         temperature: 0.3, // Lower temperature for more focused responses
         presence_penalty: 0, // Reduce computational overhead
         frequency_penalty: 0 // Reduce computational overhead
