@@ -2314,7 +2314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Text Enhancement API
   app.post('/api/enhance-text', isAuthenticated, async (req, res) => {
     try {
-      const { text, language = 'english' } = req.body;
+      const { text, language = 'english', level = 'low' } = req.body;
       
       if (!text?.trim()) {
         return res.status(400).json({ message: "Text is required for enhancement" });
@@ -2324,9 +2324,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Language must be 'english' or 'hinglish'" });
       }
       
+      if (!['low', 'medium'].includes(level)) {
+        return res.status(400).json({ message: "Enhancement level must be 'low' or 'medium'" });
+      }
+      
       const result = await OpenAIService.enhanceAnalysisText({
         text: text.trim(),
-        language: language as 'english' | 'hinglish'
+        language: language as 'english' | 'hinglish',
+        level: level as 'low' | 'medium'
       });
       
       res.json(result);
