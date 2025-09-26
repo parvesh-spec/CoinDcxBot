@@ -47,7 +47,7 @@ export class OpenAIService {
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 500, // Limit response length for faster processing
+        max_completion_tokens: 500, // Limit response length for faster processing
         temperature: 0.3, // Lower temperature for more focused responses
         presence_penalty: 0, // Reduce computational overhead
         frequency_penalty: 0 // Reduce computational overhead
