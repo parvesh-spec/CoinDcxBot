@@ -1153,8 +1153,7 @@ export class AutomationService {
       'downsideTarget1': data.downsideTarget1 ? `$${Number(data.downsideTarget1).toFixed(4)}` : '',
       'downsideTarget2': data.downsideTarget2 ? `$${Number(data.downsideTarget2).toFixed(4)}` : '',
       'breakoutPossibility': htmlEscape(data.breakoutPossibility || ''),
-      'upsidePercentage': data.upsidePercentage ? `${data.upsidePercentage}%` : '0%',
-      'downsidePercentage': data.downsidePercentage ? `${data.downsidePercentage}%` : '0%',
+      'breakoutDirection': data.breakoutDirection ? `📈 ${data.breakoutDirection.charAt(0).toUpperCase() + data.breakoutDirection.slice(1)}` : '📈 Upside',
       'imageUrl': data.imageUrl || '',
       'timestamp': new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
       'reportId': htmlEscape(data.reportId || '')

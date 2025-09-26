@@ -260,12 +260,12 @@ Stay tuned for more updates.
 🎯 Upside Targets:
 Target 1: {upsideTarget1} 
 Target 2: {upsideTarget2}
-Potential: +{upsidePercentage}
 
 🛑 Downside Targets:
 Target 1: {downsideTarget1}
 Target 2: {downsideTarget2}
-Risk: -{downsidePercentage}
+
+📊 Breakout Direction: {breakoutDirection}
 
 📋 Analysis Summary:
 {summary}
@@ -350,7 +350,7 @@ Risk: -{downsidePercentage}
                 {[
                   "{pair}", "{supportLevel}", "{resistance}", "{summary}",
                   "{upsideTarget1}", "{upsideTarget2}", "{downsideTarget1}", "{downsideTarget2}",
-                  "{breakoutPossibility}", "{upsidePercentage}", "{downsidePercentage}",
+                  "{breakoutPossibility}", "{breakoutDirection}",
                   "{imageUrl}", "{timestamp}", "{reportId}"
                 ].map(variable => (
                   <span 

@@ -839,8 +839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             downsideTarget1: '40,000.00',
             downsideTarget2: '38,500.00',
             breakoutPossibility: 'High - Volume surge indicates strong buying interest',
-            upsidePercentage: '17.6',
-            downsidePercentage: '6.0',
+            breakoutDirection: 'upside',
             imageUrl: '/images/btc-analysis.png',
             timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
             reportId: 'RR-TEST-123'
@@ -856,8 +855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             downsideTarget1: mockResearchData.downsideTarget1,
             downsideTarget2: mockResearchData.downsideTarget2,
             breakoutPossibility: mockResearchData.breakoutPossibility,
-            upsidePercentage: mockResearchData.upsidePercentage + '%',
-            downsidePercentage: mockResearchData.downsidePercentage + '%',
+            breakoutDirection: mockResearchData.breakoutDirection,
             imageUrl: mockResearchData.imageUrl,
             timestamp: mockResearchData.timestamp,
             reportId: mockResearchData.reportId
@@ -2264,12 +2262,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           downsideTarget1: reportData.downsideTarget1,
           downsideTarget2: reportData.downsideTarget2,
           breakoutPossibility: reportData.breakoutPossibility,
-          imageUrl: reportData.imageUrl,
-          // Calculate percentage targets
-          upsidePercentage: reportData.supportLevel ? 
-            ((parseFloat(reportData.upsideTarget1 || '0') - parseFloat(reportData.supportLevel)) / parseFloat(reportData.supportLevel) * 100).toFixed(2) : '0',
-          downsidePercentage: reportData.supportLevel ? 
-            ((parseFloat(reportData.supportLevel) - parseFloat(reportData.downsideTarget1 || '0')) / parseFloat(reportData.supportLevel) * 100).toFixed(2) : '0'
+          breakoutDirection: reportData.breakoutDirection,
+          imageUrl: reportData.imageUrl
         });
         console.log(`📊 Research report automation triggered for ${reportData.pair}`);
       } catch (automationError) {

@@ -23,8 +23,7 @@ interface ResearchReport {
   downsideTarget1: string;
   downsideTarget2: string;
   breakoutPossibility: string;
-  upsidePercentage: number;
-  downsidePercentage: number;
+  breakoutDirection: string;
   imageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -66,17 +65,6 @@ export default function ResearchReports() {
   // Get unique pairs for filter dropdown
   const uniquePairs = Array.from(new Set(reports.map((report: ResearchReport) => report.pair))).sort();
 
-  const getUpsideColor = (percentage: number) => {
-    if (percentage >= 20) return "text-green-600 dark:text-green-400";
-    if (percentage >= 10) return "text-emerald-600 dark:text-emerald-400";
-    return "text-blue-600 dark:text-blue-400";
-  };
-
-  const getDownsideColor = (percentage: number) => {
-    if (percentage >= 15) return "text-red-600 dark:text-red-400";
-    if (percentage >= 8) return "text-orange-600 dark:text-orange-400";
-    return "text-yellow-600 dark:text-yellow-400";
-  };
 
   if (error) {
     return (
@@ -299,20 +287,16 @@ export default function ResearchReports() {
                       </div>
                     </div>
 
-                    {/* Targets & Percentages */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Upside Potential</span>
-                        <span className={`font-semibold ${getUpsideColor(report.upsidePercentage)}`}>
-                          +{report.upsidePercentage}%
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Downside Risk</span>
-                        <span className={`font-semibold ${getDownsideColor(report.downsidePercentage)}`}>
-                          -{report.downsidePercentage}%
-                        </span>
-                      </div>
+                    {/* Breakout Direction */}
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground font-medium">Breakout Direction</span>
+                      <span className={`font-semibold px-2 py-1 rounded text-xs ${
+                        report.breakoutDirection === 'upside' 
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                      }`}>
+                        {report.breakoutDirection === 'upside' ? '📈 Upside' : '📉 Downside'}
+                      </span>
                     </div>
 
                     {/* Summary */}
