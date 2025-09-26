@@ -8,6 +8,7 @@ const openai = new OpenAI({
 export interface EnhancementRequest {
   text: string;
   language: 'english' | 'hinglish';
+  level: 'low' | 'medium';
 }
 
 export interface EnhancementResponse {
@@ -30,14 +31,14 @@ export class OpenAIService {
     }
 
     try {
-      const prompt = this.createEnhancementPrompt(request.text, request.language);
+      const prompt = this.createEnhancementPrompt(request.text, request.language, request.level);
       
       const response = await openai.chat.completions.create({
         model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025
         messages: [
           {
             role: "system",
-            content: this.getSystemPrompt(request.language)
+            content: this.getSystemPrompt(request.language, request.level)
           },
           {
             role: "user",
@@ -69,45 +70,54 @@ export class OpenAIService {
   /**
    * Create system prompt based on language preference
    */
-  private static getSystemPrompt(language: 'english' | 'hinglish'): string {
-    if (language === 'hinglish') {
-      return `You are a grammar correction assistant for Hinglish (Hindi + English mix) text. 
+  private static getSystemPrompt(language: 'english' | 'hinglish', level: 'low' | 'medium'): string {
+    const baseLanguageRules = language === 'hinglish' 
+      ? "Use natural Hinglish mixing (Hindi + English)" 
+      : "Use clear, professional English";
+    
+    if (level === 'low') {
+      // LOW LEVEL: Grammar correction only
+      return `You are a grammar correction assistant for ${language === 'hinglish' ? 'Hinglish (Hindi + English mix)' : 'English'} text. 
       Your ONLY task is to fix grammar and improve readability while keeping the EXACT same meaning and emotion.
       
       Guidelines:
       - Fix grammar errors and typos only
       - Maintain the EXACT same emotion, tone, and message
       - Keep the same length - do NOT add new information
-      - Use natural Hinglish mixing (Hindi + English)
+      - ${baseLanguageRules}
       - DO NOT expand or elaborate the content
       - Only correct what's grammatically wrong
       
       Respond in JSON format: {"enhancedText": "corrected text here"}`;
     } else {
-      return `You are a grammar correction assistant for English text.
-      Your ONLY task is to fix grammar and improve readability while keeping the EXACT same meaning and emotion.
+      // MEDIUM LEVEL: Light enhancement with existing information
+      return `You are a text enhancement assistant for ${language === 'hinglish' ? 'Hinglish (Hindi + English mix)' : 'English'} text.
+      Your task is to improve the text while keeping it concise and using ONLY the information provided.
       
       Guidelines:
-      - Fix grammar errors, typos, and sentence structure only
-      - Maintain the EXACT same emotion, tone, and message
-      - Keep the same length - do NOT add new information
-      - Use clear, professional English
-      - DO NOT expand or elaborate the content
-      - Only correct what's grammatically wrong
+      - Fix grammar, spelling, and sentence structure
+      - Improve clarity and flow using existing information only
+      - Keep the EXACT same emotion, tone, and core message
+      - ${baseLanguageRules}
+      - DO NOT add new facts or information not implied in the original
+      - Make it slightly more professional but not lengthy
+      - Enhance readability while preserving original meaning
       
-      Respond in JSON format: {"enhancedText": "corrected text here"}`;
+      Respond in JSON format: {"enhancedText": "enhanced text here"}`;
     }
   }
 
   /**
    * Create enhancement prompt
    */
-  private static createEnhancementPrompt(text: string, language: 'english' | 'hinglish'): string {
-    const languageInstruction = language === 'hinglish' 
-      ? "Fix grammar errors and typos in this Hinglish text:"
-      : "Fix grammar errors and typos in this English text:";
-
-    return `${languageInstruction}
+  private static createEnhancementPrompt(text: string, language: 'english' | 'hinglish', level: 'low' | 'medium'): string {
+    const languageLabel = language === 'hinglish' ? 'Hinglish' : 'English';
+    
+    if (level === 'low') {
+      // LOW LEVEL: Grammar correction only
+      const instruction = `Fix grammar errors and typos in this ${languageLabel} text:`;
+      
+      return `${instruction}
 
 Original text:
 "${text}"
@@ -124,5 +134,27 @@ IMPORTANT:
 - Do NOT make it longer
 - Do NOT change the overall message
 - Only fix what's grammatically wrong`;
+    } else {
+      // MEDIUM LEVEL: Light enhancement
+      const instruction = `Enhance this ${languageLabel} text while using only existing information:`;
+      
+      return `${instruction}
+
+Original text:
+"${text}"
+
+Please improve the following while keeping it concise:
+1. Grammar, spelling, and sentence structure
+2. Clarity and flow using existing information only
+3. Professional tone while maintaining emotion
+4. Readability without changing meaning
+
+IMPORTANT:
+- Keep the SAME core message and emotion
+- Do NOT add new facts or information
+- Use only what's provided or implied in the original
+- Make it better but not lengthy
+- Preserve the original meaning and intent`;
+    }
   }
 }
