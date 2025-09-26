@@ -37,9 +37,12 @@ export default function ResearchReports() {
   const itemsPerPage = 12;
 
   // Fetch research reports
-  const { data: reports = [], isLoading, error, refetch } = useQuery({
+  const { data: reportsData, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/research-reports'],
-  }) as { data: ResearchReport[], isLoading: boolean, error: any, refetch: () => void };
+  });
+
+  const reports = reportsData?.reports || [];
+  const totalReports = reportsData?.total || 0;
 
   // Filter and search logic
   const filteredReports = reports.filter((report: ResearchReport) => {
