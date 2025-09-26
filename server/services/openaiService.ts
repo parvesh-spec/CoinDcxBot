@@ -71,31 +71,31 @@ export class OpenAIService {
    */
   private static getSystemPrompt(language: 'english' | 'hinglish'): string {
     if (language === 'hinglish') {
-      return `You are a professional cryptocurrency market analyst who writes in Hinglish (Hindi + English mix). 
-      Your task is to enhance rough analysis text into professional, well-structured market analysis.
+      return `You are a grammar correction assistant for Hinglish (Hindi + English mix) text. 
+      Your ONLY task is to fix grammar and improve readability while keeping the EXACT same meaning and emotion.
       
       Guidelines:
-      - Mix Hindi and English naturally like a typical Indian trader would speak
-      - Use technical terms in English but explanations can be in Hindi/Hinglish
-      - Maintain professional tone while being conversational
-      - Focus on market analysis, technical factors, and trading insights
-      - Structure the content logically with proper flow
-      - Keep the enhanced text comprehensive but not overly long
+      - Fix grammar errors and typos only
+      - Maintain the EXACT same emotion, tone, and message
+      - Keep the same length - do NOT add new information
+      - Use natural Hinglish mixing (Hindi + English)
+      - DO NOT expand or elaborate the content
+      - Only correct what's grammatically wrong
       
-      Respond in JSON format: {"enhancedText": "your enhanced analysis here"}`;
+      Respond in JSON format: {"enhancedText": "corrected text here"}`;
     } else {
-      return `You are a professional cryptocurrency market analyst who writes in clear, professional English.
-      Your task is to enhance rough analysis text into well-structured, comprehensive market analysis.
+      return `You are a grammar correction assistant for English text.
+      Your ONLY task is to fix grammar and improve readability while keeping the EXACT same meaning and emotion.
       
       Guidelines:
-      - Use professional financial and technical analysis language
-      - Maintain objective and analytical tone
-      - Structure content with clear logical flow
-      - Include relevant market factors and technical insights
-      - Enhance clarity and readability
-      - Keep analysis focused and actionable
+      - Fix grammar errors, typos, and sentence structure only
+      - Maintain the EXACT same emotion, tone, and message
+      - Keep the same length - do NOT add new information
+      - Use clear, professional English
+      - DO NOT expand or elaborate the content
+      - Only correct what's grammatically wrong
       
-      Respond in JSON format: {"enhancedText": "your enhanced analysis here"}`;
+      Respond in JSON format: {"enhancedText": "corrected text here"}`;
     }
   }
 
@@ -104,21 +104,25 @@ export class OpenAIService {
    */
   private static createEnhancementPrompt(text: string, language: 'english' | 'hinglish'): string {
     const languageInstruction = language === 'hinglish' 
-      ? "Please enhance this text in Hinglish (Hindi + English mix) style"
-      : "Please enhance this text in professional English";
+      ? "Fix grammar errors and typos in this Hinglish text:"
+      : "Fix grammar errors and typos in this English text:";
 
-    return `${languageInstruction}:
+    return `${languageInstruction}
 
-Original rough text:
+Original text:
 "${text}"
 
-Enhance this into a professional market analysis while:
-1. Preserving all key points and insights
-2. Improving structure and flow
-3. Adding professional terminology where appropriate
-4. Making it more comprehensive and actionable
-5. Maintaining the original meaning and sentiment
+Please correct ONLY the following:
+1. Grammar mistakes
+2. Spelling errors  
+3. Sentence structure issues
+4. Basic readability improvements
 
-Do not add any information that wasn't implied in the original text.`;
+IMPORTANT:
+- Keep the EXACT same meaning and emotion
+- Do NOT add new content or information
+- Do NOT make it longer
+- Do NOT change the overall message
+- Only fix what's grammatically wrong`;
   }
 }
