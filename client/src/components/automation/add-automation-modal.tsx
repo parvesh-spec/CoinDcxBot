@@ -43,7 +43,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Automation name is required").max(100, "Name too long"),
   channelId: z.string().min(1, "Please select a channel"),
   templateId: z.string().min(1, "Please select a template"),
-  automationType: z.enum(['trade', 'simple'], {
+  automationType: z.enum(['trade', 'simple', 'research_report'], {
     required_error: "Please select automation type",
   }),
   triggerType: z.string().min(1, "Please select trigger type"),
@@ -51,6 +51,7 @@ const formSchema = z.object({
   signalTypeFilter: z.string().optional(),
   scheduledTime: z.string().optional(),
   scheduledDays: z.array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])).optional(),
+  delayMinutes: z.number().min(0).max(1440).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -86,6 +87,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
       signalTypeFilter: editAutomation.signalTypeFilter || "all",
       scheduledTime: editAutomation.scheduledTime || "",
       scheduledDays: editAutomation.scheduledDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      delayMinutes: editAutomation.delayMinutes || 0,
       isActive: editAutomation.isActive ?? true,
     } : {
       name: "",
@@ -97,6 +99,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
       signalTypeFilter: "all",
       scheduledTime: "",
       scheduledDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      delayMinutes: 0,
       isActive: true,
     },
   });
@@ -114,6 +117,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
         signalTypeFilter: editAutomation.signalTypeFilter || "all",
         scheduledTime: editAutomation.scheduledTime || "",
         scheduledDays: editAutomation.scheduledDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        delayMinutes: editAutomation.delayMinutes || 0,
         isActive: editAutomation.isActive ?? true,
       });
     } else if (!isEditMode) {
@@ -127,6 +131,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
         signalTypeFilter: "all",
         scheduledTime: "",
         scheduledDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        delayMinutes: 0,
         isActive: true,
       });
     }
@@ -260,6 +265,8 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
                     // Reset trigger type when automation type changes
                     if (value === 'trade') {
                       form.setValue('triggerType', 'trade_registered');
+                    } else if (value === 'research_report') {
+                      form.setValue('triggerType', 'research_report_submit');
                     } else {
                       form.setValue('triggerType', 'scheduled');
                     }
@@ -271,6 +278,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="trade">Trade-Based (Triggered by trade events)</SelectItem>
+                      <SelectItem value="research_report">Research Report-Based (Triggered by report creation)</SelectItem>
                       <SelectItem value="simple">Time-Based (Scheduled messages)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -327,6 +335,8 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
                 const filteredTemplates = activeTemplates.filter(template => {
                   if (automationType === 'trade') {
                     return template.templateType === 'trade' || !template.templateType; // Default to trade for existing templates
+                  } else if (automationType === 'research_report') {
+                    return template.templateType === 'research_report';
                   } else {
                     return template.templateType === 'simple';
                   }
@@ -409,6 +419,10 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
                               {getTriggerLabel("target_3_hit")}
                             </SelectItem>
                           </>
+                        ) : automationType === 'research_report' ? (
+                          <SelectItem value="research_report_submit">
+                            Research Report Created (Triggered when report is submitted)
+                          </SelectItem>
                         ) : (
                           <SelectItem value="scheduled">
                             Scheduled Time (Time-based automation)
@@ -482,6 +496,34 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
                   )}
                 />
               </>
+            )}
+
+            {/* Delay Minutes for Research Report Automations */}
+            {form.watch('automationType') === 'research_report' && (
+              <FormField
+                control={form.control}
+                name="delayMinutes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Delay Minutes (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="1440"
+                        placeholder="0"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value, 10) : 0)}
+                        data-testid="input-delay-minutes"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-xs text-muted-foreground">
+                      Delay message sending after report creation (0-1440 minutes). Leave empty for immediate sending.
+                    </p>
+                  </FormItem>
+                )}
+              />
             )}
 
             {/* Time Scheduling Fields for Simple Automations */}
