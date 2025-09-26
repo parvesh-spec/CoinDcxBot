@@ -47,10 +47,9 @@ export class OpenAIService {
           }
         ],
         response_format: { type: "json_object" },
-        max_tokens: 500, // Limit response length for faster processing
         temperature: 0.3, // Lower temperature for more focused responses
-        presence_penalty: 0, // Reduce computational overhead
-        frequency_penalty: 0 // Reduce computational overhead
+        presence_penalty: 0,
+        frequency_penalty: 0
       });
 
       const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -102,12 +101,42 @@ export class OpenAIService {
    * Create system prompt based on language preference
    */
   private static getSystemPrompt(language: 'english' | 'hinglish', level: 'low' | 'medium'): string {
+    const languageInstruction = language === 'hinglish' 
+      ? "You MUST respond in Hinglish (Hindi + English mix) style. Use Hindi words mixed with English naturally like Indian traders speak."
+      : "You MUST respond in clear, professional English only.";
+    
     if (level === 'low') {
       // LOW LEVEL: Grammar correction only
-      return `Fix grammar errors in ${language} text. Keep same meaning and length. Return JSON: {"enhancedText": "corrected text"}`;
+      return `You are a grammar correction assistant. Your ONLY task is to fix grammar errors and typos while keeping the EXACT same meaning, tone, and length.
+
+${languageInstruction}
+
+Guidelines for LOW level:
+- Fix ONLY grammar mistakes, spelling errors, and basic sentence structure
+- Keep the EXACT same emotion, tone, and message  
+- Do NOT add new information or expand content
+- Do NOT make it more professional or formal
+- Keep the same length and style
+- Preserve original meaning completely
+
+Respond in JSON format: {"enhancedText": "your corrected text here"}`;
     } else {
-      // MEDIUM LEVEL: Light enhancement  
-      return `Improve ${language} text - fix grammar and enhance clarity. Keep same meaning, don't add new info. Return JSON: {"enhancedText": "enhanced text"}`;
+      // MEDIUM LEVEL: Enhancement with existing information
+      return `You are a text enhancement assistant. Your task is to improve the text quality while using ONLY the existing information provided.
+
+${languageInstruction}
+
+Guidelines for MEDIUM level:
+- Fix grammar, spelling, and sentence structure
+- Improve clarity, flow, and readability using existing information only
+- Make it slightly more professional and well-structured
+- Enhance presentation while keeping the same core message and emotion
+- You may rearrange sentences for better flow
+- Use only information that's provided or clearly implied in the original
+- Make it more comprehensive and actionable while staying concise
+- Do NOT add new facts or data not mentioned in the original
+
+Respond in JSON format: {"enhancedText": "your enhanced text here"}`;
     }
   }
 
@@ -115,10 +144,43 @@ export class OpenAIService {
    * Create enhancement prompt
    */
   private static createEnhancementPrompt(text: string, language: 'english' | 'hinglish', level: 'low' | 'medium'): string {
+    const languageLabel = language === 'hinglish' ? 'Hinglish (Hindi + English mix)' : 'English';
+    
     if (level === 'low') {
-      return `Text: "${text}"\n\nFix grammar and typos only. Keep same meaning.`;
+      // LOW LEVEL: Grammar correction only
+      return `Please correct grammar errors and typos in this ${languageLabel} text while keeping EXACTLY the same meaning, tone, and emotion.
+
+Original text:
+"${text}"
+
+IMPORTANT FOR LOW LEVEL:
+- Fix ONLY grammar mistakes, spelling errors, and sentence structure
+- Keep the EXACT same meaning, tone, and emotion
+- Do NOT add new information or make it more professional
+- Do NOT expand or elaborate the content
+- Keep the same length and casual/formal style as original
+- If it's in ${languageLabel}, respond in ${languageLabel}
+
+Only correct what's grammatically wrong, nothing else.`;
     } else {
-      return `Text: "${text}"\n\nImprove grammar and clarity. Use only existing information.`;
+      // MEDIUM LEVEL: Light enhancement
+      return `Please enhance this ${languageLabel} text by improving clarity and structure while using ONLY the information provided in the original text.
+
+Original text:
+"${text}"
+
+IMPORTANT FOR MEDIUM LEVEL:
+- Fix grammar, spelling, and sentence structure
+- Improve clarity, flow, and readability 
+- Make it slightly more professional and well-structured
+- Enhance presentation while keeping the same core message and emotion
+- You may rearrange sentences for better flow
+- Use only information that's provided or clearly implied in the original
+- Make it more comprehensive and actionable while staying concise
+- If it's in ${languageLabel}, respond in ${languageLabel}
+- Do NOT add new facts, data, or information not mentioned in the original
+
+Transform the rough text into a polished version using existing content only.`;
     }
   }
 }
