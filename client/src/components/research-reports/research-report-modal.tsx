@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Upload, X, FileText, Save, Loader2, Wand2, Languages } from "lucide-react";
+import { Upload, X, FileText, Save, Loader2, Wand2, Languages, Zap, Sparkles } from "lucide-react";
 import ObjectUploader from "@/components/ui/object-uploader";
 
 // Form validation schema
@@ -52,6 +52,8 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
   
   // Enhancement state
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'hinglish'>('english');
+  const [selectedLevel, setSelectedLevel] = useState<'low' | 'medium'>('low');
   const [isEnhancing, setIsEnhancing] = useState(false);
 
   const isEditMode = !!editReport;
@@ -178,7 +180,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
   });
 
   // Enhancement functions
-  const handleEnhanceText = async (language: 'english' | 'hinglish') => {
+  const handleEnhanceText = async () => {
     const currentText = form.getValues('summary');
     
     if (!currentText?.trim()) {
@@ -196,16 +198,19 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
     try {
       const response = await apiRequest('POST', '/api/enhance-text', {
         text: currentText,
-        language: language
+        language: selectedLanguage,
+        level: selectedLevel
       });
 
       const data = await response.json();
       
       if (data.enhancedText) {
         form.setValue('summary', data.enhancedText);
+        const levelText = selectedLevel === 'low' ? 'Grammar Corrected' : 'Enhanced';
+        const langText = selectedLanguage === 'hinglish' ? 'Hinglish' : 'English';
         toast({
           title: "✨ Text Enhanced!",
-          description: `Analysis enhanced in ${language === 'hinglish' ? 'Hinglish' : 'English'} using AI`,
+          description: `Analysis ${levelText} in ${langText} using AI`,
         });
       }
     } catch (error) {
@@ -529,57 +534,112 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
         </ScrollArea>
       </DialogContent>
       
-      {/* Language Selection Modal */}
+      {/* Enhancement Options Modal */}
       <Dialog open={showLanguageModal} onOpenChange={setShowLanguageModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center">
-              <Languages className="w-5 h-5 mr-2 text-purple-600" />
-              Choose Enhancement Language
+              <Wand2 className="w-5 h-5 mr-2 text-purple-600" />
+              AI Enhancement Options
             </DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Select the language style for AI enhancement
+              Choose language and enhancement level for AI processing
             </p>
           </DialogHeader>
           
-          <div className="space-y-3 pt-4">
-            <Button
-              onClick={() => handleEnhanceText('english')}
-              disabled={isEnhancing}
-              className="w-full justify-start"
-              variant="outline"
-              data-testid="button-enhance-english"
-            >
-              <span className="text-lg mr-3">🇺🇸</span>
-              <div className="text-left">
-                <div className="font-medium">Professional English</div>
-                <div className="text-xs text-muted-foreground">Formal business English with technical terms</div>
+          <div className="space-y-4 pt-4">
+            {/* Language Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Language Style</label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => setSelectedLanguage('english')}
+                  variant={selectedLanguage === 'english' ? 'default' : 'outline'}
+                  className="justify-start p-3 h-auto"
+                  data-testid="button-select-english"
+                >
+                  <span className="text-lg mr-2">🇺🇸</span>
+                  <div className="text-left">
+                    <div className="text-sm font-medium">English</div>
+                    <div className="text-xs opacity-70">Professional</div>
+                  </div>
+                </Button>
+                
+                <Button
+                  onClick={() => setSelectedLanguage('hinglish')}
+                  variant={selectedLanguage === 'hinglish' ? 'default' : 'outline'}
+                  className="justify-start p-3 h-auto"
+                  data-testid="button-select-hinglish"
+                >
+                  <span className="text-lg mr-2">🇮🇳</span>
+                  <div className="text-left">
+                    <div className="text-sm font-medium">Hinglish</div>
+                    <div className="text-xs opacity-70">Mixed Style</div>
+                  </div>
+                </Button>
               </div>
-            </Button>
+            </div>
             
-            <Button
-              onClick={() => handleEnhanceText('hinglish')}
-              disabled={isEnhancing}
-              className="w-full justify-start"
-              variant="outline"
-              data-testid="button-enhance-hinglish"
-            >
-              <span className="text-lg mr-3">🇮🇳</span>
-              <div className="text-left">
-                <div className="font-medium">Hinglish Style</div>
-                <div className="text-xs text-muted-foreground">Hindi + English mix, conversational tone</div>
+            {/* Enhancement Level */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Enhancement Level</label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => setSelectedLevel('low')}
+                  variant={selectedLevel === 'low' ? 'default' : 'outline'}
+                  className="justify-start p-3 h-auto"
+                  data-testid="button-select-low"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  <div className="text-left">
+                    <div className="text-sm font-medium">Low</div>
+                    <div className="text-xs opacity-70">Grammar Fix</div>
+                  </div>
+                </Button>
+                
+                <Button
+                  onClick={() => setSelectedLevel('medium')}
+                  variant={selectedLevel === 'medium' ? 'default' : 'outline'}
+                  className="justify-start p-3 h-auto"
+                  data-testid="button-select-medium"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  <div className="text-left">
+                    <div className="text-sm font-medium">Medium</div>
+                    <div className="text-xs opacity-70">Enhance Text</div>
+                  </div>
+                </Button>
               </div>
-            </Button>
+            </div>
           </div>
           
-          <div className="pt-4 border-t">
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-4 border-t">
             <Button
               variant="ghost"
               onClick={() => setShowLanguageModal(false)}
-              className="w-full"
+              className="flex-1"
               data-testid="button-cancel-enhance"
             >
               Cancel
+            </Button>
+            <Button
+              onClick={handleEnhanceText}
+              disabled={isEnhancing}
+              className="flex-1"
+              data-testid="button-apply-enhancement"
+            >
+              {isEnhancing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enhancing...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Enhance Text
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
