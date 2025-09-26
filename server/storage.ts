@@ -9,6 +9,7 @@ import {
   copyTrades,
   copyTradingApplications,
   otpVerifications,
+  researchReports,
   type User,
   type InsertUser,
   type TelegramChannel,
@@ -31,6 +32,8 @@ import {
   type InsertCopyTradingUser,
   type CopyTrade,
   type InsertCopyTrade,
+  type ResearchReport,
+  type InsertResearchReport,
   type OtpVerification,
   type InsertOtpVerification,
   type VerifyOtp,
@@ -157,6 +160,17 @@ export interface IStorage {
     executedQuantity?: number;
     leverage?: number;
   }): Promise<CopyTrade | undefined>;
+  
+  // Research Report operations
+  getResearchReports(filters?: {
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ reports: ResearchReport[]; total: number }>;
+  getResearchReport(id: string): Promise<ResearchReport | undefined>;
+  createResearchReport(report: InsertResearchReport): Promise<ResearchReport>;
+  updateResearchReport(id: string, report: Partial<InsertResearchReport>): Promise<ResearchReport | undefined>;
+  deleteResearchReport(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1504,6 +1518,65 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return result.rowCount || 0;
+  }
+
+  // Research Report operations
+  async getResearchReports(filters?: {
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ reports: ResearchReport[]; total: number }> {
+    const limit = filters?.limit || 10;
+    const offset = filters?.offset || 0;
+    
+    let query = db.select().from(researchReports);
+    
+    if (filters?.isActive !== undefined) {
+      query = query.where(eq(researchReports.isActive, filters.isActive));
+    }
+    
+    const reports = await query
+      .orderBy(desc(researchReports.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    // Get total count
+    let countQuery = db.select({ count: sql<number>`count(*)` }).from(researchReports);
+    if (filters?.isActive !== undefined) {
+      countQuery = countQuery.where(eq(researchReports.isActive, filters.isActive));
+    }
+    const [{ count }] = await countQuery;
+    
+    return { reports, total: Number(count) };
+  }
+
+  async getResearchReport(id: string): Promise<ResearchReport | undefined> {
+    const [report] = await db.select().from(researchReports).where(eq(researchReports.id, id));
+    return report;
+  }
+
+  async createResearchReport(reportData: InsertResearchReport): Promise<ResearchReport> {
+    const [report] = await db.insert(researchReports).values(reportData).returning();
+    return report;
+  }
+
+  async updateResearchReport(id: string, reportData: Partial<InsertResearchReport>): Promise<ResearchReport | undefined> {
+    const [report] = await db
+      .update(researchReports)
+      .set({ ...reportData, updatedAt: new Date() })
+      .where(eq(researchReports.id, id))
+      .returning();
+    return report;
+  }
+
+  async deleteResearchReport(id: string): Promise<boolean> {
+    // Soft delete - mark as inactive instead of actually deleting
+    const [report] = await db
+      .update(researchReports)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(researchReports.id, id))
+      .returning();
+    return !!report;
   }
 }
 
