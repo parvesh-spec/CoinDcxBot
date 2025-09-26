@@ -46,7 +46,7 @@ export const messageTemplates = pgTable("message_templates", {
   name: varchar("name").notNull(),
   channelId: varchar("channel_id"), // Nullable, no FK to avoid circular reference
   template: text("template").notNull(),
-  templateType: varchar("template_type").notNull().default('trade'), // 'simple' or 'trade'
+  templateType: varchar("template_type").notNull().default('trade'), // 'simple', 'trade', or 'research_report'
   includeFields: jsonb("include_fields").notNull(),
   buttons: jsonb("buttons").default([]), // Inline keyboard buttons
   parseMode: varchar("parse_mode").default("HTML"), // HTML or Markdown
@@ -102,12 +102,13 @@ export const automations = pgTable("automations", {
   name: varchar("name").notNull(),
   channelId: varchar("channel_id").notNull().references(() => telegramChannels.id),
   templateId: varchar("template_id").notNull().references(() => messageTemplates.id),
-  automationType: varchar("automation_type").notNull(), // 'trade' or 'simple'
-  triggerType: varchar("trigger_type").notNull(), // For trade: 'trade_registered', 'trade_completed', etc. For simple: 'scheduled'
+  automationType: varchar("automation_type").notNull(), // 'trade', 'simple', or 'research_report'
+  triggerType: varchar("trigger_type").notNull(), // For trade: 'trade_registered', 'trade_completed', etc. For simple: 'scheduled'. For research_report: 'research_report_submit'
   scheduledTime: varchar("scheduled_time"), // For simple automations: "09:00" (24h format, Kolkata timezone)
   scheduledDays: jsonb("scheduled_days").default(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']), // Days of week for simple automations
   sourceFilter: varchar("source_filter"), // Optional filter by trade source: 'coindcx', 'api', 'manual'
   signalTypeFilter: varchar("signal_type_filter"), // Optional filter by signal type: 'intraday', 'swing', 'positional'
+  delayInMinutes: integer("delay_in_minutes"), // Optional delay for research_report automations
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -126,6 +127,20 @@ export const sentMessages = pgTable("sent_messages", {
   errorMessage: text("error_message"), // Error details if failed
   sentAt: timestamp("sent_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Research Reports table
+export const researchReports = pgTable("research_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supportLevel: text("support_level").notNull(), // e.g., "9.03800 to 9.03847"
+  resistanceLevel: text("resistance_level").notNull(), // Same format as support level
+  summary: text("summary").notNull(), // Brief research summary
+  scenarios: jsonb("scenarios").notNull(), // {upside: {target1: string, target2: string}, downside: {target1: string, target2: string}}
+  breakoutPossibility: jsonb("breakout_possibility").notNull(), // {upside: number, downside: number} - percentages
+  imageUrl: text("image_url"), // Optional image URL from object storage
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Copy Trading Users table
@@ -306,7 +321,7 @@ export const insertMessageTemplateSchema = createInsertSchema(messageTemplates).
   createdAt: true,
   updatedAt: true,
 }).extend({
-  templateType: z.enum(['simple', 'trade'], {
+  templateType: z.enum(['simple', 'trade', 'research_report'], {
     required_error: "Please select template type",
   }),
   includeFields: z.any().optional(), // Make includeFields optional since UI no longer sends it
@@ -452,7 +467,7 @@ export const insertAutomationSchema = createInsertSchema(automations).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  automationType: z.enum(['trade', 'simple'], {
+  automationType: z.enum(['trade', 'simple', 'research_report'], {
     required_error: "Please select automation type",
   }),
   triggerType: z.string().min(1, "Please select trigger type"),
@@ -477,10 +492,48 @@ export const insertAutomationSchema = createInsertSchema(automations).omit({
     }
   }
   
+  // For research_report automations, validate triggerType and delayInMinutes
+  if (data.automationType === 'research_report') {
+    if (data.triggerType !== 'research_report_submit') {
+      return false;
+    }
+    // delayInMinutes is optional but if provided, must be positive integer
+    if (data.delayInMinutes !== undefined && data.delayInMinutes !== null) {
+      if (!Number.isInteger(data.delayInMinutes) || data.delayInMinutes < 0) {
+        return false;
+      }
+    }
+  }
+  
   return true;
 }, {
-  message: "Invalid automation configuration. Simple automations require scheduled time in HH:MM format and triggerType must be 'scheduled'. Trade automations require valid trade trigger type.",
+  message: "Invalid automation configuration. Simple automations require scheduled time in HH:MM format and triggerType must be 'scheduled'. Trade automations require valid trade trigger type. Research report automations require triggerType 'research_report_submit' and optional positive integer delayInMinutes.",
   path: ['scheduledTime']
+});
+
+export const insertResearchReportSchema = createInsertSchema(researchReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  scenarios: z.object({
+    upside: z.object({
+      target1: z.string().min(1, "Upside target 1 is required"),
+      target2: z.string().min(1, "Upside target 2 is required")
+    }),
+    downside: z.object({
+      target1: z.string().min(1, "Downside target 1 is required"),
+      target2: z.string().min(1, "Downside target 2 is required")
+    })
+  }),
+  breakoutPossibility: z.object({
+    upside: z.number().min(0).max(100, "Upside percentage must be between 0 and 100"),
+    downside: z.number().min(0).max(100, "Downside percentage must be between 0 and 100")
+  }).refine((data) => data.upside + data.downside === 100, {
+    message: "Upside and downside percentages must total 100%",
+    path: ["upside"]
+  }),
+  imageUrl: z.string().optional()
 });
 
 export const insertSentMessageSchema = createInsertSchema(sentMessages).omit({
@@ -620,6 +673,8 @@ export type CopyTradingUser = typeof copyTradingUsers.$inferSelect;
 export type InsertCopyTradingUser = z.infer<typeof insertCopyTradingUserSchema>;
 export type CopyTrade = typeof copyTrades.$inferSelect;
 export type InsertCopyTrade = z.infer<typeof insertCopyTradeSchema>;
+export type ResearchReport = typeof researchReports.$inferSelect;
+export type InsertResearchReport = z.infer<typeof insertResearchReportSchema>;
 export type OtpVerification = typeof otpVerifications.$inferSelect;
 export type InsertOtpVerification = z.infer<typeof insertOtpVerificationSchema>;
 export type VerifyOtp = z.infer<typeof verifyOtpSchema>;
