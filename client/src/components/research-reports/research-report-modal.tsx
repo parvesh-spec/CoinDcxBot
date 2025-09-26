@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
-import { Upload, X, FileText, Save, Loader2 } from "lucide-react";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Upload, X, FileText, Save, Loader2, Wand2, Languages } from "lucide-react";
 import ObjectUploader from "@/components/ui/object-uploader";
 
 // Form validation schema
@@ -49,6 +49,10 @@ interface ResearchReportModalProps {
 
 export default function ResearchReportModal({ isOpen, onClose, editReport, onSuccess }: ResearchReportModalProps) {
   const { toast } = useToast();
+  
+  // Enhancement state
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
 
   const isEditMode = !!editReport;
 
@@ -172,6 +176,51 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
       });
     }
   });
+
+  // Enhancement functions
+  const handleEnhanceText = async (language: 'english' | 'hinglish') => {
+    const currentText = form.getValues('summary');
+    
+    if (!currentText?.trim()) {
+      toast({
+        title: "Text Required",
+        description: "Please enter some analysis text before enhancing",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsEnhancing(true);
+    setShowLanguageModal(false);
+
+    try {
+      const response = await apiRequest({
+        url: '/api/enhance-text',
+        method: 'POST',
+        body: {
+          text: currentText,
+          language: language
+        }
+      });
+
+      if (response.enhancedText) {
+        form.setValue('summary', response.enhancedText);
+        toast({
+          title: "✨ Text Enhanced!",
+          description: `Analysis enhanced in ${language === 'hinglish' ? 'Hinglish' : 'English'} using AI`,
+        });
+      }
+    } catch (error) {
+      console.error('Enhancement error:', error);
+      toast({
+        title: "Enhancement Failed",
+        description: "Failed to enhance text. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
 
   const onSubmit = (data: ResearchReportFormData) => {
     if (isEditMode) {
@@ -388,7 +437,25 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                   name="summary"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Analysis Summary *</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Analysis Summary *</FormLabel>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowLanguageModal(true)}
+                          disabled={isEnhancing}
+                          className="flex items-center gap-2 text-xs"
+                          data-testid="button-enhance"
+                        >
+                          {isEnhancing ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Wand2 className="w-3 h-3" />
+                          )}
+                          {isEnhancing ? "Enhancing..." : "✨ AI Enhance"}
+                        </Button>
+                      </div>
                       <FormControl>
                         <Textarea 
                           placeholder="Provide detailed market analysis, key factors, and reasoning behind the price targets..."
@@ -463,6 +530,62 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
           </Form>
         </ScrollArea>
       </DialogContent>
+      
+      {/* Language Selection Modal */}
+      <Dialog open={showLanguageModal} onOpenChange={setShowLanguageModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Languages className="w-5 h-5 mr-2 text-purple-600" />
+              Choose Enhancement Language
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Select the language style for AI enhancement
+            </p>
+          </DialogHeader>
+          
+          <div className="space-y-3 pt-4">
+            <Button
+              onClick={() => handleEnhanceText('english')}
+              disabled={isEnhancing}
+              className="w-full justify-start"
+              variant="outline"
+              data-testid="button-enhance-english"
+            >
+              <span className="text-lg mr-3">🇺🇸</span>
+              <div className="text-left">
+                <div className="font-medium">Professional English</div>
+                <div className="text-xs text-muted-foreground">Formal business English with technical terms</div>
+              </div>
+            </Button>
+            
+            <Button
+              onClick={() => handleEnhanceText('hinglish')}
+              disabled={isEnhancing}
+              className="w-full justify-start"
+              variant="outline"
+              data-testid="button-enhance-hinglish"
+            >
+              <span className="text-lg mr-3">🇮🇳</span>
+              <div className="text-left">
+                <div className="font-medium">Hinglish Style</div>
+                <div className="text-xs text-muted-foreground">Hindi + English mix, conversational tone</div>
+              </div>
+            </Button>
+          </div>
+          
+          <div className="pt-4 border-t">
+            <Button
+              variant="ghost"
+              onClick={() => setShowLanguageModal(false)}
+              className="w-full"
+              data-testid="button-cancel-enhance"
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
