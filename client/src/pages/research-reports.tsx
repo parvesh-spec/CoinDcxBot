@@ -23,7 +23,7 @@ interface ResearchReport {
   downsideTarget1: string;
   downsideTarget2: string;
   breakoutPossibility: string;
-  breakoutDirection: string;
+  breakoutDirection: 'upside' | 'downside';
   imageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;

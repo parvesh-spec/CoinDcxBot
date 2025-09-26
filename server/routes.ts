@@ -2253,19 +2253,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await automationService.triggerAutomations('research_report_submit', {
           reportId: report.id,
-          pair: reportData.pair,
           supportLevel: reportData.supportLevel,
-          resistance: reportData.resistance,
+          resistance: reportData.resistanceLevel,
           summary: reportData.summary,
-          upsideTarget1: reportData.upsideTarget1,
-          upsideTarget2: reportData.upsideTarget2,
-          downsideTarget1: reportData.downsideTarget1,
-          downsideTarget2: reportData.downsideTarget2,
-          breakoutPossibility: reportData.breakoutPossibility,
+          upsideTarget1: reportData.scenarios.upside.target1,
+          upsideTarget2: reportData.scenarios.upside.target2,
+          downsideTarget1: reportData.scenarios.downside.target1,
+          downsideTarget2: reportData.scenarios.downside.target2,
           breakoutDirection: reportData.breakoutDirection,
           imageUrl: reportData.imageUrl
         });
-        console.log(`📊 Research report automation triggered for ${reportData.pair}`);
+        console.log(`📊 Research report automation triggered for research report ${report.id}`);
       } catch (automationError) {
         console.error("Error triggering research report automation:", automationError);
         // Don't fail the request if automation fails
