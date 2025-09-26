@@ -249,7 +249,33 @@ Good morning! Hope you're having a great day.
 
 Stay tuned for more updates.
 
-#CoinDCX` 
+#CoinDCX`
+                  : value === 'research_report'
+                  ? `📊 RESEARCH ANALYSIS 📊
+
+🏷️ Pair: {pair}
+📈 Support: {supportLevel}
+📉 Resistance: {resistance}
+
+🎯 Upside Targets:
+Target 1: {upsideTarget1} 
+Target 2: {upsideTarget2}
+Potential: +{upsidePercentage}
+
+🛑 Downside Targets:
+Target 1: {downsideTarget1}
+Target 2: {downsideTarget2}
+Risk: -{downsidePercentage}
+
+📋 Analysis Summary:
+{summary}
+
+🚀 Breakout Possibility:
+{breakoutPossibility}
+
+⏰ Published: {timestamp}
+
+#CoinDCX #Research #TechnicalAnalysis`
                   : `🚨 TRADE ALERT 🚨
 
 📊 Pair: {pair}
@@ -271,11 +297,12 @@ Stay tuned for more updates.
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="trade">Trade Message (with variables)</SelectItem>
+              <SelectItem value="research_report">Research Report (with analysis variables)</SelectItem>
               <SelectItem value="simple">Simple Message (no variables)</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground mt-1">
-            Trade messages can use variables like {"{pair}"}, {"{price}"}. Simple messages cannot use variables.
+            Trade messages can use variables like {"{pair}"}, {"{price}"}. Research reports can use analysis variables like {"{supportLevel}"}, {"{resistance}"}. Simple messages cannot use variables.
           </p>
         </div>
 
@@ -312,6 +339,34 @@ Stay tuned for more updates.
               </div>
               <div className="text-xs text-blue-700 dark:text-blue-300">
                 💡 Click on any variable above to add it to your template
+              </div>
+            </div>
+          )}
+
+          {formData.templateType === 'research_report' && (
+            <div className="mt-3 p-3 border rounded-lg bg-green-50 dark:bg-green-950/20 space-y-2">
+              <div className="text-xs font-medium text-green-900 dark:text-green-100">🔧 Available Variables for Research Reports:</div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  "{pair}", "{supportLevel}", "{resistance}", "{summary}",
+                  "{upsideTarget1}", "{upsideTarget2}", "{downsideTarget1}", "{downsideTarget2}",
+                  "{breakoutPossibility}", "{upsidePercentage}", "{downsidePercentage}",
+                  "{imageUrl}", "{timestamp}", "{reportId}"
+                ].map(variable => (
+                  <span 
+                    key={variable}
+                    className="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 rounded text-xs font-mono cursor-pointer hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors"
+                    onClick={() => {
+                      const newTemplate = formData.template + variable;
+                      setFormData(prev => ({ ...prev, template: newTemplate }));
+                    }}
+                  >
+                    {variable}
+                  </span>
+                ))}
+              </div>
+              <div className="text-xs text-green-700 dark:text-green-300">
+                💡 Click on any variable above to add it to your template. Use {"{imageUrl}"} if you want to include analysis charts.
               </div>
             </div>
           )}
