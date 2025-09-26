@@ -8,7 +8,7 @@ import { coindcxService, CoinDCXService } from "./services/coindcx";
 import { automationService } from "./services/automationService";
 import { copyTradingService } from "./services/copyTradingService";
 import { sendApplicationConfirmationEmail } from "./services/email";
-import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, insertTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema, sendUserAccessOtpSchema, verifyUserAccessOtpSchema } from "@shared/schema";
+import { insertTelegramChannelSchema, insertMessageTemplateSchema, registerSchema, loginSchema, completeTradeSchema, updateSafebookSchema, insertAutomationSchema, updateTradeSchema, insertTradeSchema, User, uploadUrlRequestSchema, finalizeImageUploadSchema, insertCopyTradingUserSchema, insertCopyTradingApplicationSchema, insertCopyTradeSchema, sendOtpSchema, verifyOtpSchema, sendUserAccessOtpSchema, verifyUserAccessOtpSchema, insertResearchReportSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { safeDecrypt } from "./utils/encryption";
 
@@ -2170,6 +2170,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching public completed trades:", error);
       res.status(500).json({ message: "Failed to fetch completed trades" });
+    }
+  });
+
+  // Research Reports API Routes
+  app.get('/api/research-reports', isAuthenticated, async (req, res) => {
+    try {
+      const { isActive, limit, offset } = req.query;
+      
+      const filters: any = {};
+      if (isActive !== undefined) filters.isActive = isActive === 'true';
+      if (limit) filters.limit = parseInt(limit as string);
+      if (offset) filters.offset = parseInt(offset as string);
+      
+      const result = await storage.getResearchReports(filters);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching research reports:", error);
+      res.status(500).json({ message: "Failed to fetch research reports" });
+    }
+  });
+
+  app.get('/api/research-reports/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const report = await storage.getResearchReport(id);
+      
+      if (!report) {
+        return res.status(404).json({ message: "Research report not found" });
+      }
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error fetching research report:", error);
+      res.status(500).json({ message: "Failed to fetch research report" });
+    }
+  });
+
+  app.post('/api/research-reports', isAuthenticated, async (req, res) => {
+    try {
+      const reportData = insertResearchReportSchema.parse(req.body);
+      const report = await storage.createResearchReport(reportData);
+      
+      // Trigger research_report_submit automation
+      try {
+        await automationService.triggerAutomations('research_report_submit', {
+          reportId: report.id,
+          pair: reportData.pair,
+          supportLevel: reportData.supportLevel,
+          resistance: reportData.resistance,
+          summary: reportData.summary,
+          upsideTarget1: reportData.upsideTarget1,
+          upsideTarget2: reportData.upsideTarget2,
+          downsideTarget1: reportData.downsideTarget1,
+          downsideTarget2: reportData.downsideTarget2,
+          breakoutPossibility: reportData.breakoutPossibility,
+          imageUrl: reportData.imageUrl,
+          // Calculate percentage targets
+          upsidePercentage: reportData.supportLevel ? 
+            ((parseFloat(reportData.upsideTarget1 || '0') - parseFloat(reportData.supportLevel)) / parseFloat(reportData.supportLevel) * 100).toFixed(2) : '0',
+          downsidePercentage: reportData.supportLevel ? 
+            ((parseFloat(reportData.supportLevel) - parseFloat(reportData.downsideTarget1 || '0')) / parseFloat(reportData.supportLevel) * 100).toFixed(2) : '0'
+        });
+        console.log(`📊 Research report automation triggered for ${reportData.pair}`);
+      } catch (automationError) {
+        console.error("Error triggering research report automation:", automationError);
+        // Don't fail the request if automation fails
+      }
+      
+      res.status(201).json(report);
+    } catch (error) {
+      console.error("Error creating research report:", error);
+      res.status(500).json({ message: "Failed to create research report" });
+    }
+  });
+
+  app.put('/api/research-reports/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const reportData = insertResearchReportSchema.partial().parse(req.body);
+      
+      const report = await storage.updateResearchReport(id, reportData);
+      
+      if (!report) {
+        return res.status(404).json({ message: "Research report not found" });
+      }
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error updating research report:", error);
+      res.status(500).json({ message: "Failed to update research report" });
+    }
+  });
+
+  app.delete('/api/research-reports/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteResearchReport(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Research report not found" });
+      }
+      
+      res.json({ message: "Research report deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting research report:", error);
+      res.status(500).json({ message: "Failed to delete research report" });
     }
   });
 
