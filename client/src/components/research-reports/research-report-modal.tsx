@@ -120,10 +120,30 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
   // Create research report mutation
   const createMutation = useMutation({
     mutationFn: async (data: ResearchReportFormData) => {
+      // Transform frontend data to match backend schema
+      const transformedData = {
+        pair: data.pair,
+        supportLevel: data.supportLevel,
+        resistanceLevel: data.resistance, // Fix field name
+        summary: data.summary,
+        scenarios: { // Structure targets into scenarios object
+          upside: {
+            target1: data.upsideTarget1,
+            target2: data.upsideTarget2
+          },
+          downside: {
+            target1: data.downsideTarget1,
+            target2: data.downsideTarget2
+          }
+        },
+        breakoutDirection: data.breakoutDirection,
+        imageUrl: data.imageUrl
+      };
+      
       const response = await fetch('/api/research-reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(transformedData),
       });
       if (!response.ok) throw new Error('Failed to create research report');
       return response.json();
@@ -151,10 +171,30 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
   // Update research report mutation
   const updateMutation = useMutation({
     mutationFn: async (data: ResearchReportFormData) => {
+      // Transform frontend data to match backend schema
+      const transformedData = {
+        pair: data.pair,
+        supportLevel: data.supportLevel,
+        resistanceLevel: data.resistance, // Fix field name
+        summary: data.summary,
+        scenarios: { // Structure targets into scenarios object
+          upside: {
+            target1: data.upsideTarget1,
+            target2: data.upsideTarget2
+          },
+          downside: {
+            target1: data.downsideTarget1,
+            target2: data.downsideTarget2
+          }
+        },
+        breakoutDirection: data.breakoutDirection,
+        imageUrl: data.imageUrl
+      };
+      
       const response = await fetch(`/api/research-reports/${editReport?.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(transformedData),
       });
       if (!response.ok) throw new Error('Failed to update research report');
       return response.json();
