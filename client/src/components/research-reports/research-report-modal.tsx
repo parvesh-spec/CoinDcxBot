@@ -281,9 +281,29 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
 
   // Emoji insertion function
   const insertEmoji = (emoji: string) => {
-    const currentText = form.getValues('summary');
-    const newText = currentText + emoji;
-    form.setValue('summary', newText);
+    const textarea = document.querySelector('[data-testid="textarea-summary"]') as HTMLTextAreaElement;
+    
+    if (textarea) {
+      const cursorPosition = textarea.selectionStart;
+      const currentText = form.getValues('summary') || '';
+      
+      // Insert emoji at cursor position
+      const newText = currentText.slice(0, cursorPosition) + emoji + currentText.slice(cursorPosition);
+      
+      // Update form value
+      form.setValue('summary', newText);
+      
+      // Set cursor position after the inserted emoji
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(cursorPosition + emoji.length, cursorPosition + emoji.length);
+      }, 0);
+    } else {
+      // Fallback: append to end if textarea not found
+      const currentText = form.getValues('summary') || '';
+      form.setValue('summary', currentText + emoji);
+    }
+    
     setShowEmojiPicker(false);
   };
 
