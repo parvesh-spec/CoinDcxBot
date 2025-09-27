@@ -103,8 +103,9 @@ export class TradeMonitorService {
   async triggerSafebook(tradeId: string, price: string): Promise<void> {
     try {
       const trade = await storage.getTrade(tradeId);
-      if (trade && trade.status === 'active') {
-        console.log(`📗 Triggering safebook automation for trade ${trade.tradeId} at price ${price}`);
+      if (trade) {
+        // Trigger automation for safebook hit (active OR completed trades)
+        console.log(`📗 Triggering safebook automation for trade ${trade.tradeId} at price ${price} (status: ${trade.status})`);
         await automationService.triggerAutomations(trade, 'safebook_hit' as any);
       }
     } catch (error) {
