@@ -803,6 +803,31 @@ export class AutomationService {
   }
 
   /**
+   * Retry database operation with exponential backoff for connection issues
+   */
+  private async retryDatabaseOperation<T>(operation: () => Promise<T>, operationName: string, maxRetries = 3): Promise<T> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        const isConnectionError = error instanceof Error && 
+          (error.message.includes('Connection terminated unexpectedly') ||
+           error.message.includes('Connection timeout') ||
+           error.message.includes('Connection refused'));
+           
+        if (isConnectionError && attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Cap at 5 seconds
+          console.log(`⚠️ ${operationName} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms: ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error(`Failed after ${maxRetries} attempts`);
+  }
+
+  /**
    * Execute scheduled simple message automations
    */
   private async executeScheduledAutomations() {
@@ -817,8 +842,11 @@ export class AutomationService {
         weekday: 'long'
       }).format(now).toLowerCase();
 
-      // Get all active simple automations that should trigger at this time
-      const automations = await storage.getAutomations();
+      // Get all active simple automations that should trigger at this time with retry logic
+      const automations = await this.retryDatabaseOperation(
+        () => storage.getAutomations(),
+        'Get automations'
+      );
       
       const scheduledAutomations = automations.filter(automation => {
         const isMatch = automation.isActive && 
@@ -886,7 +914,12 @@ export class AutomationService {
       };
       
       const telegramResult = imageUrl 
-        ? await telegramService.sendMessage(channel.channelId, { ...telegramMessage, photo: imageUrl })
+        ? await telegramService.sendMessage(channel.channelId, { 
+            photo: imageUrl,
+            caption: messageText,
+            parse_mode: template.parseMode as 'HTML' | 'Markdown',
+            reply_markup: processedButtons.length > 0 ? { inline_keyboard: processedButtons } : undefined
+          })
         : await telegramService.sendMessage(channel.channelId, telegramMessage);
 
       // Track sent message
