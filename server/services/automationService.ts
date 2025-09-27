@@ -1072,19 +1072,17 @@ export class AutomationService {
         if (shouldTryPhoto && absoluteImageUrl) {
           // Try to send as photo with caption
           console.log(`📷 Sending research report as photo with caption to ${channel.name}`);
-          sendResult = await telegramService.sendMessage({
-            channelId: channel.channelId,
-            text: messageText,
-            imageUrl: absoluteImageUrl,
-            parseMode: 'HTML'
+          sendResult = await telegramService.sendMessage(channel.channelId, {
+            photo: absoluteImageUrl,
+            caption: messageText,
+            parse_mode: 'HTML'
           });
         } else {
           // Send as text message
           console.log(`📝 Sending research report as text to ${channel.name}`);
-          sendResult = await telegramService.sendMessage({
-            channelId: channel.channelId,
+          sendResult = await telegramService.sendMessage(channel.channelId, {
             text: messageText,
-            parseMode: 'HTML'
+            parse_mode: 'HTML'
           });
         }
         
