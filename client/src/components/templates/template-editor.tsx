@@ -255,7 +255,7 @@ Stay tuned for more updates.
 
 🏷️ Pair: {pair}
 📈 Support: {supportLevel}
-📉 Resistance: {resistance}
+📉 Resistance: {resistanceLevel}
 
 🎯 Upside Targets:
 Target 1: {upsideTarget1} 
@@ -270,8 +270,6 @@ Target 2: {downsideTarget2}
 📋 Analysis Summary:
 {summary}
 
-🚀 Breakout Possibility:
-{breakoutPossibility}
 
 ⏰ Published: {timestamp}
 
@@ -348,9 +346,9 @@ Target 2: {downsideTarget2}
               <div className="text-xs font-medium text-green-900 dark:text-green-100">🔧 Available Variables for Research Reports:</div>
               <div className="flex flex-wrap gap-1">
                 {[
-                  "{pair}", "{supportLevel}", "{resistance}", "{summary}",
+                  "{pair}", "{supportLevel}", "{resistanceLevel}", "{summary}",
                   "{upsideTarget1}", "{upsideTarget2}", "{downsideTarget1}", "{downsideTarget2}",
-                  "{breakoutPossibility}", "{breakoutDirection}",
+                  "{breakoutDirection}",
                   "{imageUrl}", "{timestamp}", "{reportId}"
                 ].map(variable => (
                   <span 
@@ -366,7 +364,7 @@ Target 2: {downsideTarget2}
                 ))}
               </div>
               <div className="text-xs text-green-700 dark:text-green-300">
-                💡 Click on any variable above to add it to your template. Use {"{imageUrl}"} if you want to include analysis charts.
+                💡 Click on any variable above to add it to your template. Images from reports will be automatically included.
               </div>
             </div>
           )}
@@ -382,18 +380,29 @@ Target 2: {downsideTarget2}
         </div>
 
 
-        {/* Image Upload Section */}
-        <div>
-          <ObjectUploader
-            onImageUploaded={(imageUrl) => setFormData(prev => ({ ...prev, imageUrl }))}
-            onImageRemoved={() => setFormData(prev => ({ ...prev, imageUrl: "" }))}
-            currentImageUrl={formData.imageUrl}
-            className="w-full"
-          />
-          <p className="text-xs text-muted-foreground mt-2">
-            Upload an optional image to include with your message template. Supports PNG, JPG, GIF up to 5MB.
-          </p>
-        </div>
+        {/* Image Upload Section - Only for trade and simple templates */}
+        {formData.templateType !== 'research_report' && (
+          <div>
+            <ObjectUploader
+              onImageUploaded={(imageUrl) => setFormData(prev => ({ ...prev, imageUrl }))}
+              onImageRemoved={() => setFormData(prev => ({ ...prev, imageUrl: "" }))}
+              currentImageUrl={formData.imageUrl}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Upload an optional image to include with your message template. Supports PNG, JPG, GIF up to 5MB.
+            </p>
+          </div>
+        )}
+        
+        {formData.templateType === 'research_report' && (
+          <div className="mt-3 p-3 border rounded-lg bg-orange-50 dark:bg-orange-950/20">
+            <div className="text-xs font-medium text-orange-900 dark:text-orange-100">📊 Research Report Images:</div>
+            <div className="text-xs text-orange-700 dark:text-orange-300">
+              Images are uploaded when creating each research report. The report's image (if any) will be automatically included with the Telegram message. No separate template image needed.
+            </div>
+          </div>
+        )}
 
         {/* Inline Buttons Configuration */}
         <div>
