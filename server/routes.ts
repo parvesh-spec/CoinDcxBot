@@ -828,18 +828,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create mock data based on template type
         let variables: any = {};
         
-        if (template.type === 'research_report') {
+        if (template.templateType === 'research_report') {
           // Mock research report data for testing
           const mockResearchData = {
             pair: 'BTC-USDT',
             supportLevel: '42,500.00',
-            resistance: '48,000.00',
+            resistanceLevel: '48,000.00',
             summary: 'Strong bullish momentum with potential breakout above resistance. Support levels holding well.',
             upsideTarget1: '50,000.00',
             upsideTarget2: '52,500.00',
             downsideTarget1: '40,000.00',
             downsideTarget2: '38,500.00',
-            breakoutPossibility: 'High - Volume surge indicates strong buying interest',
             breakoutDirection: 'upside',
             imageUrl: '/images/btc-analysis.png',
             timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
@@ -849,13 +848,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           variables = {
             pair: mockResearchData.pair,
             supportLevel: mockResearchData.supportLevel,
-            resistance: mockResearchData.resistance,
+            resistanceLevel: mockResearchData.resistanceLevel,
             summary: mockResearchData.summary,
             upsideTarget1: mockResearchData.upsideTarget1,
             upsideTarget2: mockResearchData.upsideTarget2,
             downsideTarget1: mockResearchData.downsideTarget1,
             downsideTarget2: mockResearchData.downsideTarget2,
-            breakoutPossibility: mockResearchData.breakoutPossibility,
             breakoutDirection: mockResearchData.breakoutDirection,
             imageUrl: mockResearchData.imageUrl,
             timestamp: mockResearchData.timestamp,
