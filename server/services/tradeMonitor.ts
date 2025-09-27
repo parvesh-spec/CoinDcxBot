@@ -82,7 +82,7 @@ export class TradeMonitorService {
         // Map target type to automation trigger
         const triggerMap = {
           'stop_loss': 'stop_loss_hit',
-          'safebook': 'safebook_hit',
+          'safebook': 'safe_book_hit',
           'target_1': 'target_1_hit', 
           'target_2': 'target_2_hit',
           'target_3': 'target_3_hit'
@@ -106,7 +106,7 @@ export class TradeMonitorService {
       if (trade) {
         // Trigger automation for safebook hit (active OR completed trades)
         console.log(`📗 Triggering safebook automation for trade ${trade.tradeId} at price ${price} (status: ${trade.status})`);
-        await automationService.triggerAutomations(trade, 'safebook_hit' as any);
+        await automationService.triggerAutomations(trade, 'safe_book_hit' as any);
       }
     } catch (error) {
       console.error(`Error triggering safebook automation for ${tradeId}:`, error);

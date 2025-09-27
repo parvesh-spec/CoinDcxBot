@@ -6,7 +6,7 @@ import * as cron from 'node-cron';
 export type AutomationTrigger = 
   | 'trade_registered' 
   | 'stop_loss_hit'
-  | 'safebook_hit'   // V2: Consistent naming with storage layer
+  | 'safe_book_hit'   // V2: Consistent naming with storage layer
   | 'target_1_hit'
   | 'target_2_hit'
   | 'target_3_hit'
@@ -345,7 +345,7 @@ export class AutomationService {
       console.log(`📤 Processing automation: ${automation.name} -> Channel: ${channel.name}, Template: ${template.name}`);
       
       // Check if this is a reply-type trigger (target hits, stop loss, safebook)
-      const isReplyTrigger = ['stop_loss_hit', 'safebook_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'].includes(trigger);
+      const isReplyTrigger = ['stop_loss_hit', 'safe_book_hit', 'target_1_hit', 'target_2_hit', 'target_3_hit'].includes(trigger);
       let originalMessageId: string | null = null;
       
       if (isReplyTrigger) {
