@@ -1096,6 +1096,10 @@ export class AutomationService {
         shouldTryPhoto = !!absoluteImageUrl;
       }
       
+      // Process inline buttons from template (using simple button processing - no variables)
+      const processedButtons = this.processSimpleButtons((template.buttons as any[][]) || []);
+      const reply_markup = processedButtons.length > 0 ? { inline_keyboard: processedButtons } : undefined;
+      
       // Send message to Telegram
       let sendResult: any = null;
       let finalStatus = 'failed';
@@ -1108,14 +1112,16 @@ export class AutomationService {
           sendResult = await telegramService.sendMessage(channel.channelId, {
             photo: absoluteImageUrl,
             caption: messageText,
-            parse_mode: 'HTML'
+            parse_mode: 'HTML',
+            reply_markup
           });
         } else {
           // Send as text message
           console.log(`📝 Sending research report as text to ${channel.name}`);
           sendResult = await telegramService.sendMessage(channel.channelId, {
             text: messageText,
-            parse_mode: 'HTML'
+            parse_mode: 'HTML',
+            reply_markup
           });
         }
         
