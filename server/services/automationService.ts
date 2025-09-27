@@ -129,7 +129,19 @@ export class AutomationService {
         // Find all active automations for research report trigger
         const automations = await storage.getAutomations();
         const matchingAutomations = automations.filter(automation => {
-          return automation.isActive && automation.triggerType === trigger;
+          if (!automation.isActive || automation.triggerType !== trigger) {
+            return false;
+          }
+          
+          // Check research report type filter if specified
+          if (automation.researchReportTypeFilter && automation.researchReportTypeFilter !== 'all') {
+            if (data.type !== automation.researchReportTypeFilter) {
+              console.log(`🔍 Skipping automation ${automation.name} - research report type filter mismatch (expected: ${automation.researchReportTypeFilter}, got: ${data.type})`);
+              return false;
+            }
+          }
+          
+          return true;
         });
         
         console.log(`📋 Found ${matchingAutomations.length} matching research report automations`);
