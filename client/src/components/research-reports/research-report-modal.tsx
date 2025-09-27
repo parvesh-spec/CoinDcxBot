@@ -10,9 +10,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Upload, X, FileText, Save, Loader2, Wand2, Languages, Zap, Sparkles } from "lucide-react";
+import { Upload, X, FileText, Save, Loader2, Wand2, Languages, Zap, Sparkles, Smile } from "lucide-react";
 import ObjectUploader from "@/components/ui/object-uploader";
 import { ResearchReport } from "@shared/schema"; // Import correct type
 
@@ -37,6 +38,14 @@ const researchReportSchema = z.object({
 
 type ResearchReportFormData = z.infer<typeof researchReportSchema>;
 
+// Emoji categories for the picker
+const EMOJI_CATEGORIES = {
+  "Faces": ["😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳"],
+  "Trading": ["📈", "📉", "💰", "💵", "💎", "🚀", "🔥", "⚡", "🎯", "📊", "🏆", "💪", "👍", "👎", "✅", "❌", "⭐", "🌟", "💯", "🔴", "🟢", "🟡", "🔵"],
+  "Symbols": ["🚨", "⚠️", "💡", "🔔", "📢", "📣", "⏰", "⏳", "🎉", "🎊", "✨", "💫", "⭐", "🌟", "🔥", "💥", "⚡", "🌈", "🎯", "🎪", "🎨", "🎭"],
+  "Numbers": ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟", "#️⃣", "*️⃣", "0️⃣"]
+};
+
 interface ResearchReportModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -52,6 +61,9 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
   const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'hinglish'>('english');
   const [selectedLevel, setSelectedLevel] = useState<'low' | 'medium'>('low');
   const [isEnhancing, setIsEnhancing] = useState(false);
+  
+  // Emoji picker state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const isEditMode = !!editReport;
   const isViewMode = !!editReport; // For now, we only open modal for viewing existing reports
@@ -265,6 +277,14 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
     } finally {
       setIsEnhancing(false);
     }
+  };
+
+  // Emoji insertion function
+  const insertEmoji = (emoji: string) => {
+    const currentText = form.getValues('summary');
+    const newText = currentText + emoji;
+    form.setValue('summary', newText);
+    setShowEmojiPicker(false);
   };
 
   const onSubmit = (data: ResearchReportFormData) => {
@@ -661,22 +681,72 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                     <FormItem>
                       <div className="flex items-center justify-between">
                         <FormLabel>Analysis Summary</FormLabel>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowLanguageModal(true)}
-                          disabled={isEnhancing}
-                          className="flex items-center gap-2 text-xs"
-                          data-testid="button-enhance"
-                        >
-                          {isEnhancing ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Wand2 className="w-3 h-3" />
-                          )}
-                          {isEnhancing ? "Enhancing..." : "✨ AI Enhance"}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {/* Emoji Picker Button */}
+                          <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center gap-1 text-xs"
+                                data-testid="button-emoji-picker"
+                              >
+                                <Smile className="w-3 h-3" />
+                                😊
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent 
+                              className="w-80 p-4" 
+                              align="end"
+                              data-testid="popover-emoji-picker"
+                            >
+                              <div className="space-y-3">
+                                <h4 className="font-medium text-sm">Choose Emoji</h4>
+                                <ScrollArea className="h-64">
+                                  {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
+                                    <div key={category} className="mb-4">
+                                      <h5 className="text-xs font-medium text-muted-foreground mb-2">{category}</h5>
+                                      <div className="grid grid-cols-8 gap-1">
+                                        {emojis.map((emoji) => (
+                                          <Button
+                                            key={emoji}
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 hover:bg-muted"
+                                            onClick={() => insertEmoji(emoji)}
+                                            data-testid={`emoji-${emoji}`}
+                                          >
+                                            {emoji}
+                                          </Button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </ScrollArea>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                          
+                          {/* AI Enhance Button */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowLanguageModal(true)}
+                            disabled={isEnhancing}
+                            className="flex items-center gap-2 text-xs"
+                            data-testid="button-enhance"
+                          >
+                            {isEnhancing ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Wand2 className="w-3 h-3" />
+                            )}
+                            {isEnhancing ? "Enhancing..." : "✨ AI Enhance"}
+                          </Button>
+                        </div>
                       </div>
                       <FormControl>
                         <Textarea 
