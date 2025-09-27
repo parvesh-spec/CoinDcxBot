@@ -51,6 +51,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
   const [isEnhancing, setIsEnhancing] = useState(false);
 
   const isEditMode = !!editReport;
+  const isViewMode = !!editReport; // For now, we only open modal for viewing existing reports
 
   // Form setup
   const form = useForm<ResearchReportFormData>({
@@ -268,6 +269,152 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  // If viewing mode, show clean display
+  if (isViewMode && editReport) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center">
+              <FileText className="w-5 h-5 mr-2 text-blue-600" />
+              Research Report Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
+            <div className="space-y-6 py-4">
+              {/* Basic Info */}
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-lg text-blue-700 dark:text-blue-300">
+                    {editReport.pair}
+                  </h3>
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    editReport.breakoutDirection === 'upside' 
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                  }`}>
+                    {editReport.breakoutDirection === 'upside' ? '📈 Upside Breakout' : '📉 Downside Breakout'}
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Created: {new Date(editReport.createdAt).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
+
+              {/* Support & Resistance */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
+                  <h4 className="font-semibold text-green-700 dark:text-green-300 mb-2">
+                    🟢 Support Level
+                  </h4>
+                  <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                    {editReport.supportLevel}
+                  </p>
+                </div>
+                <div className="bg-red-50 dark:bg-red-950 p-4 rounded-lg">
+                  <h4 className="font-semibold text-red-700 dark:text-red-300 mb-2">
+                    🔴 Resistance Level
+                  </h4>
+                  <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                    {editReport.resistanceLevel}
+                  </p>
+                </div>
+              </div>
+
+              {/* Price Targets */}
+              <div className="space-y-4">
+                <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
+                  <h4 className="font-semibold text-green-700 dark:text-green-300 mb-3">
+                    🎯 Upside Targets
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Target 1</p>
+                      <p className="text-lg font-semibold text-green-600">
+                        {(editReport.scenarios as any)?.upside?.target1 || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Target 2</p>
+                      <p className="text-lg font-semibold text-green-600">
+                        {(editReport.scenarios as any)?.upside?.target2 || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 dark:bg-red-950 p-4 rounded-lg">
+                  <h4 className="font-semibold text-red-700 dark:text-red-300 mb-3">
+                    🛑 Downside Targets
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Target 1</p>
+                      <p className="text-lg font-semibold text-red-600">
+                        {(editReport.scenarios as any)?.downside?.target1 || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Target 2</p>
+                      <p className="text-lg font-semibold text-red-600">
+                        {(editReport.scenarios as any)?.downside?.target2 || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Analysis Summary */}
+              <div className="bg-purple-50 dark:bg-purple-950 p-4 rounded-lg">
+                <h4 className="font-semibold text-purple-700 dark:text-purple-300 mb-3">
+                  📋 Market Analysis
+                </h4>
+                <p className="text-foreground leading-relaxed">
+                  {editReport.summary}
+                </p>
+              </div>
+
+              {/* Chart Image */}
+              {editReport.imageUrl && (
+                <div className="bg-orange-50 dark:bg-orange-950 p-4 rounded-lg">
+                  <h4 className="font-semibold text-orange-700 dark:text-orange-300 mb-3">
+                    📊 Analysis Chart
+                  </h4>
+                  <div className="text-center">
+                    <img 
+                      src={editReport.imageUrl} 
+                      alt="Analysis Chart"
+                      className="max-w-full h-auto rounded-lg shadow-md mx-auto"
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Close Button */}
+          <div className="flex justify-end pt-4 border-t">
+            <Button
+              onClick={onClose}
+              variant="outline"
+              data-testid="button-close-view"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

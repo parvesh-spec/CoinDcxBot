@@ -298,18 +298,6 @@ export default function ResearchReports() {
                     >
                       👁️ View
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="text-xs px-3"
-                      onClick={() => {
-                        setEditingReport(report);
-                        setIsModalOpen(true);
-                      }}
-                      data-testid={`button-edit-report-${report.id}`}
-                    >
-                      ✏️ Edit
-                    </Button>
                   </div>
                 </div>
               ))}
