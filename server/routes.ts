@@ -2251,14 +2251,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Trigger research_report_submit automation
       try {
         await automationService.triggerAutomations('research_report_submit', {
-          reportId: report.id,
+          id: report.id,
+          pair: reportData.pair,
           supportLevel: reportData.supportLevel,
-          resistance: reportData.resistanceLevel,
+          resistanceLevel: reportData.resistanceLevel,
           summary: reportData.summary,
-          upsideTarget1: reportData.scenarios.upside.target1,
-          upsideTarget2: reportData.scenarios.upside.target2,
-          downsideTarget1: reportData.scenarios.downside.target1,
-          downsideTarget2: reportData.scenarios.downside.target2,
+          scenarios: reportData.scenarios,
           breakoutDirection: reportData.breakoutDirection,
           imageUrl: reportData.imageUrl
         });
