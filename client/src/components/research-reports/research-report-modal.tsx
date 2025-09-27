@@ -18,18 +18,21 @@ import { ResearchReport } from "@shared/schema"; // Import correct type
 
 // Form validation schema
 const researchReportSchema = z.object({
+  type: z.enum(['pattern-based', 'level-based'], {
+    errorMap: () => ({ message: "Please select report type" })
+  }),
   pair: z.string().min(1, "Trading pair is required"),
-  supportLevel: z.string().min(1, "Support level is required"),
-  resistance: z.string().min(1, "Resistance level is required"),
-  summary: z.string().min(10, "Summary must be at least 10 characters"),
-  upsideTarget1: z.string().min(1, "First upside target is required"),
-  upsideTarget2: z.string().min(1, "Second upside target is required"),
-  downsideTarget1: z.string().min(1, "First downside target is required"),
-  downsideTarget2: z.string().min(1, "Second downside target is required"),
+  supportLevel: z.string().optional(),
+  resistance: z.string().optional(),
+  summary: z.string().optional(),
+  upsideTarget1: z.string().optional(),
+  upsideTarget2: z.string().optional(),
+  downsideTarget1: z.string().optional(),
+  downsideTarget2: z.string().optional(),
   breakoutDirection: z.enum(['upside', 'downside'], {
     errorMap: () => ({ message: "Please select breakout direction" })
-  }),
-  imageUrl: z.string().optional(),
+  }).optional(),
+  imageUrl: z.string().min(1, "Chart image is required"),
 });
 
 type ResearchReportFormData = z.infer<typeof researchReportSchema>;
@@ -57,6 +60,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
   const form = useForm<ResearchReportFormData>({
     resolver: zodResolver(researchReportSchema),
     defaultValues: isEditMode && editReport ? {
+      type: (editReport as any).type || "pattern-based",
       pair: editReport.pair || "",
       supportLevel: editReport.supportLevel || "",
       resistance: editReport.resistanceLevel || "", // Fix field name
@@ -65,9 +69,10 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
       upsideTarget2: (editReport.scenarios as any)?.upside?.target2 || "", // Extract from scenarios
       downsideTarget1: (editReport.scenarios as any)?.downside?.target1 || "", // Extract from scenarios
       downsideTarget2: (editReport.scenarios as any)?.downside?.target2 || "", // Extract from scenarios
-      breakoutDirection: (editReport.breakoutDirection as any) || "upside",
+      breakoutDirection: (editReport.breakoutDirection as any) || undefined,
       imageUrl: editReport.imageUrl || "",
     } : {
+      type: "pattern-based",
       pair: "",
       supportLevel: "",
       resistance: "",
@@ -76,7 +81,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
       upsideTarget2: "",
       downsideTarget1: "",
       downsideTarget2: "",
-      breakoutDirection: "upside",
+      breakoutDirection: undefined,
       imageUrl: "",
     },
   });
@@ -439,6 +444,37 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                 </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Report Type */}
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Report Type *</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-report-type">
+                              <SelectValue placeholder="Select type..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="pattern-based" data-testid="option-pattern-based">
+                              🔍 Pattern-based
+                            </SelectItem>
+                            <SelectItem value="level-based" data-testid="option-level-based">
+                              📊 Level-based
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Trading Pair */}
                   <FormField
                     control={form.control}
@@ -464,7 +500,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                     name="breakoutDirection"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Breakout Possibility *</FormLabel>
+                        <FormLabel>Breakout Possibility</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
                           defaultValue={field.value}
@@ -497,7 +533,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                     name="supportLevel"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Support Level *</FormLabel>
+                        <FormLabel>Support Level</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="e.g., 42500.00" 
@@ -516,7 +552,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                     name="resistance"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Resistance Level *</FormLabel>
+                        <FormLabel>Resistance Level</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="e.g., 48000.00" 
@@ -540,7 +576,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                     name="upsideTarget1"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Target 1 *</FormLabel>
+                        <FormLabel>Target 1</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="50000.00" 
@@ -558,7 +594,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                     name="upsideTarget2"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Target 2 *</FormLabel>
+                        <FormLabel>Target 2</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="52500.00" 
@@ -579,7 +615,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                     name="downsideTarget1"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Target 1 *</FormLabel>
+                        <FormLabel>Target 1</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="40000.00" 
@@ -597,7 +633,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                     name="downsideTarget2"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Target 2 *</FormLabel>
+                        <FormLabel>Target 2</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="38500.00" 
@@ -622,7 +658,7 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                   render={({ field }) => (
                     <FormItem>
                       <div className="flex items-center justify-between">
-                        <FormLabel>Analysis Summary *</FormLabel>
+                        <FormLabel>Analysis Summary</FormLabel>
                         <Button
                           type="button"
                           variant="outline"
