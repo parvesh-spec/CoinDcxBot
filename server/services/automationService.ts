@@ -1140,21 +1140,32 @@ export class AutomationService {
         .replace(/'/g, '&#039;');
     };
     
+    // Helper function to format numbers (remove trailing zeros)
+    const formatNumber = (value: any): string => {
+      if (!value) return '';
+      const num = parseFloat(value.toString());
+      return isNaN(num) ? '' : `$${num.toString()}`; // toString() removes trailing zeros
+    };
+    
+    // Extract scenarios data
+    const scenarios = data.scenarios || {};
+    const upside = scenarios.upside || {};
+    const downside = scenarios.downside || {};
+    
     // Define available research report variables
     const variables: Record<string, string> = {
       'pair': htmlEscape(data.pair || ''),
-      'supportLevel': data.supportLevel ? `$${Number(data.supportLevel).toFixed(4)}` : '',
-      'resistance': data.resistance ? `$${Number(data.resistance).toFixed(4)}` : '',
+      'supportLevel': htmlEscape(data.supportLevel || ''),
+      'resistanceLevel': htmlEscape(data.resistanceLevel || ''),
       'summary': htmlEscape(data.summary || ''),
-      'upsideTarget1': data.upsideTarget1 ? `$${Number(data.upsideTarget1).toFixed(4)}` : '',
-      'upsideTarget2': data.upsideTarget2 ? `$${Number(data.upsideTarget2).toFixed(4)}` : '',
-      'downsideTarget1': data.downsideTarget1 ? `$${Number(data.downsideTarget1).toFixed(4)}` : '',
-      'downsideTarget2': data.downsideTarget2 ? `$${Number(data.downsideTarget2).toFixed(4)}` : '',
-      'breakoutPossibility': htmlEscape(data.breakoutPossibility || ''),
+      'upsideTarget1': formatNumber(upside.target1),
+      'upsideTarget2': formatNumber(upside.target2),
+      'downsideTarget1': formatNumber(downside.target1),
+      'downsideTarget2': formatNumber(downside.target2),
       'breakoutDirection': data.breakoutDirection ? `📈 ${data.breakoutDirection.charAt(0).toUpperCase() + data.breakoutDirection.slice(1)}` : '📈 Upside',
       'imageUrl': data.imageUrl || '',
       'timestamp': new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-      'reportId': htmlEscape(data.reportId || '')
+      'reportId': htmlEscape(data.id || '')
     };
     
     // Replace all variables in template
