@@ -870,6 +870,8 @@ export class DatabaseStorage implements IStorage {
         scheduledDays: automations.scheduledDays,
         sourceFilter: automations.sourceFilter,
         signalTypeFilter: automations.signalTypeFilter,
+        researchReportTypeFilter: automations.researchReportTypeFilter,
+        delayMinutes: automations.delayMinutes,
         isActive: automations.isActive,
         createdAt: automations.createdAt,
         updatedAt: automations.updatedAt,
