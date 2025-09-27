@@ -871,7 +871,7 @@ export class DatabaseStorage implements IStorage {
         sourceFilter: automations.sourceFilter,
         signalTypeFilter: automations.signalTypeFilter,
         researchReportTypeFilter: automations.researchReportTypeFilter,
-        delayMinutes: automations.delayMinutes,
+        delayInMinutes: automations.delayInMinutes,
         isActive: automations.isActive,
         createdAt: automations.createdAt,
         updatedAt: automations.updatedAt,
