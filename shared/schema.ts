@@ -132,13 +132,14 @@ export const sentMessages = pgTable("sent_messages", {
 // Research Reports table
 export const researchReports = pgTable("research_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: varchar("type").notNull(), // 'pattern-based' or 'level-based'
   pair: varchar("pair").notNull(), // Trading pair e.g., "BTC-USDT"
-  supportLevel: text("support_level").notNull(), // e.g., "9.03800 to 9.03847"
-  resistanceLevel: text("resistance_level").notNull(), // Same format as support level
-  summary: text("summary").notNull(), // Brief research summary
-  scenarios: jsonb("scenarios").notNull(), // {upside: {target1: string, target2: string}, downside: {target1: string, target2: string}}
-  breakoutDirection: varchar("breakout_direction").notNull(), // 'upside' or 'downside'
-  imageUrl: text("image_url"), // Optional image URL from object storage
+  supportLevel: text("support_level"), // e.g., "9.03800 to 9.03847" - optional
+  resistanceLevel: text("resistance_level"), // Same format as support level - optional
+  summary: text("summary"), // Brief research summary - optional
+  scenarios: jsonb("scenarios"), // {upside: {target1: string, target2: string}, downside: {target1: string, target2: string}} - optional
+  breakoutDirection: varchar("breakout_direction"), // 'upside' or 'downside' - optional
+  imageUrl: text("image_url").notNull(), // Required chart image URL from object storage
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -517,6 +518,13 @@ export const insertResearchReportSchema = createInsertSchema(researchReports).om
   createdAt: true,
   updatedAt: true,
 }).extend({
+  type: z.enum(['pattern-based', 'level-based'], {
+    errorMap: () => ({ message: "Report type must be either 'pattern-based' or 'level-based'" })
+  }),
+  pair: z.string().min(1, "Trading pair is required"),
+  supportLevel: z.string().optional(),
+  resistanceLevel: z.string().optional(),
+  summary: z.string().optional(),
   scenarios: z.object({
     upside: z.object({
       target1: z.string().min(1, "Upside target 1 is required"),
@@ -526,11 +534,11 @@ export const insertResearchReportSchema = createInsertSchema(researchReports).om
       target1: z.string().min(1, "Downside target 1 is required"),
       target2: z.string().min(1, "Downside target 2 is required")
     })
-  }),
+  }).optional(),
   breakoutDirection: z.enum(['upside', 'downside'], {
     errorMap: () => ({ message: "Breakout direction must be either 'upside' or 'downside'" })
-  }),
-  imageUrl: z.string().optional()
+  }).optional(),
+  imageUrl: z.string().min(1, "Chart image is required")
 });
 
 export const insertSentMessageSchema = createInsertSchema(sentMessages).omit({
