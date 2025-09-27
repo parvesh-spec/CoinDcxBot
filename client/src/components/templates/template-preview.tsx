@@ -14,7 +14,8 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
 
     // Sample data for preview
     const sampleData = {
-      pair: "B-ETH_USDT",
+      // Trade variables
+      pair: "BTC-USDT",
       price: "$4,285.67",
       type: "BUY",
       leverage: "50x",
@@ -26,6 +27,17 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
       timestamp: "Dec 15, 2024 14:32",
       profitLoss: "+$5,234",
       signalType: "Intraday",
+      
+      // Research report variables
+      supportLevel: "42,500 to 42,800",
+      resistanceLevel: "45,200 to 45,500", 
+      summary: "yha se support lagha hai jalse hi ye support break hoga to sell positional me or nhi hoga to buy swing me",
+      upsideTarget1: "46,000.00",
+      upsideTarget2: "47,500.00",
+      downsideTarget1: "41,200.00", 
+      downsideTarget2: "39,800.00",
+      breakoutDirection: "upside",
+      reportId: "RP-2024-001",
     };
 
     // Replace all variables with sample data
@@ -42,7 +54,8 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
 
     // Sample data for button variable replacement
     const sampleData = {
-      pair: "B-ETH_USDT",
+      // Trade variables
+      pair: "BTC-USDT",
       price: "4285.67",
       type: "BUY",
       leverage: "50",
@@ -54,7 +67,18 @@ export default function TemplatePreview({ template, buttons = [], parseMode = "H
       timestamp: "Dec15-2024",
       tradeId: "TXN-12345",
       profitLoss: "5234",
-      signalType: "Intraday"
+      signalType: "Intraday",
+      
+      // Research report variables
+      supportLevel: "42500-42800",
+      resistanceLevel: "45200-45500",
+      summary: "support-analysis",
+      upsideTarget1: "46000",
+      upsideTarget2: "47500",
+      downsideTarget1: "41200",
+      downsideTarget2: "39800",
+      breakoutDirection: "upside",
+      reportId: "RP-2024-001",
     };
 
     return buttons.map((row, rowIndex) => (
