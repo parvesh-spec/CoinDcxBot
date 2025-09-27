@@ -2252,6 +2252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await automationService.triggerAutomations('research_report_submit', {
           id: report.id,
+          type: reportData.type,
           pair: reportData.pair,
           supportLevel: reportData.supportLevel,
           resistanceLevel: reportData.resistanceLevel,

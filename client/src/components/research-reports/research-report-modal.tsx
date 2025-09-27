@@ -304,13 +304,13 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Created: {new Date(editReport.createdAt).toLocaleDateString('en-US', { 
+                  Created: {editReport.createdAt ? new Date(editReport.createdAt).toLocaleDateString('en-US', { 
                     year: 'numeric', 
                     month: 'long', 
                     day: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit'
-                  })}
+                  }) : 'Unknown'}
                 </div>
               </div>
 
