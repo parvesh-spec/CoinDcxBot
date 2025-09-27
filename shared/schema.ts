@@ -108,6 +108,7 @@ export const automations = pgTable("automations", {
   scheduledDays: jsonb("scheduled_days").default(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']), // Days of week for simple automations
   sourceFilter: varchar("source_filter"), // Optional filter by trade source: 'coindcx', 'api', 'manual'
   signalTypeFilter: varchar("signal_type_filter"), // Optional filter by signal type: 'intraday', 'swing', 'positional'
+  researchReportTypeFilter: varchar("research_report_type_filter"), // Optional filter by research report type: 'pattern-based', 'level-based'
   delayInMinutes: integer("delay_in_minutes"), // Optional delay for research_report automations
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),

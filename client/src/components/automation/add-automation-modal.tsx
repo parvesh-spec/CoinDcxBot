@@ -49,6 +49,7 @@ const formSchema = z.object({
   triggerType: z.string().min(1, "Please select trigger type"),
   sourceFilter: z.string().optional(),
   signalTypeFilter: z.string().optional(),
+  researchReportTypeFilter: z.string().optional(),
   scheduledTime: z.string().optional(),
   scheduledDays: z.array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])).optional(),
   delayMinutes: z.number().min(0).max(1440).optional(),
@@ -85,6 +86,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
       triggerType: editAutomation.triggerType || "trade_registered",
       sourceFilter: editAutomation.sourceFilter || "all",
       signalTypeFilter: editAutomation.signalTypeFilter || "all",
+      researchReportTypeFilter: editAutomation.researchReportTypeFilter || "all",
       scheduledTime: editAutomation.scheduledTime || "",
       scheduledDays: editAutomation.scheduledDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       delayMinutes: editAutomation.delayMinutes || 0,
@@ -97,6 +99,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
       triggerType: "trade_registered",
       sourceFilter: "all",
       signalTypeFilter: "all",
+      researchReportTypeFilter: "all",
       scheduledTime: "",
       scheduledDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       delayMinutes: 0,
@@ -115,6 +118,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
         triggerType: editAutomation.triggerType || "trade_registered",
         sourceFilter: editAutomation.sourceFilter || "all",
         signalTypeFilter: editAutomation.signalTypeFilter || "all",
+        researchReportTypeFilter: editAutomation.researchReportTypeFilter || "all",
         scheduledTime: editAutomation.scheduledTime || "",
         scheduledDays: editAutomation.scheduledDays || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
         delayMinutes: editAutomation.delayMinutes || 0,
@@ -129,6 +133,7 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
         triggerType: "trade_registered",
         sourceFilter: "all",
         signalTypeFilter: "all",
+        researchReportTypeFilter: "all",
         scheduledTime: "",
         scheduledDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
         delayMinutes: 0,
@@ -498,32 +503,62 @@ export default function AddAutomationModal({ isOpen, onClose, editAutomation }: 
               </>
             )}
 
-            {/* Delay Minutes for Research Report Automations */}
+            {/* Research Report Filters for Research Report Automations */}
             {form.watch('automationType') === 'research_report' && (
-              <FormField
-                control={form.control}
-                name="delayMinutes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Delay Minutes (Optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="1440"
-                        placeholder="0"
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value, 10) : 0)}
-                        data-testid="input-delay-minutes"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                    <p className="text-xs text-muted-foreground">
-                      Delay message sending after report creation (0-1440 minutes). Leave empty for immediate sending.
-                    </p>
-                  </FormItem>
-                )}
-              />
+              <>
+                {/* Research Report Type Filter */}
+                <FormField
+                  control={form.control}
+                  name="researchReportTypeFilter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Research Report Type Filter (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-research-report-type-filter">
+                            <SelectValue placeholder="Select report type filter" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="all">All Report Types</SelectItem>
+                          <SelectItem value="pattern-based">🔍 Pattern-based</SelectItem>
+                          <SelectItem value="level-based">📊 Level-based</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Only trigger automation for selected research report type. Leave empty to include all types.
+                      </p>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Delay Minutes */}
+                <FormField
+                  control={form.control}
+                  name="delayMinutes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Delay Minutes (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="1440"
+                          placeholder="0"
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value, 10) : 0)}
+                          data-testid="input-delay-minutes"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-xs text-muted-foreground">
+                        Delay message sending after report creation (0-1440 minutes). Leave empty for immediate sending.
+                      </p>
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
 
             {/* Time Scheduling Fields for Simple Automations */}
