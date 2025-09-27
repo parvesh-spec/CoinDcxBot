@@ -122,20 +122,21 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
     mutationFn: async (data: ResearchReportFormData) => {
       // Transform frontend data to match backend schema
       const transformedData = {
+        type: data.type,
         pair: data.pair,
         supportLevel: data.supportLevel,
         resistanceLevel: data.resistance, // Fix field name
         summary: data.summary,
-        scenarios: { // Structure targets into scenarios object
+        scenarios: data.upsideTarget1 || data.upsideTarget2 || data.downsideTarget1 || data.downsideTarget2 ? { // Only include scenarios if targets are provided
           upside: {
-            target1: data.upsideTarget1,
-            target2: data.upsideTarget2
+            target1: data.upsideTarget1 || "",
+            target2: data.upsideTarget2 || ""
           },
           downside: {
-            target1: data.downsideTarget1,
-            target2: data.downsideTarget2
+            target1: data.downsideTarget1 || "",
+            target2: data.downsideTarget2 || ""
           }
-        },
+        } : undefined,
         breakoutDirection: data.breakoutDirection,
         imageUrl: data.imageUrl
       };
@@ -173,20 +174,21 @@ export default function ResearchReportModal({ isOpen, onClose, editReport, onSuc
     mutationFn: async (data: ResearchReportFormData) => {
       // Transform frontend data to match backend schema
       const transformedData = {
+        type: data.type,
         pair: data.pair,
         supportLevel: data.supportLevel,
         resistanceLevel: data.resistance, // Fix field name
         summary: data.summary,
-        scenarios: { // Structure targets into scenarios object
+        scenarios: data.upsideTarget1 || data.upsideTarget2 || data.downsideTarget1 || data.downsideTarget2 ? { // Only include scenarios if targets are provided
           upside: {
-            target1: data.upsideTarget1,
-            target2: data.upsideTarget2
+            target1: data.upsideTarget1 || "",
+            target2: data.upsideTarget2 || ""
           },
           downside: {
-            target1: data.downsideTarget1,
-            target2: data.downsideTarget2
+            target1: data.downsideTarget1 || "",
+            target2: data.downsideTarget2 || ""
           }
-        },
+        } : undefined,
         breakoutDirection: data.breakoutDirection,
         imageUrl: data.imageUrl
       };
