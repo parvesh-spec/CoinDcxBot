@@ -811,6 +811,68 @@ export class CoinDCXService {
       };
     }
   }
+
+  /**
+   * Align quantity to exchange step size requirements
+   * @param quantity - Raw calculated quantity
+   * @param stepSize - Step size from market metadata
+   * @returns Aligned quantity
+   */
+  alignQuantityToStep(quantity: number, stepSize: number): number {
+    if (!stepSize || stepSize <= 0) return quantity;
+    
+    // Round down to nearest step
+    const aligned = Math.floor(quantity / stepSize) * stepSize;
+    
+    // Handle precision issues with floating point
+    const precision = stepSize.toString().includes('.') 
+      ? stepSize.toString().split('.')[1].length 
+      : 0;
+    
+    return Number(aligned.toFixed(precision));
+  }
+
+  /**
+   * Round price to exchange tick size requirements
+   * @param price - Raw price
+   * @param tickSize - Tick size from market metadata (min_price)
+   * @returns Rounded price
+   */
+  roundPriceToTick(price: number, tickSize?: number): number {
+    if (!tickSize || tickSize <= 0) return price;
+    
+    // Round to nearest tick
+    const rounded = Math.round(price / tickSize) * tickSize;
+    
+    // Handle precision issues
+    const precision = tickSize.toString().includes('.') 
+      ? tickSize.toString().split('.')[1].length 
+      : 0;
+    
+    return Number(rounded.toFixed(precision));
+  }
+
+  /**
+   * Check if quantity meets minimum requirements
+   * @param quantity - Quantity to validate
+   * @param minQty - Minimum quantity from market metadata
+   * @returns true if valid, false otherwise
+   */
+  isQuantityValid(quantity: number, minQty: number): boolean {
+    return quantity >= minQty;
+  }
+
+  /**
+   * Check if notional value meets minimum requirements
+   * @param quantity - Order quantity
+   * @param price - Order price
+   * @param minNotional - Minimum notional from market metadata
+   * @returns true if valid, false otherwise
+   */
+  isNotionalValid(quantity: number, price: number, minNotional: number): boolean {
+    const notional = quantity * price;
+    return notional >= minNotional;
+  }
 }
 
 export const coindcxService = new CoinDCXService();
