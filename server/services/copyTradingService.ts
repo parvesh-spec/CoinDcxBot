@@ -402,11 +402,54 @@ export class CopyTradingService {
         throw new Error('Original trade not found');
       }
       
+      // Fetch market metadata for proper sizing and rounding
+      const metadata = await this.coindcxService.getFuturesInstrumentMeta(copyTrade.pair);
+      console.log(`📋 Market metadata for ${copyTrade.pair}:`, {
+        minQty: metadata.minQty,
+        stepSize: metadata.stepSize,
+        tickSize: metadata.tickSize,
+        minNotional: metadata.minNotional
+      });
+      
       // Use tradeFund from user settings instead of wallet balance
       const tradeFund = parseFloat(user.tradeFund); // e.g., 100 USDT
-      const entryPrice = parseFloat(copyTrade.originalPrice);
-      const stopLossPrice = originalTrade.stopLossTrigger ? parseFloat(originalTrade.stopLossTrigger) : null;
-      const takeProfitPrice = originalTrade.takeProfitTrigger ? parseFloat(originalTrade.takeProfitTrigger) : null;
+      const rawEntryPrice = parseFloat(copyTrade.originalPrice);
+      
+      // Round entry price to tick size
+      const entryPrice = this.coindcxService.roundPriceToTick(rawEntryPrice, metadata.tickSize);
+      
+      // Calculate TP/SL based on original deltas, not absolute prices
+      let stopLossPrice: number | null = null;
+      let takeProfitPrice: number | null = null;
+      
+      if (originalTrade.stopLossTrigger) {
+        const originalStopLoss = parseFloat(originalTrade.stopLossTrigger);
+        const originalEntry = parseFloat(originalTrade.price);
+        const slDelta = originalStopLoss - originalEntry; // Can be negative or positive
+        
+        // Apply same delta to new entry price and round to tick size
+        const newStopLoss = entryPrice + slDelta;
+        stopLossPrice = this.coindcxService.roundPriceToTick(newStopLoss, metadata.tickSize);
+      }
+      
+      if (originalTrade.takeProfitTrigger) {
+        const originalTP = parseFloat(originalTrade.takeProfitTrigger);
+        const originalEntry = parseFloat(originalTrade.price);
+        const tpDelta = originalTP - originalEntry;
+        
+        // Apply same delta to new entry price and round to tick size
+        const newTP = entryPrice + tpDelta;
+        takeProfitPrice = this.coindcxService.roundPriceToTick(newTP, metadata.tickSize);
+        
+        // Validate TP direction based on trade type
+        if (copyTrade.type.toLowerCase() === 'buy' && takeProfitPrice && takeProfitPrice <= entryPrice) {
+          console.log(`⚠️ TP ${takeProfitPrice} invalid for BUY (must be > entry ${entryPrice}), adjusting...`);
+          takeProfitPrice = this.coindcxService.roundPriceToTick(entryPrice + (metadata.tickSize || 0.01), metadata.tickSize);
+        } else if (copyTrade.type.toLowerCase() === 'sell' && takeProfitPrice && takeProfitPrice >= entryPrice) {
+          console.log(`⚠️ TP ${takeProfitPrice} invalid for SELL (must be < entry ${entryPrice}), adjusting...`);
+          takeProfitPrice = this.coindcxService.roundPriceToTick(entryPrice - (metadata.tickSize || 0.01), metadata.tickSize);
+        }
+      }
       
       console.log(`🚀 Executing ${this.isDryRun ? 'DRY-RUN' : 'REAL'} trade: ${copyTrade.pair} ${copyTrade.type} for ${user.name}`);
       
@@ -447,6 +490,23 @@ export class CopyTradingService {
         calculatedLeverage = parseFloat(copyTrade.leverage);
         calculatedQuantity = (tradeFund * calculatedLeverage) / entryPrice; // Simple fallback
         console.log(`⚠️ No stop loss found, using original leverage: ${calculatedLeverage}x`);
+      }
+      
+      // Align quantity to step size
+      const rawQuantity = calculatedQuantity;
+      calculatedQuantity = this.coindcxService.alignQuantityToStep(rawQuantity, metadata.stepSize);
+      
+      console.log(`📐 Quantity alignment: ${rawQuantity} → ${calculatedQuantity} (step: ${metadata.stepSize})`);
+      
+      // Check minimum quantity requirement
+      if (!this.coindcxService.isQuantityValid(calculatedQuantity, metadata.minQty)) {
+        throw new Error(`Quantity ${calculatedQuantity} is below minimum ${metadata.minQty} for ${copyTrade.pair}`);
+      }
+      
+      // Check minimum notional requirement
+      if (!this.coindcxService.isNotionalValid(calculatedQuantity, entryPrice, metadata.minNotional)) {
+        const notional = calculatedQuantity * entryPrice;
+        throw new Error(`Notional value ${notional.toFixed(2)} USDT is below minimum ${metadata.minNotional} USDT for ${copyTrade.pair}`);
       }
       
       // Validate order parameters
