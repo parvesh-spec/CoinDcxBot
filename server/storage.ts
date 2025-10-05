@@ -153,12 +153,13 @@ export interface IStorage {
   }): Promise<{ copyTrades: any[]; total: number }>;
   getCopyTradesByOriginalId(originalTradeId: string): Promise<CopyTrade[]>;
   createCopyTrade(copyTrade: InsertCopyTrade): Promise<CopyTrade>;
-  updateCopyTradeStatus(id: string, status: string, errorMessage?: string): Promise<CopyTrade | undefined>;
+  updateCopyTradeStatus(id: string, status: string, errorMessage?: string, orderParameters?: any): Promise<CopyTrade | undefined>;
   updateCopyTradeExecution(id: string, executionDetails: {
     executedTradeId?: string;
     executedPrice?: number;
     executedQuantity?: number;
     leverage?: number;
+    orderParameters?: any;
   }): Promise<CopyTrade | undefined>;
   
   // Research Report operations
@@ -1350,13 +1351,16 @@ export class DatabaseStorage implements IStorage {
     return copyTrade;
   }
 
-  async updateCopyTradeStatus(id: string, status: string, errorMessage?: string): Promise<CopyTrade | undefined> {
+  async updateCopyTradeStatus(id: string, status: string, errorMessage?: string, orderParameters?: any): Promise<CopyTrade | undefined> {
     const updateData: any = { status, updatedAt: new Date() };
     if (errorMessage) {
       updateData.errorMessage = errorMessage;
     }
     if (status === 'executed') {
       updateData.executionTime = new Date();
+    }
+    if (orderParameters) {
+      updateData.orderParameters = orderParameters;
     }
 
     const [updatedTrade] = await db
@@ -1372,6 +1376,7 @@ export class DatabaseStorage implements IStorage {
     executedPrice?: number;
     executedQuantity?: number;
     leverage?: number;
+    orderParameters?: any;
   }): Promise<CopyTrade | undefined> {
     const updateData: any = { 
       updatedAt: new Date(),
@@ -1391,6 +1396,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (executionDetails.leverage) {
       updateData.leverage = executionDetails.leverage;
+    }
+    if (executionDetails.orderParameters) {
+      updateData.orderParameters = executionDetails.orderParameters;
     }
 
     const [updatedTrade] = await db

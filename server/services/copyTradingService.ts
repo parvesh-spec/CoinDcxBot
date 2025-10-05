@@ -392,6 +392,8 @@ export class CopyTradingService {
     apiKey: string, 
     apiSecret: string
   ): Promise<void> {
+    let orderData: any = null; // Declare here so it's accessible in catch block
+    
     try {
       const tradeContext = `${copyTrade.pair} ${copyTrade.type} for user ${user.name}`;
       console.log(`🚀 Executing ${this.isDryRun ? 'DRY-RUN' : 'REAL'} trade: ${tradeContext}`);
@@ -585,18 +587,27 @@ export class CopyTradingService {
       );
       
       if (orderResult.success && orderResult.orderId && orderResult.orderId !== 'unknown') {
-        // Update copy trade with execution details
+        // Update copy trade with execution details and order parameters for debugging
         await storage.updateCopyTradeExecution(copyTrade.id, {
           executedTradeId: orderResult.orderId,
           executedPrice: entryPrice, // Market order will execute near this price
           executedQuantity: calculatedQuantity,
-          leverage: calculatedLeverage
+          leverage: calculatedLeverage,
+          orderParameters: orderData // Save complete order data sent to exchange
         });
         
         console.log(`✅ Copy trade ${copyTrade.id} executed successfully! Order ID: ${orderResult.orderId}`);
       } else {
         const errorMsg = `Order execution failed: ${orderResult.message || 'Unknown error'}`;
         console.log(`❌ ${errorMsg}`);
+        
+        // Save order parameters even for failed orders for debugging
+        await storage.updateCopyTradeStatus(
+          copyTrade.id,
+          'failed',
+          errorMsg,
+          orderData
+        );
         
         throw new Error(errorMsg);
       }
@@ -607,11 +618,12 @@ export class CopyTradingService {
       // Classify error for better handling
       const errorMessage = this.classifyError(error);
       
-      // Update copy trade with failure status
+      // Update copy trade with failure status and order parameters for debugging
       await storage.updateCopyTradeStatus(
         copyTrade.id,
         'failed',
-        `Execution failed: ${errorMessage}`
+        `Execution failed: ${errorMessage}`,
+        (error as any).orderData || orderData || null
       );
       
       throw error; // Re-throw to be caught by caller
